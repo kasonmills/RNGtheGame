@@ -15,13 +15,14 @@ public class Player
     public int Health;
     public int MaxHealth;
     public int Gold;
+    Random rd = new Random();
 
     // Inventory
     public List<Item> Inventory;
     public Weapon EquippedWeapon;
     public Armor EquippedArmor;
 
-    // Constructor
+    // define the player from the save file
     public Player(string name)
     {
         Name = name;
@@ -34,61 +35,56 @@ public class Player
         Inventory = new List<Item>();
     }
 
-    // Methods
-
-    /// <summary>
-    /// Adds experience to the player and levels up if the experience threshold is met.
-    /// </summary>
-    public void AddExperience(int exp)
+    // Adds experience to the player and levels up if the experience threshold is met.
+    public void AddExperience(int exp, int level)
     {
         Experience += exp;
         Console.WriteLine($"{Name} gained {exp} experience!");
 
-        while (Experience >= ExperienceToLevelUp())
+        while (Experience >= ExperienceToLevelUp(level))
         {
-            Experience -= ExperienceToLevelUp();
+            Experience -= ExperienceToLevelUp(level);
             LevelUp();
         }
     }
 
-    /// <summary>
-    /// Levels up the player, increasing stats and health.
-    /// </summary>
+    // Levels up the player, increasing stats and health.
     private void LevelUp()
     {
         Level++;
-        MaxHealth += 10;
+        MaxHealth += rd.Next(1,7);
         Health = MaxHealth; // Restore health on level up
 
         Console.WriteLine($"{Name} leveled up to level {Level}!");
     }
 
-    /// <summary>
-    /// Calculates the experience needed to level up.
-    /// </summary>
-    private int ExperienceToLevelUp()
+    // Calculates the experience needed to level up.
+    private int ExperienceToLevelUp(int currentLVL)
     {
-        return Level * 100; // Example: Level 1 -> 100 EXP, Level 2 -> 200 EXP, etc.
+        int i = 1;
+        double expCalc = 100;
+        while (i < currentLVL)
+        {
+            expCalc *= 1.02;
+            i++;
+        }
+        int expNeeded = Convert.ToInt32(expCalc);
+        return expNeeded;
     }
 
-    /// <summary>
     /// Heals the player by a specific amount.
-    /// </summary>
     public void Heal(int amount)
     {
         Health = Math.Min(Health + amount, MaxHealth);
         Console.WriteLine($"{Name} healed for {amount} health. Current health: {Health}/{MaxHealth}");
     }
 
-    /// <summary>
     /// Takes damage and reduces health.
-    /// </summary>
     public void TakeDamage(int damage)
     {
         Health -= damage;
         if (Health <= 0)
         {
-            Health = 0;
             Console.WriteLine($"{Name} has been defeated!");
         }
         else
@@ -97,27 +93,21 @@ public class Player
         }
     }
 
-    /// <summary>
-    /// Adds an item to the player's inventory.
-    /// </summary>
+    // Adds an item to the player's inventory.
     public void AddToInventory(Item item)
     {
         Inventory.Add(item);
         Console.WriteLine($"{item.Name} has been added to your inventory.");
     }
 
-    /// <summary>
-    /// Equips a weapon, replacing the current weapon if one is already equipped.
-    /// </summary>
+    // Equips a weapon, replacing the current weapon if one is already equipped.
     public void EquipWeapon(Weapon weapon)
     {
         EquippedWeapon = weapon;
         Console.WriteLine($"{Name} equipped {weapon.Name}.");
     }
 
-    /// <summary>
-    /// Equips armor, replacing the current armor if one is already equipped.
-    /// </summary>
+    // Equips armor, replacing the current armor if one is already equipped.
     public void EquipArmor(Armor armor)
     {
         EquippedArmor = armor;
