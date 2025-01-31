@@ -17,28 +17,61 @@ public class Player
     public int Gold;
     Random rd = new Random();
 
+    public int Savefile;
+
     // Inventory
-    public List<Item> Inventory;
+    public List<Item> Inventory = new List<Item>();
     public Weapon EquippedWeapon;
     public Armor EquippedArmor;
 
-    // define the player from the save file
-    public Player(string name)
+    // define the player from the save file, I will also need a flag that checks to see if it a new game or not
+    public Player(string name, int level, int experience, int health, int gold, List<Item> intentory)
     {
-        Name = name;
-        Level = 1;
-        Experience = 0;
-        MaxHealth = 20;
-        Health = MaxHealth;
-        Gold = 0;
+        switch (Savefile)
+        {
+            case 0:
+                {
+                    Name = name;
+                    Level = 1;
+                    Experience = 0;
+                    MaxHealth = 20;
+                    Health = MaxHealth;
+                    Gold = 0;
+                    Inventory.Clear();
+                    break;
+                }
+            case 1:
+                {
+                    Name = name;
+                    Level = level;
+                    Experience = experience;
+                    Health = health;
+                    Gold = gold;
 
-        Inventory = new List<Item>();
+                    // Inventory = inventory; I need a line here that will set the inventory to be the same as the save file they are loading.
+                    // I am not too sure how to do it now so I will leave this comment here to remind me. 1/30/25
+                    break;
+                }
+            case 2:
+                {
+                    // case 2 will be a players set up if they chose to skip the tutorial and just want to play the game.
+                    // I will need to detrmine what it will look like after completing the tutorial so that is why is is left blank 1/30/25
+                    break;
+                }
+            default:
+                {
+                    // something failed that is why you are even getting to this case...
+                    Console.WriteLine("Something appears to have happened and your file didn't seem to load or save right.");
+                    break;
+                }
+        }
     }
 
     // Adds experience to the player and levels up if the experience threshold is met.
     public void AddExperience(int exp, int level)
     {
         Experience += exp;
+        // I will keep lines like these in here for testing purposes
         Console.WriteLine($"{Name} gained {exp} experience!");
 
         while (Experience >= ExperienceToLevelUp(level))
@@ -52,9 +85,10 @@ public class Player
     private void LevelUp()
     {
         Level++;
-        MaxHealth += rd.Next(1,7);
+        MaxHealth += rd.Next(1, 7); // this range may change 1/30/25
         Health = MaxHealth; // Restore health on level up
 
+        // this line is here for testing purposes
         Console.WriteLine($"{Name} leveled up to level {Level}!");
     }
 
@@ -65,21 +99,21 @@ public class Player
         double expCalc = 100;
         while (i < currentLVL)
         {
-            expCalc *= 1.02;
+            expCalc *= 1.035;
             i++;
         }
         int expNeeded = Convert.ToInt32(expCalc);
         return expNeeded;
     }
 
-    /// Heals the player by a specific amount.
+    // Heals the player by a specific amount.
     public void Heal(int amount)
     {
-        Health = Math.Min(Health + amount, MaxHealth);
+        // I need to have an method that will increase the health of the player but it needs to work with all healing methods 1/30/25
         Console.WriteLine($"{Name} healed for {amount} health. Current health: {Health}/{MaxHealth}");
     }
 
-    /// Takes damage and reduces health.
+    // Takes damage and reduces health.
     public void TakeDamage(int damage)
     {
         Health -= damage;
@@ -125,22 +159,26 @@ public class Weapon : Item
 {
     public int MinDamage;
     public int MaxDamage;
+    public int WeaponLvl;
 
-    public Weapon(string name, int minDamage, int maxDamage)
+    public Weapon(string name, int minDamage, int maxDamage, int Wlevel)
     {
         Name = name;
         MinDamage = minDamage;
         MaxDamage = maxDamage;
+        WeaponLvl = Wlevel;
     }
 }
 
 public class Armor : Item
 {
     public int Defense;
+    public bool Armtype;
 
-    public Armor(string name, int defense)
+    public Armor(string name, int defense, bool armtype)
     {
         Name = name;
         Defense = defense;
+        Armtype = armtype;
     }
 }
