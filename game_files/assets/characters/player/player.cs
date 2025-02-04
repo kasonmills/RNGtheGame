@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace game_files.assets.characters.player;
+namespace game_files;
 
 /*
 this class is the players file. It has everything to do with the player and every aspect related to them.
@@ -110,6 +110,7 @@ public class Player
     public void Heal(int amount)
     {
         // I need to have an method that will increase the health of the player but it needs to work with all healing methods 1/30/25
+        // this will likely need a switch case to change the text based on what kind of healing they are using.
         Console.WriteLine($"{Name} healed for {amount} health. Current health: {Health}/{MaxHealth}");
     }
 
@@ -157,6 +158,7 @@ public abstract class Item
 
 public class Weapon : Item
 {
+    // this subclass is used for weapons and their levels
     public int MinDamage;
     public int MaxDamage;
     public int WeaponLvl;
@@ -172,13 +174,16 @@ public class Weapon : Item
 
 public class Armor : Item
 {
+    // this subclass is for use with armor items and their levels
     public int Defense;
-    public bool Armtype;
+    public string Armtype;
+    public int ArmLevel;
 
-    public Armor(string name, int defense, bool armtype)
+    public Armor(string name, int defense, string armtype, int armLevel)
     {
         Name = name;
         Defense = defense;
         Armtype = armtype;
+        ArmLevel = armLevel;
     }
 }
