@@ -21,7 +21,7 @@ public abstract class Ability
     public abstract void ApplyEffectToPlayer(Player playerStats, Weapon weapon, Armor armor);
 
     // this method will apply the effect to enemies if the ability of the player can do that.
-    public abstract void ApplyEffectToEnemy(Player playerStats, Weapon weapon, Armor armor);
+    public abstract void ApplyEffectToTarget(Player playerStats, Weapon weapon, Armor armor);
 }
 
 
