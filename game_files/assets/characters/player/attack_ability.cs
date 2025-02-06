@@ -7,7 +7,7 @@ public class AttackBoost : Ability
 {
     private int attackIncrease;
 
-    public AttackBoost() : base("Attack Boost", "Temporarily increases attack power by 5.", 3)
+    public AttackBoost() : base()
     {
         attackIncrease = 5;
     }

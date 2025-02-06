@@ -96,7 +96,7 @@ public class Player
     private int ExperienceToLevelUp(int currentLVL)
     {
         int i = 1;
-        double expCalc = 100;
+        double expCalc = 120;
         while (i < currentLVL)
         {
             expCalc *= 1.035;

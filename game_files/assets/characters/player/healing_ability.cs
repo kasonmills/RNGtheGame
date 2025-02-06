@@ -7,7 +7,7 @@ public class HealingAbility : Ability
 {
     private int healAmount;
 
-    public HealingAbility() : base("Healing Light", "Restores 20 HP.", 2)
+    public HealingAbility(string name, string description) :base(name, description)
     {
         healAmount = 20;
     }

@@ -10,7 +10,7 @@ public class Armor : Item
     public string Armtype;
     public int ArmLevel;
 
-    public Armor(string name, int defense, string armtype, int armLevel)
+    public Armor(string name, int defense, string armtype, int armLevel) :base(name)
     {
         Defense = defense;
         Armtype = armtype;
