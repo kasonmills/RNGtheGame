@@ -17,6 +17,8 @@ public class Player
     public int Gold;
     Random rd = new Random();
 
+    // call a new instance of the play ability so that will affect the players stats as needed.
+
     public int Savefile;
 
     // Inventory
