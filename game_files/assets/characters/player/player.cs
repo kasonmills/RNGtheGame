@@ -150,5 +150,22 @@ public class Player
         EquippedArmor = armor;
         Console.WriteLine($"{Name} equipped {armor.Name}.");
     }
+
+    public void select_ability(Ability ability)
+    {
+        // this method lets the player select what ability they want.
+        switch (ability)
+        {
+            // I haven't decided how many abilites they can choose from but I know there will be at least two..
+            case AttackBoost: // I am keeping it blank for now because I need to work on this more.
+            {
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
 }
 

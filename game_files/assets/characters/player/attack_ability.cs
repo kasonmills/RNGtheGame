@@ -7,20 +7,23 @@ public class AttackBoost : Ability
 {
     private int attackIncrease;
 
-    public AttackBoost() : base()
+    public AttackBoost(string name, string description) : base(name, description)
     {
         attackIncrease = 5;
     }
 
-    public override void ApplyEffect(PlayerStats playerStats, Weapon weapon, Armor armor)
+    public override void ApplyEffectToPlayer(Weapon weapon, Armor armor)
     {
-        playerStats.Strength += attackIncrease;
         Console.WriteLine($"{Name} applied! Strength increased by {attackIncrease}.");
     }
 
-    public override void RemoveEffect(PlayerStats playerStats, Weapon weapon, Armor armor)
+    public override void ApplyEffectToTarget(Weapon weapon, Armor armor)
     {
-        playerStats.Strength -= attackIncrease;
+    
+    }
+
+    public void RemoveEffect(Weapon weapon, Armor armor)
+    {
         Console.WriteLine($"{Name} effect removed! Strength returned to normal.");
     }
 }

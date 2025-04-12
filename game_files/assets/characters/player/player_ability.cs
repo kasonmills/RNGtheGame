@@ -12,10 +12,20 @@ public class PlayerAbility : Ability
     private Armor _equippedArmor;
 
     // Constructor
-    public PlayerAbility(string name, string description) : base(string name, string description)
+    public PlayerAbility(string name, string description) : base(name, description)
     {
         // this would be defining one unique ability note a whole list of them... But I will need a list of all the abilites 
         // that are possible but only one is active for the player
         //ability = List<Ability>("");
+    }
+
+    public override void ApplyEffectToPlayer(Weapon _equipedWeapon, Armor _equipedArmor)
+    {
+
+    }
+
+    public override void ApplyEffectToTarget(Weapon weapon, Armor armor)
+    {
+    
     }
 }
