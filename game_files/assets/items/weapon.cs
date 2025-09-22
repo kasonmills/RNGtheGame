@@ -10,7 +10,7 @@ public class Weapon : Item
     public int MaxDamage;
     public int WeaponLvl;
 
-    public Weapon(string name, int minDamage, int maxDamage, int Wlevel)
+    public Weapon(string name, int minDamage, int maxDamage, int Wlevel) :base(name)
     {
         MinDamage = minDamage;
         MaxDamage = maxDamage;

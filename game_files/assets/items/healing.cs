@@ -5,7 +5,7 @@ namespace game_files;
 
 public class Healing : Item
 {
-    public Healing()
+    public Healing(string name) :base(name)
     {
         
     }

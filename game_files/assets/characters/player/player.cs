@@ -17,6 +17,8 @@ public class Player
     public int Gold;
     Random rd = new Random();
 
+    // call a new instance of the play ability so that will affect the players stats as needed.
+
     public int Savefile;
 
     // Inventory
@@ -96,7 +98,7 @@ public class Player
     private int ExperienceToLevelUp(int currentLVL)
     {
         int i = 1;
-        double expCalc = 100;
+        double expCalc = 120;
         while (i < currentLVL)
         {
             expCalc *= 1.035;
@@ -148,42 +150,22 @@ public class Player
         EquippedArmor = armor;
         Console.WriteLine($"{Name} equipped {armor.Name}.");
     }
-}
 
-// Base Item Class (Extend for Weapons, Armor, etc.)
-public abstract class Item
-{
-    public string Name;
-}
-
-public class Weapon : Item
-{
-    // this subclass is used for weapons and their levels
-    public int MinDamage;
-    public int MaxDamage;
-    public int WeaponLvl;
-
-    public Weapon(string name, int minDamage, int maxDamage, int Wlevel)
+    public void select_ability(Ability ability)
     {
-        Name = name;
-        MinDamage = minDamage;
-        MaxDamage = maxDamage;
-        WeaponLvl = Wlevel;
+        // this method lets the player select what ability they want.
+        switch (ability)
+        {
+            // I haven't decided how many abilites they can choose from but I know there will be at least two..
+            case AttackBoost: // I am keeping it blank for now because I need to work on this more.
+            {
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
     }
 }
 
-public class Armor : Item
-{
-    // this subclass is for use with armor items and their levels
-    public int Defense;
-    public string Armtype;
-    public int ArmLevel;
-
-    public Armor(string name, int defense, string armtype, int armLevel)
-    {
-        Name = name;
-        Defense = defense;
-        Armtype = armtype;
-        ArmLevel = armLevel;
-    }
-}

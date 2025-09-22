@@ -12,5 +12,11 @@ public class Item
     {
         Name = name;
     }
+
+    public Item(string name, Ability ability)
+    {
+        Name = name;
+        Ability Ability1 = ability;
+    }
 }
 
