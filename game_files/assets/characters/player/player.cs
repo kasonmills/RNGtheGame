@@ -154,13 +154,59 @@ public class Player
     public void select_ability(Ability ability)
     {
         // this method lets the player select what ability they want.
+        // ability will be detrimed at the start of save file and relodaded when the player loads their game.
         switch (ability)
         {
             // I haven't decided how many abilites they can choose from but I know there will be at least two..
-            case AttackBoost: // I am keeping it blank for now because I need to work on this more.
-            {
-                break;
-            }
+            case AttackBoost: // I am only building the skeleton for now because I need to figure out how I want to handle abilities.
+            // I also am not sure how the ability levels will work yet... 10/20/25
+                {
+                    break;
+                }
+            case HealthBoost:
+                {
+                    break;
+                }
+            case CriticalStrike:
+                {
+                    break;
+                }
+            case AccuracyBoost:
+                {
+                    break;
+                }
+            case EvasionBoost:
+                {
+                    break;
+                }
+            case SwordBoost:
+                {
+                    break;
+                }
+            case AxeBoost:
+                {
+                    break;
+                }
+            case BowBoost:
+                {
+                    break;
+                }
+            case SpearBoost:
+                {
+                    break;
+                }
+            case DaggerBoost:
+                {
+                    break;
+                }
+            case ArmorBoost:
+                {
+                    break;
+                }
+            case MagicBoost: // this one might not make it into the game depending on how I want to handle magic.
+                {
+                    break;
+                }
             default:
             {
                 break;
@@ -168,4 +214,3 @@ public class Player
         }
     }
 }
-
