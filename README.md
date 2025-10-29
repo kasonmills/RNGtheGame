@@ -6,6 +6,7 @@ RNG-The-Game/
 
     Assets/
         Characters/
+            ability_base.cs
             Player/
                 Player.cs
                 PlayerStats.cs
@@ -76,10 +77,10 @@ RNG-The-Game/
             Enemies/
 
     Docs/
-        DesignDocument.md
-        RNGAlgorithms.md
+        DesignDocument.md ?
+        RNGAlgorithms.md ?
         ToDoList.md
-        README.md
+        README.md ?
 
     Tests/
         TestCombat.cs
