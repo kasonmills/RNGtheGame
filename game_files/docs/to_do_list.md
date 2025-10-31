@@ -12,5 +12,6 @@
 12. make the game maps
 13. Register for copyrights if needed?
 14. Create my own LLC?
-15. 
+15. Eliminate possible redundant files (ability - ability_base)
+16. 
 in no particular order of importance

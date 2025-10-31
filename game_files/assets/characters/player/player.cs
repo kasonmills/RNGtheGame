@@ -27,46 +27,27 @@ public class Player
     public Armor EquippedArmor;
 
     // define the player from the save file, I will also need a flag that checks to see if it a new game or not
-    public Player(string name, int level, int experience, int health, int gold, List<Item> intentory)
+    public Player(string name)
     {
-        switch (Savefile)
-        {
-            case 0:
-                {
-                    Name = name;
-                    Level = 1;
-                    Experience = 0;
-                    MaxHealth = 20;
-                    Health = MaxHealth;
-                    Gold = 0;
-                    Inventory.Clear();
-                    break;
-                }
-            case 1:
-                {
-                    Name = name;
-                    Level = level;
-                    Experience = experience;
-                    Health = health;
-                    Gold = gold;
+        Name = name;
+        Level = 1;
+        Experience = 0;
+        MaxHealth = 20;
+        Health = MaxHealth;
+        Gold = 0;
+        Inventory.Clear();
+    }
 
-                    // Inventory = inventory; I need a line here that will set the inventory to be the same as the save file they are loading.
-                    // I am not too sure how to do it now so I will leave this comment here to remind me. 1/30/25
-                    break;
-                }
-            case 2:
-                {
-                    // case 2 will be a players set up if they chose to skip the tutorial and just want to play the game.
-                    // I will need to detrmine what it will look like after completing the tutorial so that is why is is left blank 1/30/25
-                    break;
-                }
-            default:
-                {
-                    // something failed that is why you are even getting to this case...
-                    Console.WriteLine("Something appears to have happened and your file didn't seem to load or save right.");
-                    break;
-                }
-        }
+    public static Player LoadFromSave(SaveData data)
+    {
+        Player player = new Player(data.Name);
+        player.Level = data.Level;
+        player.Experience = data.Experience;
+        player.MaxHealth = data.MaxHealth;
+        player.Health = data.Health;
+        player.Gold = data.Gold;
+        player.Inventory = data.Inventory;
+        return player;
     }
 
     // Adds experience to the player and levels up if the experience threshold is met.

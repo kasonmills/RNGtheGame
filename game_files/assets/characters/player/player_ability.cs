@@ -24,7 +24,7 @@ public class PlayerAbility : Ability
 
     }
 
-    public override void ApplyEffectToTarget(Weapon weapon, Armor armor)
+    public override void ApplyEffectToTarget(Weapon weapon)
     {
     
     }

@@ -12,17 +12,17 @@ public class HealingAbility : Ability
         healAmount = 20;
     }
 
-    public override void ApplyEffectToPlayer(Weapon weapon, Armor armor)
+    public override void ApplyEffectToPlayer()
     {
         Console.WriteLine($"{Name} used! Restored {healAmount} HP.");
     }
 
-    public override void ApplyEffectToTarget(Weapon weapon, Armor armor)
+    public override void ApplyEffectToTarget()
     {
     
     }
 
-    public void RemoveEffect(Weapon weapon, Armor armor)
+    public void RemoveEffect()
     {
         // Healing is a one-time effect, so nothing to remove
     }

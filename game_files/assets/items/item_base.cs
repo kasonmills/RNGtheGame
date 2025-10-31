@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace game_files;
 
 // Base Item Class (Extend for Weapons, Armor, etc.)
-public class Item
+public abstract class Item
 {
     public string Name;
 
@@ -18,5 +18,7 @@ public class Item
         Name = name;
         Ability Ability1 = ability;
     }
+
+    public abstract void ModifyStat(Player player);
 }
 
