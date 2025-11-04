@@ -2,9 +2,9 @@ using System;
 
 namespace game_files;
 
-class EnemyAbility
+class Dragon : Enemy
 {
-    public EnemyAbility()
+    public Dragon()
     {
         
     }

@@ -2,9 +2,9 @@ using System;
 
 namespace game_files;
 
-class EnemyBase
+class Enemy : Entity
 {
-    public EnemyBase()
+    public Enemy()
     {
         
     }

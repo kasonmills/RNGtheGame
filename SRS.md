@@ -7,41 +7,46 @@
            1.3 Intended Use
 1.3.1 For fun! Or to prove a point? Or to discuss the nature of RNG itself. Most of all the intended use is to be played and to enjoy the experience. 
            1.4 Product Scope
-1.4.1 Development Timeline
+1.4.1 Development platform and logistics
 	1.4.1.1 What would I develop it on?
 1.4.1.1.1 Visual Studio Code
 1.4.1.1.2 Godot
 1.4.1.1.3 Unreal
 1.4.1.2 What programming language should I use to develop it?
 	1.4.1.2.1 C++
-	1.4.1.2.2 C#
-	1.4.1.2.3 Python
-1.4.1.2 weekly effort allocation
-	1.4.1.2.1  goal per week
-1.4.1.2.1.1 Once all of the documentation has been taken care of I plan on working 5 hours a week during work and the other 4 during my personal time.
-1.4.1.3 full development timeline
-1.4.1.3.1 * development timeline may have to be adjusted due to issues arising with getting the framework of the ground… (1/20/25)
-1.4.1.3.1 Month 1
-1.4.1.3.1.1 the full skeleton built and much of the base mechanics fleshed out/working towards available testing by month two. Have the map able to be explored
-1.4.1.3.2 Month 2
-1.4.1.3.2.1 Finish the basic moments. Develop and be able to start testing the combat system. Start work in the menu system.
-1.4.1.3.3 Month 3
-1.4.1.3.3.1 manage and develop the maps, test out and balance the boss battles. Work on implementing the unique character abilities and armor
-1.4.1.3.4 Month 4
-1.4.1.3.4.1 work on leveling up adjustments. The assignment of different rarities of weapons and armor. Test RNG to see if it is still as random as I thought it should be.
-1.4.1.3.5 Month 5
-1.4.1.3.5.1 Testing is the main focus of this month and should only be making changes based on play testing. Focus on refining the difficulty slider and effective RNG randomness where possible.
-1.4.1.3.6 Month 6
-1.4.1.3.6.1 clean up programming. Making things look pretty, functional and effective. Rigorous play testing will be needed by the time I am ready to make this game available for play.
-1.4.2 Game storage size
-1.4.2.1 I want the game to be smaller in size (storage wise) but I still want a full fledged game.
+	1.4.1.2.2 Godot languages
+1.4.2. Full development timeline
+1.4.2.1 Milestone system
+1.4.2.1.1 Each milestone will be an expected and sought after goal of the development process. I will need to define each step with progress points and possibly estimate how long it will take me to go from nothing to a fully published game on steam.
+				1.4.2.2 Milestone 1
+1.4.2.2.1 The game is in a functional state and it compiles and can run but maybe not run well.
+1.4.2.2.2 Estimated time to reach this point. 1-3 Months (10/30/25)
+1.4.2.2.3 Evidence that we have reached this point will suggest that I have put in over 60 or more hours of serious development time to get here. Since I don’t have a lot of time to work on it this is only an estimate
+1.4.2.3 Milestone 2
+1.4.2.3.1 The game is not refined and I have gotten to a point where running unit tests will be possible to make sure my code works
+1.4.2.3.2 I will start making unit tests as well as refining the system to work how I want it to. Estimated time to get here 2-5 Months
+1.4.2.3.3 I will likely have put more than 150 hours in at this point writing and testing the game so that my tests pass.
+1.4.2.4 Milestone 3
+1.4.2.4.1 The majority of the backend is finished and I have a game that has no visuals but works in function.
+1.4.2.4.2 Estimated time to get here 1-3 Months
+1.4.2.4.3 I will likely have around 200 hours into the project at this point.
+1.4.2.5 Milestone 4
+1.4.2.5.1 This point I will need to have worked on getting the visual matching with the game mechanics in Godot so that I can unify them so that the player can actually see the game he is playing.
+1.4.2.5.2 Estimated time to get here 3-6 Months
+1.4.2.5.3 I will likely need to have 300 plus hours into the game at this point as I am not artist but I can make the game look good at this point
+1.4.2.6 Milestone 5
+1.4.2.6.1 This will likely be the endgame of the project. I will want to have the game not only in a playable state but have the ability to have people play test it for further refining. I will also want to work on getting the game published on Steam and every platform that I can get it onto.
+1.4.2.6.2 Estimated time to get here ???
+1.4.2.6.3 When all is said and done I think I will likely have put 500 plus hours into it at this point but not
+1.4.3 Game storage size
+1.4.3.1 I want the game to be smaller in size (storage wise) but I still want a full fledged game.
            1.5 Definitions and Acronyms
 1.5.1 RNG
 1.5.1.1 Random Number Generator
 1.5.2 RPG/RPG’s
 1.5.2.1 Role-Playing Game
 		1.5.3 explore*
-1.5.3.1 This game will likely sit somewhere between a linear pathing (like pokemon before gen 8) and a completely open world (like Zelda TOtK). I don’t know exactly what that will entail at this moment in time but I want to make sure that my players are not on railroad tracks and they have the ability to explore the world but it won’t be completely open world. I may have to do a combination of the spin-off Mario games (Super Mario RPG for example) and (insert game here… I can’t think of one at this moment) 8/20/24
+1.5.3.1 This game will likely sit somewhere between a linear pathing (like pokemon before gen 9) and a completely open world (like Zelda TOtK). I don’t know exactly what that will entail at this moment in time but I want to make sure that my players are not on railroad tracks and they have the ability to explore the world but it won’t be completely open world. I may have to do a combination of the spin-off Mario games (Super Mario RPG for example) and (insert game here… I can’t think of one at this moment) 8/20/24
 1.5.4 lvl
 1.5.4.1 an abbreviation for level
 2. Overall Description

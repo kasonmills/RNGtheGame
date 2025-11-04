@@ -3,13 +3,13 @@ using System.Collections.Generic;
 
 namespace game_files;
 
-public abstract class Ability
+public abstract class Entity
 {
-    public string Name; // each ability needs a name
+    public string Name; // each entity needs a name
     public string Description; // a brief description
-    public int Ability_level; // what level the ability is on
+    public int level; // level of the entity
+    public int Health; // health points
+    public int MaxHealth; // maximum health points
 
-    public string Ability_target;
-
-    public abstract void Execute(Player player, Entity target = null);
+    public abstract void Execute(Entity target = null);
 }

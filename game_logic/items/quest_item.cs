@@ -3,13 +3,15 @@ using System.Collections.Generic;
 
 namespace game_files;
 
-public class Unique : Item
+public class QuestItem : Item
 {
-    // this subclass is used for items that don't quite fit into the other basic categories
-    public string _unqiue;
-
-    public Unique(string name, string unique) :base(name)
+    public QuestItem(string name, string description) : base(name, description)
     {
-        _unqiue = unique;
+    }
+
+    public override void Use(Character user)
+    {
+        Console.WriteLine($"{user.Name} uses {Name}.");
+        // Implement quest item-specific logic here
     }
 }
