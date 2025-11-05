@@ -11,10 +11,21 @@ class Program
     */
     static void Main(string[] args)
     {
-        GameManager game = new GameManager();
-        game.StartNewGame();
-        // Run text-based game loop for testing
-        game.Run();
+        // console test only comment out when using godot
+        try
+        {
+            GameManager game = new GameManager();
+            game.StartNewGame();
+            game.Run();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("\n=== FATAL ERROR ===");
+            Console.WriteLine($"The game crashed: {ex.Message}");
+            Console.WriteLine("\nPress any key to exit...");
+            Console.ReadKey();
+        }
+        // end console test
     }
 }
 

@@ -1,134 +1,133 @@
 using System;
 using System.Collections.Generic;
+using GameLogic.Items;
+using GameLogic.Data;
 
-namespace game_files;
-
-/*
-this class is the players file. It has everything to do with the player and every aspect related to them.
-*/
-public class Player : Entity
+namespace GameLogic.Entities.Player
 {
-    // Define Player Attributes
-    public string Name;
-    public int Level;
-    public int Experience;
-    public int Health;
-    public int MaxHealth;
-    public int Gold;
-    Random rd = new Random();
-
-    // call a new instance of the play ability so that will affect the players stats as needed.
-
-    public int Savefile;
-
-    // Inventory
-    public List<Item> Inventory = new List<Item>();
-    public Weapon EquippedWeapon;
-    public Armor EquippedArmor;
-
-    // define the player from the save file, I will also need a flag that checks to see if it a new game or not
-    public Player(string name)
+    public class Player // Remove ": Entity" for now until we build Entity.cs
     {
-        Name = name;
-        Level = 1;
-        Experience = 0;
-        MaxHealth = 20;
-        Health = MaxHealth;
-        Gold = 0;
-        Inventory.Clear();
-    }
+        // Player Attributes
+        public string Name;
+        public int Level;
+        public int Experience;
+        public int Health;
+        public int MaxHealth;
+        public int Gold;
+        private Random rd = new Random();
 
-    public static Player LoadFromSave(SaveData data)
-    {
-        Player player = new Player(data.Name);
-        player.Level = data.Level;
-        player.Experience = data.Experience;
-        player.MaxHealth = data.MaxHealth;
-        player.Health = data.Health;
-        player.Gold = data.Gold;
-        player.Inventory = data.Inventory;
-        return player;
-    }
+        // Inventory
+        public List<Item> Inventory = new List<Item>();
+        public Weapon EquippedWeapon;
+        public Armor EquippedArmor;
 
-    // Adds experience to the player and levels up if the experience threshold is met.
-    public void AddExperience(int exp, int level)
-    {
-        Experience += exp;
-        // I will keep lines like these in here for testing purposes
-        Console.WriteLine($"{Name} gained {exp} experience!");
-
-        while (Experience >= ExperienceToLevelUp(level))
+        // Constructor for new player
+        public Player(string name)
         {
-            Experience -= ExperienceToLevelUp(level);
-            LevelUp();
+            Name = name;
+            Level = 1;
+            Experience = 0;
+            MaxHealth = 20;
+            Health = MaxHealth;
+            Gold = 0;
+            Inventory = new List<Item>();
         }
-    }
 
-    // Levels up the player, increasing stats and health.
-    private void LevelUp()
-    {
-        Level++;
-        MaxHealth += rd.Next(1, 7); // this range may change 1/30/25
-        Health = MaxHealth; // Restore health on level up
-
-        // this line is here for testing purposes
-        Console.WriteLine($"{Name} leveled up to level {Level}!");
-    }
-
-    // Calculates the experience needed to level up.
-    private int ExperienceToLevelUp(int currentLVL)
-    {
-        int i = 1;
-        double expCalc = 120;
-        while (i < currentLVL)
+        // Load player from save data
+        public static Player LoadFromSave(SaveData data)
         {
-            expCalc *= 1.035;
-            i++;
+            Player player = new Player(data.PlayerName);
+            player.Level = data.Level;
+            player.Experience = data.Experience;
+            player.MaxHealth = data.MaxHealth;
+            player.Health = data.Health;
+            player.Gold = data.Gold;
+            
+            // TODO: Reconstruct inventory from item names
+            // For now, leave inventory empty until we build ItemDatabase
+            player.Inventory = new List<Item>();
+            
+            return player;
         }
-        int expNeeded = Convert.ToInt32(expCalc);
-        return expNeeded;
-    }
 
-    // Heals the player by a specific amount.
-    public void Heal(int amount)
-    {
-        // I need to have an method that will increase the health of the player but it needs to work with all healing methods 1/30/25
-        // this will likely need a switch case to change the text based on what kind of healing they are using.
-        Console.WriteLine($"{Name} healed for {amount} health. Current health: {Health}/{MaxHealth}");
-    }
-
-    // Takes damage and reduces health.
-    public void TakeDamage(int damage)
-    {
-        Health -= damage;
-        if (Health <= 0)
+        // Adds experience and handles level ups
+        public void AddExperience(int exp)
         {
-            Console.WriteLine($"{Name} has been defeated!");
+            Experience += exp;
+            Console.WriteLine($"{Name} gained {exp} experience!");
+
+            while (Experience >= ExperienceToLevelUp())
+            {
+                Experience -= ExperienceToLevelUp();
+                LevelUp();
+            }
         }
-        else
+
+        // Level up the player
+        private void LevelUp()
         {
-            Console.WriteLine($"{Name} took {damage} damage. Current health: {Health}/{MaxHealth}");
+            Level++;
+            MaxHealth += rd.Next(1, 7);
+            Health = MaxHealth; // Full heal on level up
+            Console.WriteLine($"{Name} leveled up to level {Level}!");
         }
-    }
 
-    // Adds an item to the player's inventory.
-    public void AddToInventory(Item item)
-    {
-        Inventory.Add(item);
-        Console.WriteLine($"{item.Name} has been added to your inventory.");
-    }
+        // Calculate XP needed for next level
+        private int ExperienceToLevelUp()
+        {
+            double expCalc = 120;
+            for (int i = 1; i < Level; i++)
+            {
+                expCalc *= 1.035;
+            }
+            return Convert.ToInt32(expCalc);
+        }
 
-    // Equips a weapon, replacing the current weapon if one is already equipped.
-    public void EquipWeapon(Weapon weapon)
-    {
-        EquippedWeapon = weapon;
-        Console.WriteLine($"{Name} equipped {weapon.Name}.");
-    }
+        // Heal the player (FIXED - actually increases health now!)
+        public void Heal(int amount)
+        {
+            Health += amount;
+            if (Health > MaxHealth)
+            {
+                Health = MaxHealth;
+            }
+            Console.WriteLine($"{Name} healed for {amount} HP. Current health: {Health}/{MaxHealth}");
+        }
 
-    // Equips armor, replacing the current armor if one is already equipped.
-    public void EquipArmor(Armor armor)
-    {
-        EquippedArmor = armor;
-        Console.WriteLine($"{Name} equipped {armor.Name}.");
+        // Take damage
+        public void TakeDamage(int damage)
+        {
+            Health -= damage;
+            if (Health <= 0)
+            {
+                Health = 0;
+                Console.WriteLine($"{Name} has been defeated!");
+            }
+            else
+            {
+                Console.WriteLine($"{Name} took {damage} damage. Current health: {Health}/{MaxHealth}");
+            }
+        }
+
+        // Add item to inventory
+        public void AddToInventory(Item item)
+        {
+            Inventory.Add(item);
+            Console.WriteLine($"{item.Name} has been added to your inventory.");
+        }
+
+        // Equip weapon
+        public void EquipWeapon(Weapon weapon)
+        {
+            EquippedWeapon = weapon;
+            Console.WriteLine($"{Name} equipped {weapon.Name}.");
+        }
+
+        // Equip armor
+        public void EquipArmor(Armor armor)
+        {
+            EquippedArmor = armor;
+            Console.WriteLine($"{Name} equipped {armor.Name}.");
+        }
     }
 }
