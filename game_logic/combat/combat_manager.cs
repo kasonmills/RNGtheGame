@@ -6,19 +6,25 @@ using GameLogic.Systems;
 namespace GameLogic.Combat
 {
     /// <summary>
-    /// Manages turn-based combat between player and enemies
-    /// Handles combat flow, damage calculation, and turn order
+    /// Orchestrates combat encounters between player and enemies
+    /// Delegates to specialized managers for turn order, damage, and actions
     /// </summary>
     public class CombatManager
     {
         private RNGManager _rngManager;
+        private TurnManager _turnManager;
+        private DamageCalculator _damageCalculator;
+        
         private Player _player;
         private Enemy _enemy;
-        private int _turnCount;
+        private bool _combatActive;
+        private bool _playerDefending;
 
         public CombatManager(RNGManager rngManager)
         {
             _rngManager = rngManager;
+            _turnManager = new TurnManager();
+            _damageCalculator = new DamageCalculator(rngManager);
         }
 
         /// <summary>
@@ -29,58 +35,95 @@ namespace GameLogic.Combat
         {
             _player = player;
             _enemy = enemy;
-            _turnCount = 0;
+            _combatActive = true;
+            _playerDefending = false;
 
+            // Initialize turn manager
+            _turnManager.InitializeCombat(player, enemy);
+
+            // Display combat start
+            ShowCombatIntro();
+
+            // Main combat loop
+            while (_combatActive && _player.Health > 0 && _enemy.Health > 0)
+            {
+                Console.WriteLine($"\n{_turnManager.GetTurnStatus()}");
+                
+                if (_turnManager.IsPlayerTurn())
+                {
+                    PlayerTurn();
+                }
+                else
+                {
+                    EnemyTurn();
+                }
+
+                // Check for combat end
+                if (_enemy.Health <= 0)
+                {
+                    return HandleVictory();
+                }
+                else if (_player.Health <= 0)
+                {
+                    return HandleDefeat();
+                }
+
+                _turnManager.NextTurn();
+                
+                // Show status between turns
+                if (_combatActive)
+                {
+                    ShowCombatStatus();
+                }
+            }
+
+            // Fled from combat
+            return false;
+        }
+
+        /// <summary>
+        /// Display combat introduction
+        /// </summary>
+        private void ShowCombatIntro()
+        {
             Console.Clear();
             Console.WriteLine("=".PadRight(50, '='));
             Console.WriteLine($"    COMBAT: {_player.Name} vs {_enemy.Name}");
             Console.WriteLine("=".PadRight(50, '='));
+            Console.WriteLine($"\nEnemy Level: {_enemy.Level}");
+            Console.WriteLine($"Enemy HP: {_enemy.Health}/{_enemy.MaxHealth}");
             Console.WriteLine();
-
-            // Main combat loop
-            while (_player.Health > 0 && _enemy.Health > 0)
-            {
-                _turnCount++;
-                Console.WriteLine($"\n--- Turn {_turnCount} ---");
-                
-                // Player turn
-                PlayerTurn();
-                
-                if (_enemy.Health <= 0)
-                {
-                    return PlayerVictory();
-                }
-
-                // Enemy turn
-                EnemyTurn();
-                
-                if (_player.Health <= 0)
-                {
-                    return PlayerDefeat();
-                }
-
-                // Show status after both turns
-                ShowCombatStatus();
-            }
-
-            // Should never reach here, but just in case
-            return _player.Health > 0;
         }
 
         /// <summary>
-        /// Player's turn - choose action
+        /// Handle the player's turn
         /// </summary>
         private void PlayerTurn()
         {
+            // Reset defense status at start of turn
+            _playerDefending = false;
+
             Console.WriteLine($"\n{_player.Name}'s Turn!");
             Console.WriteLine($"Your HP: {_player.Health}/{_player.MaxHealth}");
             Console.WriteLine($"Enemy HP: {_enemy.Health}/{_enemy.MaxHealth}");
             
+            // Get player's action choice
+            CombatAction action = GetPlayerAction();
+            
+            // Process the action
+            ProcessAction(action);
+        }
+
+        /// <summary>
+        /// Get the player's chosen action
+        /// </summary>
+        private CombatAction GetPlayerAction()
+        {
             Console.WriteLine("\nChoose your action:");
             Console.WriteLine("1. Attack");
             Console.WriteLine("2. Use Active Ability");
             Console.WriteLine("3. Use Item (TODO)");
-            Console.WriteLine("4. Defend (reduce damage this turn)");
+            Console.WriteLine("4. Defend");
             Console.WriteLine("5. Try to Flee");
 
             Console.Write("\nChoice: ");
@@ -89,102 +132,176 @@ namespace GameLogic.Combat
             switch (choice)
             {
                 case "1":
-                    PlayerAttack();
-                    break;
+                    return CombatAction.Attack(_player, _enemy);
                 case "2":
-                    UseActiveAbility();
-                    break;
+                    // TODO: Implement ability selection
+                    Console.WriteLine("\nActive abilities not implemented yet. Attacking instead!");
+                    return CombatAction.Attack(_player, _enemy);
                 case "3":
-                    Console.WriteLine("Items not implemented yet. Attacking instead!");
-                    PlayerAttack();
-                    break;
+                    // TODO: Implement item selection
+                    Console.WriteLine("\nItems not implemented yet. Attacking instead!");
+                    return CombatAction.Attack(_player, _enemy);
                 case "4":
-                    PlayerDefend();
-                    break;
+                    return CombatAction.Defend(_player);
                 case "5":
-                    AttemptFlee();
-                    break;
+                    return CombatAction.Flee(_player);
                 default:
                     Console.WriteLine("Invalid choice. Attacking by default.");
-                    PlayerAttack();
+                    return CombatAction.Attack(_player, _enemy);
+            }
+        }
+
+        /// <summary>
+        /// Handle the enemy's turn
+        /// </summary>
+        private void EnemyTurn()
+        {
+            Console.WriteLine($"\n{_enemy.Name}'s Turn!");
+
+            // Simple AI: Always attack
+            // TODO: Implement more sophisticated AI (use abilities, etc.)
+            CombatAction action = CombatAction.Attack(_enemy, _player);
+            
+            ProcessAction(action);
+        }
+
+        /// <summary>
+        /// Process a combat action
+        /// </summary>
+        private void ProcessAction(CombatAction action)
+        {
+            switch (action.Type)
+            {
+                case ActionType.Attack:
+                    ProcessAttack(action);
+                    break;
+                case ActionType.UseAbility:
+                    ProcessAbility(action);
+                    break;
+                case ActionType.UseItem:
+                    ProcessItem(action);
+                    break;
+                case ActionType.Defend:
+                    ProcessDefend(action);
+                    break;
+                case ActionType.Flee:
+                    ProcessFlee(action);
                     break;
             }
         }
 
         /// <summary>
-        /// Player uses their active ability (if they have one)
-        /// Passive abilities don't need activation - they apply automatically
+        /// Process an attack action
         /// </summary>
-        private void UseActiveAbility()
+        private void ProcessAttack(CombatAction action)
         {
-            // TODO: Check if player has an ability assigned
-            // TODO: Check if ability REQUIRES ACTIVATION (active abilities only)
-            // TODO: Execute the ability
-            
-            Console.WriteLine("\nActive abilities not fully implemented yet!");
-            Console.WriteLine("For now, attacking instead...");
-            PlayerAttack();
-            
-            // FUTURE IMPLEMENTATION:
-            // if (_player.SelectedAbility != null && _player.SelectedAbility.RequiresActivation)
-            // {
-            //     // Player must use a turn to activate (heal, special attack, buff)
-            //     _player.SelectedAbility.Execute(_player, _enemy);
-            // }
-            // else
-            // {
-            //     Console.WriteLine("You don't have an active ability to use!");
-            //     Console.WriteLine("(Passive abilities apply automatically)");
-            // }
+            Console.WriteLine($"\n{action.Actor.Name} attacks {action.Target.Name}!");
+
+            DamageResult result;
+
+            // Calculate damage based on attacker type
+            if (action.Actor == _player)
+            {
+                result = _damageCalculator.CalculatePlayerAttackDamage(_player, _enemy);
+                
+                // Check if player is unarmed
+                if (_player.EquippedWeapon == null)
+                {
+                    Console.WriteLine("(Fighting unarmed - find a weapon!)");
+                }
+            }
+            else
+            {
+                result = _damageCalculator.CalculateEnemyAttackDamage(_enemy, _player);
+                
+                // Apply defense reduction if player is defending
+                if (_playerDefending && action.Target == _player)
+                {
+                    result.FinalDamage = result.FinalDamage / 2;
+                    Console.WriteLine($"Defensive stance reduced damage by {result.FinalDamage}!");
+                }
+            }
+
+            // Display result
+            if (result.Missed)
+            {
+                Console.WriteLine("The attack missed!");
+            }
+            else
+            {
+                if (result.IsCritical)
+                {
+                    Console.WriteLine("CRITICAL HIT!");
+                }
+
+                if (result.DamageReduced > 0)
+                {
+                    Console.WriteLine($"Armor blocked {result.DamageReduced} damage!");
+                }
+
+                // Apply damage
+                action.Target.TakeDamage(result.FinalDamage);
+                Console.WriteLine($"{action.Target.Name} took {result.FinalDamage} damage!");
+            }
         }
 
         /// <summary>
-        /// Player defends - reduces incoming damage
+        /// Process an ability action
         /// </summary>
-        private void PlayerDefend()
+        private void ProcessAbility(CombatAction action)
         {
-            Console.WriteLine($"\n{_player.Name} takes a defensive stance!");
-            // TODO: Implement defense buff that reduces next attack damage
-            // For now, just skip turn
+            // TODO: Implement ability processing
+            // action.Ability.Execute(action.Actor, action.Target);
+            Console.WriteLine("Abilities not fully implemented yet!");
         }
 
         /// <summary>
-        /// Player attempts to flee from combat
+        /// Process an item action
         /// </summary>
-        private void AttemptFlee()
+        private void ProcessItem(CombatAction action)
+        {
+            // TODO: Implement item processing
+            Console.WriteLine("Items not implemented yet!");
+        }
+
+        /// <summary>
+        /// Process a defend action
+        /// </summary>
+        private void ProcessDefend(CombatAction action)
+        {
+            Console.WriteLine($"\n{action.Actor.Name} takes a defensive stance!");
+            
+            if (action.Actor == _player)
+            {
+                _playerDefending = true;
+                Console.WriteLine("Next incoming attack will deal reduced damage!");
+            }
+        }
+
+        /// <summary>
+        /// Process a flee action
+        /// </summary>
+        private void ProcessFlee(CombatAction action)
         {
             int fleeChance = 30; // Base 30% chance
             int fleeRoll = _rngManager.Roll(1, 100);
 
             if (fleeRoll <= fleeChance)
             {
-                Console.WriteLine($"\n{_player.Name} successfully fled from combat!");
+                Console.WriteLine($"\n{action.Actor.Name} successfully fled from combat!");
                 Console.WriteLine("You escaped, but gained no rewards...");
+                Console.WriteLine($"Remaining HP: {_player.Health}/{_player.MaxHealth}");
+                
+                _combatActive = false;
+                
                 Console.WriteLine("\nPress any key to continue...");
                 Console.ReadKey();
-                
-                // End combat as a "loss" (no XP/loot)
-                _enemy.Health = 0; // Trick to end combat loop
-                _player.Health = 1; // Keep player alive
             }
             else
             {
-                Console.WriteLine($"\n{_player.Name} failed to escape!");
-                Console.WriteLine("The enemy gets a free attack!");
-                // Enemy gets bonus attack as punishment for failed flee
+                Console.WriteLine($"\n{action.Actor.Name} failed to escape!");
+                Console.WriteLine("Turn wasted!");
             }
-        }
-
-        /// <summary>
-        /// Enemy's turn - AI decides action
-        /// </summary>
-        private void EnemyTurn()
-        {
-            Console.WriteLine($"\n{_enemy.Name}'s Turn!");
-
-            // Simple AI: Always attack for now
-            // TODO: Make AI use abilities, defend, etc.
-            EnemyAttack();
         }
 
         /// <summary>
@@ -204,7 +321,7 @@ namespace GameLogic.Combat
         /// <summary>
         /// Handle player victory
         /// </summary>
-        private bool PlayerVictory()
+        private bool HandleVictory()
         {
             Console.Clear();
             Console.WriteLine("\n" + "=".PadRight(50, '='));
@@ -223,7 +340,7 @@ namespace GameLogic.Combat
             _player.AddExperience(xpGained);
             _player.Gold += goldGained;
 
-            // TODO: Roll for loot drops
+            // TODO: Roll for loot drops using LootTable
 
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
@@ -234,7 +351,7 @@ namespace GameLogic.Combat
         /// <summary>
         /// Handle player defeat
         /// </summary>
-        private bool PlayerDefeat()
+        private bool HandleDefeat()
         {
             Console.Clear();
             Console.WriteLine("\n" + "=".PadRight(50, '='));
@@ -251,18 +368,16 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Calculate XP reward with more randomness
+        /// Calculate XP reward with randomness
         /// </summary>
         private int CalculateXPReward()
         {
-            // Base XP range scales with enemy level
             int minXP = _enemy.Level * 30;
             int maxXP = _enemy.Level * 70;
             
-            // Add some randomness
             int baseXP = _rngManager.Roll(minXP, maxXP);
             
-            // Bonus XP chance (10% chance for +50% XP)
+            // 10% chance for bonus XP
             int bonusRoll = _rngManager.Roll(1, 100);
             if (bonusRoll <= 10)
             {
@@ -275,18 +390,16 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Calculate gold reward with more randomness
+        /// Calculate gold reward with randomness
         /// </summary>
         private int CalculateGoldReward()
         {
-            // Base gold range scales with enemy level
             int minGold = _enemy.Level * 3;
             int maxGold = _enemy.Level * 20;
             
-            // Random gold within range
             int gold = _rngManager.Roll(minGold, maxGold);
             
-            // Small chance for treasure bonus (5% chance for double gold)
+            // 5% chance for treasure bonus
             int treasureRoll = _rngManager.Roll(1, 100);
             if (treasureRoll <= 5)
             {

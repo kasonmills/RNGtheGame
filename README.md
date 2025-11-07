@@ -13,13 +13,15 @@ RNGTheGame/
 │   │   ├── Player/
 │   │   │   ├── Player.cs               # Player data and stats
 │   │   │   └── PlayerInventory.cs      # Inventory management
-│   │   ├── Enemies/
-│   │   │   ├── Enemy.cs                # Enemy base class
-│   │   │   ├── EnemyAI.cs              # AI decision-making
-│   │   │   └── EnemyTypes/             # Folder for specific enemy classes
-│   │   │       ├── Goblin.cs
-│   │   │       ├── Dragon.cs
-│   │   │       └── Bandit.cs
+|   |   |   Enemies/
+|   |   |      EnemyBase.cs
+|   |   |      EnemyStats.cs
+|   |   |      EnemyAbilities.cs
+|   |   |      EnemyAI.cs
+|   |   |      EnemyTypes/
+|   |   |          Goblin.cs
+|   |   |          Dragon.cs
+|   |   |          Bandit.cs
 │   │   └── NPCs/
 │   │       ├── NPC.cs                  # Base NPC class
 │   │       └── Shopkeeper.cs
