@@ -1,6 +1,6 @@
 using System;
 
-namespace game_files;
+namespace GameLogic.Entities.Enemies;
 
 class EnemyAI
 {

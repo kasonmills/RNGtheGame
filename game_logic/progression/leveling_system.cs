@@ -1,6 +1,6 @@
 using System;
 
-namespace game_logic;
+namespace GameLogic.Progression;
 
 public class LevelingSystem
 {

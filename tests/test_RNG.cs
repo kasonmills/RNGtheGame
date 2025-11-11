@@ -1,6 +1,6 @@
 using System;
 
-namespace game_logic;
+namespace GameLogic.Tests;
 
 [Test]
 public class RNGTests

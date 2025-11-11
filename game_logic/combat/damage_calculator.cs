@@ -2,6 +2,8 @@ using System;
 using GameLogic.Entities.Player;
 using GameLogic.Entities.Enemies;
 using GameLogic.Systems;
+using GameLogic.Abilities.PlayerAbilities;
+using GameLogic.Abilities.EnemyAbilities;
 
 namespace GameLogic.Combat
 {
@@ -42,23 +44,37 @@ namespace GameLogic.Combat
             int levelBonus = attacker.Level / 2; // +1 damage per 2 levels
             baseDamage += levelBonus;
 
-            // Step 4: Apply passive ability modifiers
-            baseDamage = ApplyPlayerPassiveAbilities(attacker, baseDamage);
+            // Step 4: Apply AttackBoost effect if active
+            if (attacker.HasEffect<AttackBoostEffect>())
+            {
+                var attackBoost = attacker.GetEffect<AttackBoostEffect>();
+                double multiplier = attackBoost.GetDamageMultiplier();
+                baseDamage = (int)(baseDamage * multiplier);
+            }
 
             // Step 5: Check for critical hit
             int critChance = GetPlayerCritChance(attacker);
             int critRoll = _rngManager.Roll(1, 100);
-            
+
             if (critRoll <= critChance)
             {
                 result.IsCritical = true;
                 baseDamage = (int)(baseDamage * 1.5f); // 50% bonus
             }
 
-            // Step 6: Apply enemy defense/armor (handled separately)
+            // Step 6: Apply enemy RageEffect defense penalty if active
+            // (Enraged enemies take more damage due to lowered defense)
+            if (target.HasEffect<RageEffect>())
+            {
+                var rage = target.GetEffect<RageEffect>();
+                double defenseMultiplier = rage.GetDefenseMultiplier();
+                baseDamage = (int)(baseDamage * defenseMultiplier);
+            }
+
+            // Step 7: Apply enemy defense (future implementation)
             result.RawDamage = baseDamage;
             result.FinalDamage = baseDamage;
-            
+
             return result;
         }
 
@@ -81,16 +97,24 @@ namespace GameLogic.Combat
             // Step 2: Calculate base damage
             int baseDamage = _rngManager.Roll(attacker.MinDamage, attacker.MaxDamage);
 
-            // Step 3: Check for critical hit
+            // Step 3: Apply RageEffect if active
+            if (attacker.HasEffect<RageEffect>())
+            {
+                var rage = attacker.GetEffect<RageEffect>();
+                double multiplier = rage.GetDamageMultiplier();
+                baseDamage = (int)(baseDamage * multiplier);
+            }
+
+            // Step 4: Check for critical hit
             int critRoll = _rngManager.Roll(1, 100);
-            
+
             if (critRoll <= attacker.CritChance)
             {
                 result.IsCritical = true;
                 baseDamage = (int)(baseDamage * 1.5f);
             }
 
-            // Step 4: Apply player armor reduction
+            // Step 5: Apply player armor reduction
             int finalDamage = ApplyArmorReduction(baseDamage, target);
 
             result.RawDamage = baseDamage;
@@ -152,19 +176,28 @@ namespace GameLogic.Combat
             if (player.EquippedWeapon != null)
             {
                 int critChance = player.EquippedWeapon.CritChance;
-                
-                // TODO: Apply crit-boosting passive abilities
-                // if (player has CriticalStrike ability)
-                // {
-                //     critChance += 10;
-                // }
-                
+
+                // Apply CriticalStrike effect if active
+                if (player.HasEffect<CriticalStrikeEffect>())
+                {
+                    var critBoost = player.GetEffect<CriticalStrikeEffect>();
+                    critChance += critBoost.GetCritChanceBonus();
+                }
+
                 return critChance;
             }
             else
             {
-                // Unarmed: Minimal crit chance
-                return 2;
+                // Unarmed: Minimal crit chance (still benefit from CriticalStrike effect)
+                int critChance = 2;
+
+                if (player.HasEffect<CriticalStrikeEffect>())
+                {
+                    var critBoost = player.GetEffect<CriticalStrikeEffect>();
+                    critChance += critBoost.GetCritChanceBonus();
+                }
+
+                return critChance;
             }
         }
 
@@ -195,24 +228,30 @@ namespace GameLogic.Combat
         /// </summary>
         private int ApplyArmorReduction(int rawDamage, Player target)
         {
+            double damageMultiplier = 1.0;
+
+            // Apply DefenseBoost effect if active
+            if (target.HasEffect<DefenseBoostEffect>())
+            {
+                var defenseBoost = target.GetEffect<DefenseBoostEffect>();
+                damageMultiplier *= defenseBoost.GetDamageMultiplier();
+            }
+
+            // Apply damage multiplier from effects first
+            int adjustedDamage = (int)(rawDamage * damageMultiplier);
+
             if (target.EquippedArmor != null)
             {
                 int defense = target.EquippedArmor.Defense;
-                
-                // TODO: Apply defense-boosting passive abilities
-                // if (target has DefenseBoost ability)
-                // {
-                //     defense += 5;
-                // }
-                
+
                 // Armor reduces damage but never below 1
-                int finalDamage = Math.Max(1, rawDamage - defense);
+                int finalDamage = Math.Max(1, adjustedDamage - defense);
                 return finalDamage;
             }
             else
             {
-                // No armor: Full damage
-                return rawDamage;
+                // No armor: Return adjusted damage (with DefenseBoost if active)
+                return Math.Max(1, adjustedDamage);
             }
         }
 

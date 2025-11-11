@@ -1,21 +1,20 @@
 using System;
 
-namespace RNGtheGame.core
+namespace GameLogic.Entities.NPCs;
+
+public class NPCBase : Entity
 {
-    public class NPCBase : Entity
+    public string Name { get; set; }
+    public int Level { get; set; }
+
+    public NPCBase(string name, int level)
     {
-        public string Name { get; set; }
-        public int Level { get; set; }
+        Name = name;
+        Level = level;
+    }
 
-        public NPCBase(string name, int level)
-        {
-            Name = name;
-            Level = level;
-        }
-
-        public void Speak(string message)
-        {
-            Console.WriteLine($"{Name} says: {message}");
-        }
+    public void Speak(string message)
+    {
+        Console.WriteLine($"{Name} says: {message}");
     }
 }

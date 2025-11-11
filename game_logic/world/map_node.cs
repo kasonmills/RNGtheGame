@@ -1,6 +1,6 @@
-using system;
+using System;
 
-namespace game_logic;
+namespace GameLogic.World;
 
 public class MapNode
 {

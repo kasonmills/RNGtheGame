@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace game_files;
+namespace GameLogic.Items;
 
 // Base Item Class (Extend for Weapons, Armor, etc.)
 public abstract class Item

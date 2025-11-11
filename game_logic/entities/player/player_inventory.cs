@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace game_files;
+namespace GameLogic.Entities.Player;
 
 public class PlayerInventory
 {

@@ -1,6 +1,6 @@
 using System;
 
-namespace game_logic.abilities;
+namespace GameLogic.Items;
 
 public class ItemDatabase
 {

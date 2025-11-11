@@ -1,6 +1,6 @@
 using system;
 
-namespace game_logic;
+namespace GameLogic.World;
 
 public class MapManager
 {

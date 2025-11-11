@@ -2,8 +2,6 @@
 
 using GameLogic.Core;
 
-namespace game;
-
 class Program
 {
     /*
