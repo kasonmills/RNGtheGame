@@ -13,6 +13,5 @@
 13. update the related logic for new abilities
 14. generate/populate the singular loot table for the entire game
 15. implement a way to save what selections have been made in the savedata
-16. figure out the session/prompt limit so I can plan accordingly
-17. 
+16. 
 in no particular order of importance

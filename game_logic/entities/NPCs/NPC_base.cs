@@ -1,20 +1,246 @@
 using System;
+using System.Collections.Generic;
+using GameLogic.Items;
 
-namespace GameLogic.Entities.NPCs;
-
-public class NPCBase : Entity
+namespace GameLogic.Entities.NPCs
 {
-    public string Name { get; set; }
-    public int Level { get; set; }
-
-    public NPCBase(string name, int level)
+    /// <summary>
+    /// Types of NPCs in the game
+    /// </summary>
+    public enum NPCType
     {
-        Name = name;
-        Level = level;
+        Generic,        // Non-interactive background NPCs
+        Merchant,       // Shop vendors
+        QuestGiver,     // NPCs that give quests
+        Companion,      // Party members that travel with player (leveled)
+        Trainer,        // NPCs that teach abilities or provide upgrades
+        Innkeeper,      // Rest/healing NPCs
+        Blacksmith,     // Weapon/armor upgrades
+        Guard,          // Town guards
+        Citizen         // Interactive townspeople
     }
 
-    public void Speak(string message)
+    /// <summary>
+    /// Base class for all NPCs
+    /// Supports both leveled (companions) and non-leveled NPCs
+    /// </summary>
+    public class NPCBase : Entity
     {
-        Console.WriteLine($"{Name} says: {message}");
+        // NPC Identity
+        public NPCType Type { get; set; }
+        public string Greeting { get; set; }
+        public List<string> Dialogues { get; set; }
+
+        // Companion-specific properties (only used if Type == Companion)
+        public bool IsCompanion => Type == NPCType.Companion;
+        public bool InParty { get; set; }
+        public Weapon EquippedWeapon { get; set; }
+        public Armor EquippedArmor { get; set; }
+
+        // Shop-specific properties (only used if Type == Merchant)
+        public List<Item> ShopInventory { get; set; }
+        public int BuyPriceMultiplier { get; set; } = 100;  // Percent (100 = normal price)
+        public int SellPriceMultiplier { get; set; } = 50;  // Percent (50 = half price when selling)
+
+        /// <summary>
+        /// Constructor for non-leveled NPCs
+        /// </summary>
+        public NPCBase(string name, NPCType type, string greeting = null)
+        {
+            Name = name;
+            Type = type;
+            Level = 0; // Non-leveled NPCs have level 0
+            Greeting = greeting ?? $"Hello, I'm {name}.";
+            Dialogues = new List<string>();
+            ShopInventory = new List<Item>();
+            InParty = false;
+        }
+
+        /// <summary>
+        /// Constructor for leveled companions
+        /// </summary>
+        public NPCBase(string name, int level, int health, int maxHealth) : this(name, NPCType.Companion)
+        {
+            Level = level;
+            Health = health;
+            MaxHealth = maxHealth;
+            Description = "A trusted companion who fights alongside you.";
+        }
+
+        /// <summary>
+        /// Make the NPC speak
+        /// </summary>
+        public void Speak(string message)
+        {
+            Console.WriteLine($"{Name}: \"{message}\"");
+        }
+
+        /// <summary>
+        /// Greet the player
+        /// </summary>
+        public void Greet()
+        {
+            Speak(Greeting);
+        }
+
+        /// <summary>
+        /// Add dialogue options
+        /// </summary>
+        public void AddDialogue(string dialogue)
+        {
+            Dialogues.Add(dialogue);
+        }
+
+        /// <summary>
+        /// Get a random dialogue
+        /// </summary>
+        public string GetRandomDialogue(Systems.RNGManager rng)
+        {
+            if (Dialogues.Count == 0)
+            {
+                return Greeting;
+            }
+
+            int index = rng.Roll(0, Dialogues.Count - 1);
+            return Dialogues[index];
+        }
+
+        /// <summary>
+        /// Add companion to party
+        /// </summary>
+        public void JoinParty()
+        {
+            if (!IsCompanion)
+            {
+                Console.WriteLine($"{Name} cannot join the party (not a companion type).");
+                return;
+            }
+
+            InParty = true;
+            Console.WriteLine($"{Name} joined the party!");
+        }
+
+        /// <summary>
+        /// Remove companion from party
+        /// </summary>
+        public void LeaveParty()
+        {
+            InParty = false;
+            Console.WriteLine($"{Name} left the party.");
+        }
+
+        /// <summary>
+        /// Level up a companion
+        /// </summary>
+        public void LevelUp()
+        {
+            if (!IsCompanion)
+            {
+                Console.WriteLine($"{Name} cannot level up (not a companion).");
+                return;
+            }
+
+            Level++;
+
+            // Scale stats with level (similar to player)
+            int healthIncrease = 10 + (Level / 5); // Slightly less than player
+            MaxHealth += healthIncrease;
+            Health = MaxHealth; // Full heal on level up
+
+            Console.WriteLine($"{Name} leveled up to Level {Level}!");
+            Console.WriteLine($"Max Health increased by {healthIncrease} (now {MaxHealth})");
+        }
+
+        /// <summary>
+        /// Get companion's combat stats display
+        /// </summary>
+        public string GetCompanionStatsDisplay()
+        {
+            if (!IsCompanion)
+            {
+                return $"{Name} - {Type}";
+            }
+
+            string weaponInfo = EquippedWeapon != null ? EquippedWeapon.Name : "Unarmed";
+            string armorInfo = EquippedArmor != null ? EquippedArmor.Name : "None";
+
+            return $"{Name} (Lv.{Level})\n" +
+                   $"HP: {Health}/{MaxHealth}\n" +
+                   $"Weapon: {weaponInfo}\n" +
+                   $"Armor: {armorInfo}\n" +
+                   $"Status: {(InParty ? "In Party" : "Available")}";
+        }
+
+        /// <summary>
+        /// Execute NPC-specific behavior
+        /// Required by Entity base class
+        /// </summary>
+        public override void Execute(Entity target = null)
+        {
+            // NPC behavior varies by type
+            switch (Type)
+            {
+                case NPCType.Companion:
+                    if (InParty && target != null)
+                    {
+                        // Companions attack enemies when in party
+                        Console.WriteLine($"{Name} attacks {target.Name}!");
+                        // TODO: Implement companion combat when combat system is ready
+                    }
+                    break;
+
+                case NPCType.Merchant:
+                    Console.WriteLine($"{Name} stands ready to trade.");
+                    break;
+
+                case NPCType.QuestGiver:
+                    Console.WriteLine($"{Name} has a quest for you.");
+                    break;
+
+                default:
+                    // Generic NPCs just exist
+                    Console.WriteLine($"{Name} is here.");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Display NPC info
+        /// </summary>
+        public string GetInfo()
+        {
+            string typeInfo = IsCompanion ? $"Companion (Lv.{Level})" : Type.ToString();
+            return $"{Name} - {typeInfo}\n{Description ?? ""}";
+        }
+
+        /// <summary>
+        /// Equip weapon for companion
+        /// </summary>
+        public void EquipWeapon(Weapon weapon)
+        {
+            if (!IsCompanion)
+            {
+                Console.WriteLine($"{Name} cannot equip weapons (not a companion).");
+                return;
+            }
+
+            EquippedWeapon = weapon;
+            Console.WriteLine($"{Name} equipped {weapon.Name}!");
+        }
+
+        /// <summary>
+        /// Equip armor for companion
+        /// </summary>
+        public void EquipArmor(Armor armor)
+        {
+            if (!IsCompanion)
+            {
+                Console.WriteLine($"{Name} cannot equip armor (not a companion).");
+                return;
+            }
+
+            EquippedArmor = armor;
+            Console.WriteLine($"{Name} equipped {armor.Name}!");
+        }
     }
 }

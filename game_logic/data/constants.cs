@@ -4,7 +4,7 @@ namespace GameLogic.Data;
 
 public enum Constants
 {
-    MaxPlayers = 4,
+    MaxPartySize = 4,
     MaxLevels = 100,
     MaxEnemiesPerLevel = 50,
     MaxItemsInInventory = 200,

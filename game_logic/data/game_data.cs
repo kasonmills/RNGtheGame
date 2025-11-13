@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using GameLogic.Items;
 using GameLogic.Entities.Enemies;
+using GameLogic.Entities.NPCs.Companions;
 using GameLogic.Abilities.PlayerAbilities;
 
 namespace GameLogic.Data
@@ -194,6 +195,72 @@ namespace GameLogic.Data
                 "Attack Boost",
                 "Defense Boost",
                 "Critical Strike"
+            };
+        }
+
+        #endregion
+
+        #region Companion Factory Methods
+
+        /// <summary>
+        /// Create a companion by type name and level
+        /// </summary>
+        public static CompanionBase CreateCompanion(string companionType, int level)
+        {
+            return companionType.ToLower() switch
+            {
+                "warrior" => new CompanionWarrior(level),
+                "mage" => new CompanionMage(level),
+                "rogue" => new CompanionRogue(level),
+                "healer" => new CompanionHealer(level),
+                "ranger" => new CompanionRanger(level),
+                _ => new CompanionWarrior(level) // Default to warrior
+            };
+        }
+
+        /// <summary>
+        /// Get a companion by their name
+        /// </summary>
+        public static CompanionBase GetCompanion(string companionName, int level = 1)
+        {
+            return companionName.ToLower() switch
+            {
+                "garrick" or "garrick the brave" => new CompanionWarrior(level),
+                "lyra" or "lyra the arcane" => new CompanionMage(level),
+                "shadow" => new CompanionRogue(level),
+                "aria" or "aria the pure" => new CompanionHealer(level),
+                "hawk" => new CompanionRanger(level),
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// Get list of all available companion types
+        /// </summary>
+        public static List<string> GetAllCompanionTypes()
+        {
+            return new List<string>
+            {
+                "Warrior",
+                "Mage",
+                "Rogue",
+                "Healer",
+                "Ranger"
+            };
+        }
+
+        /// <summary>
+        /// Get list of all companion names with descriptions
+        /// </summary>
+        public static List<(string Name, string Type, string Description)> GetAllCompanions()
+        {
+            return new List<(string, string, string)>
+            {
+                ("Garrick the Brave", "Warrior", "A stalwart defender. Passive: +10% Max HP"),
+                ("Lyra the Arcane", "Mage", "A powerful spellcaster. Passive: +15% Staff damage"),
+                ("Shadow", "Rogue", "A silent assassin. Passive: +25% Gold drops"),
+                ("Aria the Pure", "Healer", "A devoted healer. Passive: +2 HP regen/turn"),
+                ("Hawk", "Ranger", "A skilled archer. Passive: +10% Accuracy")
             };
         }
 
