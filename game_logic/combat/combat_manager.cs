@@ -2,6 +2,7 @@ using System;
 using GameLogic.Entities.Player;
 using GameLogic.Entities.Enemies;
 using GameLogic.Systems;
+using Enemy = GameLogic.Entities.Enemies.EnemyBase;
 
 namespace GameLogic.Combat
 {

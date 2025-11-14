@@ -1,4 +1,7 @@
 using System;
+using GameLogic.Entities;
+using GameLogic.Abilities;
+using GameLogic.Items;
 
 namespace GameLogic.Combat
 {
@@ -11,7 +14,7 @@ namespace GameLogic.Combat
         public ActionType Type { get; set; }
         public Entity Actor { get; set; }        // Who is performing the action
         public Entity Target { get; set; }       // Who is being targeted (can be null for defend/flee)
-        
+
         // Optional data depending on action type
         public Ability Ability { get; set; }     // If using an ability
         public Item Item { get; set; }           // If using an item

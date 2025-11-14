@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using GameLogic.Entities.Player;
+using GameLogic.Items;
 
 namespace GameLogic.Data
 {
@@ -166,21 +167,21 @@ namespace GameLogic.Data
             // Restore equipped weapon
             if (!string.IsNullOrEmpty(saveData.EquippedWeaponName))
             {
-                player.EquippedWeapon = GameDatabase.GetWeapon(saveData.EquippedWeaponName);
+                player.EquippedWeapon = ItemDatabase.GetWeapon(saveData.EquippedWeaponName);
             }
 
             // Restore equipped armor
             if (!string.IsNullOrEmpty(saveData.EquippedArmorName))
             {
-                player.EquippedArmor = GameDatabase.GetArmor(saveData.EquippedArmorName);
+                player.EquippedArmor = ItemDatabase.GetArmor(saveData.EquippedArmorName);
             }
 
             // Restore inventory
             player.Inventory.Clear();
             foreach (var itemName in saveData.InventoryItems)
             {
-                // Try weapon first, then armor
-                Item item = (Item)GameDatabase.GetWeapon(itemName) ?? GameDatabase.GetArmor(itemName);
+                // Try to get item from database
+                Item item = ItemDatabase.GetItemByName(itemName, 1, 1);
                 if (item != null)
                 {
                     player.Inventory.Add(item);
@@ -190,13 +191,15 @@ namespace GameLogic.Data
             // Restore ability
             if (!string.IsNullOrEmpty(saveData.SelectedAbility))
             {
-                var ability = GameDatabase.CreatePlayerAbility(saveData.SelectedAbility);
-                if (ability != null)
-                {
-                    ability.Level = saveData.AbilityLevel;
-                    player.Abilities.Clear();
-                    player.Abilities.Add(ability);
-                }
+                // TODO: Implement ability restoration when ability database is created
+                // For now, skip ability restoration
+                // var ability = AbilityDatabase.GetAbility(saveData.SelectedAbility);
+                // if (ability != null)
+                // {
+                //     ability.Level = saveData.AbilityLevel;
+                //     player.Abilities.Clear();
+                //     player.Abilities.Add(ability);
+                // }
             }
         }
 

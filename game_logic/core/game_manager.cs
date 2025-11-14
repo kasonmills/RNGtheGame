@@ -19,7 +19,6 @@ namespace GameLogic.Core
         private MapManager _mapManager;
         private CombatManager _combatManager;
         private RNGManager _rngManager;
-        private SaveManager _saveManager;
         
         // === Game State Management ===
         private GameState _currentState;
@@ -39,15 +38,15 @@ namespace GameLogic.Core
         private void InitializeSystems()
         {
             Console.WriteLine("Initializing game systems...");
-            
+
             _rngManager = new RNGManager();
-            _saveManager = new SaveManager();
-            _mapManager = new MapManager(_rngManager);
+            Data.SaveManager.Initialize(); // Initialize static SaveManager
+            _mapManager = new MapManager();
             _combatManager = new CombatManager(_rngManager);
-            
+
             _currentState = GameState.MainMenu;
             _isRunning = false;
-            
+
             Console.WriteLine("Systems initialized!\n");
         }
 
@@ -119,17 +118,17 @@ namespace GameLogic.Core
         public void LoadGame()
         {
             Console.WriteLine("Loading saved game...");
-            
-            SaveData saveData = _saveManager.LoadGame();
-            
+
+            SaveData saveData = Data.SaveManager.LoadGame("save1"); // Default save slot
+
             if (saveData != null)
             {
                 _player = Player.LoadFromSave(saveData);
                 // TODO: Load map state, etc.
-                
+
                 ChangeState(GameState.Playing);
                 _isRunning = true;
-                
+
                 Console.WriteLine($"Welcome back, {_player.Name}!");
             }
             else
@@ -370,20 +369,16 @@ namespace GameLogic.Core
         {
             Console.WriteLine("\nSaving game...");
 
-            SaveData data = new data
+            bool success = Data.SaveManager.SaveGame(_player, "save1"); // Default save slot
+
+            if (success)
             {
-                PlayerName = _player.Name,
-                Level = _player.Level,
-                Experience = _player.Experience,
-                Health = _player.Health,
-                MaxHealth = _player.MaxHealth,
-                Gold = _player.Gold
-                // TODO: Add inventory, location, etc.
-            };
-
-            _saveManager.SaveGame(data); // Creates Saves/savegame.json
-
-            Console.WriteLine("Game saved successfully!");
+                Console.WriteLine("Game saved successfully!");
+            }
+            else
+            {
+                Console.WriteLine("Failed to save game.");
+            }
 
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();

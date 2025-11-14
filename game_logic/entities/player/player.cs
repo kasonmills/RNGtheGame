@@ -5,24 +5,25 @@ using GameLogic.Data;
 
 namespace GameLogic.Entities.Player
 {
-    public class Player // Remove ": Entity" for now until we build Entity.cs
+    public class Player : Entity
     {
-        // Player Attributes
-        public string Name;
-        public int Level;
-        public int Experience;
-        public int Health;
-        public int MaxHealth;
-        public int Gold;
+        // Player-specific Attributes (Name, Level, Health, MaxHealth inherited from Entity)
+        public int Experience { get; set; }
+        public int Gold { get; set; }
+        public TimeSpan PlayTime { get; set; }
+
+        // Abilities
+        public List<Abilities.Ability> Abilities { get; set; }
+
         private Random rd = new Random();
 
         // Inventory
-        public List<Item> Inventory = new List<Item>();
-        public Weapon EquippedWeapon;
-        public Armor EquippedArmor;
+        public List<Item> Inventory { get; set; }
+        public Weapon EquippedWeapon { get; set; }
+        public Armor EquippedArmor { get; set; }
 
         // Constructor for new player
-        public Player(string name)
+        public Player(string name) : base()
         {
             Name = name;
             Level = 1;
@@ -30,7 +31,9 @@ namespace GameLogic.Entities.Player
             MaxHealth = 20;
             Health = MaxHealth;
             Gold = 0;
+            PlayTime = TimeSpan.Zero;
             Inventory = new List<Item>();
+            Abilities = new List<Abilities.Ability>();
         }
 
         // Load player from save data
@@ -83,24 +86,19 @@ namespace GameLogic.Entities.Player
             return Convert.ToInt32(expCalc);
         }
 
-        // Heal the player (FIXED - actually increases health now!)
-        public void Heal(int amount)
+        // Override Heal to add console output
+        public override void Heal(int amount)
         {
-            Health += amount;
-            if (Health > MaxHealth)
-            {
-                Health = MaxHealth;
-            }
+            base.Heal(amount);
             Console.WriteLine($"{Name} healed for {amount} HP. Current health: {Health}/{MaxHealth}");
         }
 
-        // Take damage
-        public void TakeDamage(int damage)
+        // Override TakeDamage to add console output
+        public override void TakeDamage(int damage)
         {
-            Health -= damage;
+            base.TakeDamage(damage);
             if (Health <= 0)
             {
-                Health = 0;
                 Console.WriteLine($"{Name} has been defeated!");
             }
             else
@@ -128,6 +126,17 @@ namespace GameLogic.Entities.Player
         {
             EquippedArmor = armor;
             Console.WriteLine($"{Name} equipped {armor.Name}.");
+        }
+
+        /// <summary>
+        /// Implementation of abstract Execute method from Entity
+        /// For player, this could be used for executing player actions or abilities
+        /// </summary>
+        public override void Execute(Entity target = null)
+        {
+            // Placeholder implementation
+            // Can be used later for player abilities or special actions
+            Console.WriteLine($"{Name} performs an action!");
         }
     }
 }

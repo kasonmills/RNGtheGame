@@ -4,6 +4,7 @@ using GameLogic.Entities.Enemies;
 using GameLogic.Systems;
 using GameLogic.Abilities.PlayerAbilities;
 using GameLogic.Abilities.EnemyAbilities;
+using Enemy = GameLogic.Entities.Enemies.EnemyBase;
 
 namespace GameLogic.Combat
 {

@@ -9,13 +9,9 @@ namespace GameLogic.Entities.Enemies
     /// Base class for all enemies
     /// Specific enemy types (Goblin, Dragon, etc.) inherit from this
     /// </summary>
-    public abstract class EnemyBase // TODO: Can inherit from Entity once that's built
+    public abstract class EnemyBase : Entity
     {
-        // Basic Attributes
-        public string Name { get; set; }
-        public int Level { get; set; }
-        public int Health { get; set; }
-        public int MaxHealth { get; set; }
+        // Basic Attributes (Name, Level, Health, MaxHealth inherited from Entity)
 
         // Combat Stats - These define the enemy's combat capabilities
         public int MinDamage { get; set; }
@@ -39,7 +35,7 @@ namespace GameLogic.Entities.Enemies
         /// <summary>
         /// Constructor - child classes must call this
         /// </summary>
-        protected EnemyBase()
+        protected EnemyBase() : base()
         {
             LootTable = new List<Item>();
         }
@@ -49,27 +45,6 @@ namespace GameLogic.Entities.Enemies
         /// Child classes override this to set their specific stat scaling
         /// </summary>
         public abstract void InitializeStats(int level);
-
-        /// <summary>
-        /// Take damage from an attack
-        /// </summary>
-        public virtual void TakeDamage(int damage)
-        {
-            Health -= damage;
-            
-            if (Health < 0)
-            {
-                Health = 0;
-            }
-        }
-
-        /// <summary>
-        /// Check if enemy is still alive
-        /// </summary>
-        public bool IsAlive()
-        {
-            return Health > 0;
-        }
 
         /// <summary>
         /// Get enemy description for display
@@ -106,6 +81,21 @@ namespace GameLogic.Entities.Enemies
             // TODO: Implement loot drop logic based on LootTable
             // For now, return empty list
             return new List<Item>();
+        }
+
+        /// <summary>
+        /// Implementation of abstract Execute method from Entity
+        /// For enemies, this executes their AI action (attack, defend, use ability)
+        /// </summary>
+        public override void Execute(Entity target = null)
+        {
+            // Default implementation - perform basic attack
+            // Specific enemy types can override for more complex behavior
+            var action = DecideAction();
+
+            // This would normally trigger combat logic
+            // For now, placeholder
+            Console.WriteLine($"{Name} executes action: {action}");
         }
     }
 
