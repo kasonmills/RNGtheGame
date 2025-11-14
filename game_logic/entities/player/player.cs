@@ -12,8 +12,8 @@ namespace GameLogic.Entities.Player
         public int Gold { get; set; }
         public TimeSpan PlayTime { get; set; }
 
-        // Abilities
-        public List<Abilities.Ability> Abilities { get; set; }
+        // Selected Ability (permanent choice made at character creation)
+        public Abilities.Ability SelectedAbility { get; set; }
 
         private Random rd = new Random();
 
@@ -33,7 +33,51 @@ namespace GameLogic.Entities.Player
             Gold = 0;
             PlayTime = TimeSpan.Zero;
             Inventory = new List<Item>();
-            Abilities = new List<Abilities.Ability>();
+            SelectedAbility = null; // Will be set during character creation
+        }
+
+        // Set the player's permanent ability (called during character creation)
+        public void SetAbility(Abilities.Ability ability)
+        {
+            if (SelectedAbility != null)
+            {
+                Console.WriteLine($"Warning: Ability already set to {SelectedAbility.Name}. Ability cannot be changed.");
+                return;
+            }
+
+            SelectedAbility = ability;
+            Console.WriteLine($"{Name} has chosen the ability: {ability.Name}!");
+        }
+
+        // Helper method to create an ability instance from name
+        private static Abilities.Ability CreateAbilityFromName(string abilityName)
+        {
+            switch (abilityName)
+            {
+                case "Attack Boost":
+                    return new Abilities.PlayerAbilities.AttackBoost();
+                case "Heal":
+                    return new Abilities.PlayerAbilities.HealingAbility();
+                case "Defense Boost":
+                    return new Abilities.PlayerAbilities.DefenseBoost();
+                case "Critical Strike":
+                    return new Abilities.PlayerAbilities.CriticalStrike();
+                default:
+                    Console.WriteLine($"Warning: Unknown ability '{abilityName}'. No ability loaded.");
+                    return null;
+            }
+        }
+
+        // Get all available player abilities (for character creation menu)
+        public static Abilities.Ability[] GetAvailableAbilities()
+        {
+            return new Abilities.Ability[]
+            {
+                new Abilities.PlayerAbilities.AttackBoost(),
+                new Abilities.PlayerAbilities.HealingAbility(),
+                new Abilities.PlayerAbilities.DefenseBoost(),
+                new Abilities.PlayerAbilities.CriticalStrike()
+            };
         }
 
         // Load player from save data
@@ -45,11 +89,24 @@ namespace GameLogic.Entities.Player
             player.MaxHealth = data.MaxHealth;
             player.Health = data.Health;
             player.Gold = data.Gold;
-            
+            player.PlayTime = data.PlayTime;
+
             // TODO: Reconstruct inventory from item names
             // For now, leave inventory empty until we build ItemDatabase
             player.Inventory = new List<Item>();
-            
+
+            // Restore selected ability
+            if (!string.IsNullOrEmpty(data.SelectedAbilityName))
+            {
+                player.SelectedAbility = CreateAbilityFromName(data.SelectedAbilityName);
+                if (player.SelectedAbility != null)
+                {
+                    player.SelectedAbility.Level = data.SelectedAbilityLevel;
+                    player.SelectedAbility.Experience = data.SelectedAbilityExperience;
+                    Console.WriteLine($"Ability restored: {player.SelectedAbility.Name} (Lv.{player.SelectedAbility.Level})");
+                }
+            }
+
             return player;
         }
 

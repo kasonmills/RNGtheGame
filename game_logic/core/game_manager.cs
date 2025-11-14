@@ -81,6 +81,45 @@ namespace GameLogic.Core
         }
 
         /// <summary>
+        /// Let the player choose their permanent starting ability
+        /// </summary>
+        private void ChooseStartingAbility()
+        {
+            Console.WriteLine("\n=== Choose Your Ability ===");
+            Console.WriteLine("This choice is permanent and will stay with you throughout the game!");
+            Console.WriteLine();
+
+            var abilities = Player.GetAvailableAbilities();
+
+            // Display all available abilities with descriptions
+            for (int i = 0; i < abilities.Length; i++)
+            {
+                Console.WriteLine($"{i + 1}. {abilities[i].Name}");
+                Console.WriteLine($"   {abilities[i].Description}");
+                Console.WriteLine($"   {abilities[i].GetInfo()}");
+                Console.WriteLine();
+            }
+
+            // Get player choice
+            int choice = -1;
+            while (choice < 1 || choice > abilities.Length)
+            {
+                Console.Write($"Choose your ability (1-{abilities.Length}): ");
+                string input = Console.ReadLine();
+
+                if (int.TryParse(input, out choice) && choice >= 1 && choice <= abilities.Length)
+                {
+                    break;
+                }
+
+                Console.WriteLine("Invalid choice. Please try again.");
+            }
+
+            // Set the chosen ability
+            _player.SetAbility(abilities[choice - 1]);
+        }
+
+        /// <summary>
         /// Start a brand new game
         /// </summary>
         public void StartNewGame()
@@ -99,11 +138,13 @@ namespace GameLogic.Core
             
             // Create new player
             _player = new Player(playerName);
-            
+
             Console.WriteLine($"\nWelcome, {_player.Name}!");
-            Console.WriteLine("Your adventure begins...\n");
-            
-            // TODO: Let player choose starting ability
+
+            // Let player choose starting ability
+            ChooseStartingAbility();
+
+            Console.WriteLine("\nYour adventure begins...\n");
             
             // Generate starting map
             _mapManager.GenerateNewMap();
@@ -124,7 +165,17 @@ namespace GameLogic.Core
             if (saveData != null)
             {
                 _player = Player.LoadFromSave(saveData);
-                // TODO: Load map state, etc.
+
+                // Load/regenerate map based on saved seed
+                if (saveData.MapSeed != 0)
+                {
+                    _mapManager.GenerateMapFromSeed(saveData.MapSeed);
+                }
+                else
+                {
+                    // Fallback: generate new map if no seed saved
+                    _mapManager.GenerateNewMap();
+                }
 
                 ChangeState(GameState.Playing);
                 _isRunning = true;
@@ -258,25 +309,49 @@ namespace GameLogic.Core
         }
 
         /// <summary>
+        /// Spawn an enemy based on player level
+        /// </summary>
+        private Entities.Enemies.EnemyBase SpawnEnemy()
+        {
+            // Enemy level should be close to player level
+            int enemyLevel = Math.Max(1, _player.Level + _rngManager.Roll(-1, 2));
+
+            // Roll for enemy type based on rarity
+            int roll = _rngManager.Roll(1, 100);
+
+            if (roll <= 70) // 70% chance for Goblin (common)
+            {
+                return new Entities.Enemies.EnemyTypes.Goblin(enemyLevel);
+            }
+            else if (roll <= 95) // 25% chance for Bandit (elite)
+            {
+                return new Entities.Enemies.EnemyTypes.Bandit(enemyLevel);
+            }
+            else // 5% chance for Dragon (boss)
+            {
+                return new Entities.Enemies.EnemyTypes.Dragon(enemyLevel);
+            }
+        }
+
+        /// <summary>
         /// Trigger a combat encounter - called by Explore() or MapManager
         /// This method works for both text-based AND Godot versions
         /// </summary>
         public void TriggerCombatEncounter()
         {
-            Console.WriteLine("An enemy appears!\n");
-            
-            // TODO: Get enemy from EnemyFactory based on current location difficulty
-            // For now, placeholder until Enemy class exists
-            
+            // Spawn an appropriate enemy
+            var enemy = SpawnEnemy();
+
+            Console.WriteLine($"A {enemy.Name} appears!\n");
+            Console.WriteLine(enemy.GetDescription());
+
             PushState(GameState.Combat); // Save Playing state, go to Combat
-            
-            // CombatManager handles the actual combat
-            bool playerWon = _combatManager.StartCombat(_player, null); // null until Enemy exists
-            
+
+            // CombatManager handles the actual combat (including XP and loot rewards)
+            bool playerWon = _combatManager.StartCombat(_player, enemy);
+
             if (playerWon)
             {
-                Console.WriteLine("\nVictory!");
-                // TODO: Give XP and loot based on enemy
                 PopState(); // Return to Playing state
             }
             else
@@ -293,13 +368,51 @@ namespace GameLogic.Core
         public void TriggerLootEvent()
         {
             Console.WriteLine("You found a treasure chest!");
-            
+
             int goldFound = _rngManager.Roll(10, 50);
             _player.Gold += goldFound;
-            
+
             Console.WriteLine($"You gained {goldFound} gold!");
-            
-            // TODO: Use LootTable system to generate items/weapons/armor
+
+            // Roll for item drop
+            int itemRoll = _rngManager.Roll(1, 100);
+
+            if (itemRoll <= 60) // 60% chance for an item
+            {
+                // Determine item type
+                int typeRoll = _rngManager.Roll(1, 100);
+
+                if (typeRoll <= 50) // 50% consumable
+                {
+                    var potion = Items.ItemDatabase.GetHealthPotion(_player.Level);
+                    if (potion != null)
+                    {
+                        _player.AddToInventory(potion);
+                        Console.WriteLine($"Found: {potion.GetDisplayName()}");
+                    }
+                }
+                else if (typeRoll <= 75) // 25% weapon
+                {
+                    var weapon = Items.ItemDatabase.GetWeapon("Sword", _player.Level, _player.Level);
+                    if (weapon != null)
+                    {
+                        _player.AddToInventory(weapon);
+                        Console.WriteLine($"Found: {weapon.GetDisplayName()}");
+                    }
+                }
+                else // 25% armor
+                {
+                    var armor = Items.ItemDatabase.GetArmor("Leather Armor", _player.Level, _player.Level);
+                    if (armor != null)
+                    {
+                        _player.AddToInventory(armor);
+                        Console.WriteLine($"Found: {armor.GetDisplayName()}");
+                    }
+                }
+            }
+
+            Console.WriteLine("\nPress any key to continue...");
+            Console.ReadKey();
         }
 
         /// <summary>
@@ -339,9 +452,43 @@ namespace GameLogic.Core
             Console.WriteLine($"Experience: {_player.Experience}");
             Console.WriteLine($"Health: {_player.Health}/{_player.MaxHealth}");
             Console.WriteLine($"Gold: {_player.Gold}");
-            
-            // TODO: Add ability info, attack/defense stats
-            
+
+            // Ability info
+            Console.WriteLine("\n--- Ability ---");
+            if (_player.SelectedAbility != null)
+            {
+                Console.WriteLine(_player.SelectedAbility.GetInfo());
+            }
+            else
+            {
+                Console.WriteLine("No ability selected");
+            }
+
+            // Attack stats
+            Console.WriteLine("\n--- Combat Stats ---");
+            if (_player.EquippedWeapon != null)
+            {
+                Console.WriteLine($"Weapon: {_player.EquippedWeapon.Name}");
+                Console.WriteLine($"  Damage: {_player.EquippedWeapon.MinDamage}-{_player.EquippedWeapon.MaxDamage}");
+                Console.WriteLine($"  Accuracy: {_player.EquippedWeapon.Accuracy}%");
+                Console.WriteLine($"  Crit Chance: {_player.EquippedWeapon.CritChance}%");
+            }
+            else
+            {
+                Console.WriteLine("Weapon: None (unarmed - 1-3 damage)");
+            }
+
+            // Defense stats
+            if (_player.EquippedArmor != null)
+            {
+                Console.WriteLine($"Armor: {_player.EquippedArmor.Name}");
+                Console.WriteLine($"  Defense: {_player.EquippedArmor.Defense}");
+            }
+            else
+            {
+                Console.WriteLine("Armor: None");
+            }
+
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
         }

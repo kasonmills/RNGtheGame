@@ -75,12 +75,50 @@ namespace GameLogic.Entities.Enemies
 
         /// <summary>
         /// Get loot drops when defeated
+        /// Uses RNG to determine which items from the loot table drop
         /// </summary>
-        public virtual List<Item> GetLootDrops()
+        public virtual List<Item> GetLootDrops(Systems.RNGManager rng)
         {
-            // TODO: Implement loot drop logic based on LootTable
-            // For now, return empty list
-            return new List<Item>();
+            var drops = new List<Item>();
+
+            if (LootTable == null || LootTable.Count == 0)
+            {
+                return drops;
+            }
+
+            // Each item in the loot table has a chance to drop
+            foreach (var item in LootTable)
+            {
+                // Base drop chance based on item rarity
+                int dropChance = item.Rarity switch
+                {
+                    ItemRarity.Common => 50,      // 50% chance
+                    ItemRarity.Uncommon => 25,    // 25% chance
+                    ItemRarity.Rare => 10,        // 10% chance
+                    ItemRarity.Epic => 5,         // 5% chance
+                    ItemRarity.Legendary => 2,    // 2% chance
+                    ItemRarity.Mythic => 1,       // 1% chance
+                    _ => 20                       // Default 20%
+                };
+
+                // Boss/Elite enemies have better drop rates
+                if (Type == EnemyType.Boss)
+                {
+                    dropChance = Math.Min(dropChance * 3, 100);
+                }
+                else if (Type == EnemyType.Elite || Type == EnemyType.Miniboss)
+                {
+                    dropChance = Math.Min(dropChance * 2, 100);
+                }
+
+                // Roll for drop
+                if (rng.Roll(1, 100) <= dropChance)
+                {
+                    drops.Add(item);
+                }
+            }
+
+            return drops;
         }
 
         /// <summary>

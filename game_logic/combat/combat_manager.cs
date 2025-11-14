@@ -20,6 +20,7 @@ namespace GameLogic.Combat
         private Enemy _enemy;
         private bool _combatActive;
         private bool _playerDefending;
+        private bool _enemyDefending;
 
         public CombatManager(RNGManager rngManager)
         {
@@ -38,6 +39,7 @@ namespace GameLogic.Combat
             _enemy = enemy;
             _combatActive = true;
             _playerDefending = false;
+            _enemyDefending = false;
 
             // Initialize turn manager
             _turnManager.InitializeCombat(player, enemy);
@@ -70,7 +72,18 @@ namespace GameLogic.Combat
                 }
 
                 _turnManager.NextTurn();
-                
+
+                // Reduce ability cooldowns
+                if (_player.SelectedAbility != null && _player.SelectedAbility.CurrentCooldown > 0)
+                {
+                    _player.SelectedAbility.CurrentCooldown--;
+                }
+
+                if (_enemy.SpecialAbility != null && _enemy.SpecialAbility.CurrentCooldown > 0)
+                {
+                    _enemy.SpecialAbility.CurrentCooldown--;
+                }
+
                 // Show status between turns
                 if (_combatActive)
                 {
@@ -123,7 +136,7 @@ namespace GameLogic.Combat
             Console.WriteLine("\nChoose your action:");
             Console.WriteLine("1. Attack");
             Console.WriteLine("2. Use Active Ability");
-            Console.WriteLine("3. Use Item (TODO)");
+            Console.WriteLine("3. Use Item");
             Console.WriteLine("4. Defend");
             Console.WriteLine("5. Try to Flee");
 
@@ -135,13 +148,53 @@ namespace GameLogic.Combat
                 case "1":
                     return CombatAction.Attack(_player, _enemy);
                 case "2":
-                    // TODO: Implement ability selection
-                    Console.WriteLine("\nActive abilities not implemented yet. Attacking instead!");
-                    return CombatAction.Attack(_player, _enemy);
+                    // Use player's selected ability
+                    if (_player.SelectedAbility != null)
+                    {
+                        // Check if ability is on cooldown
+                        if (_player.SelectedAbility.CurrentCooldown > 0)
+                        {
+                            Console.WriteLine($"\n{_player.SelectedAbility.Name} is on cooldown for {_player.SelectedAbility.CurrentCooldown} more turns!");
+                            Console.WriteLine("Attacking instead.");
+                            return CombatAction.Attack(_player, _enemy);
+                        }
+
+                        return CombatAction.UseAbility(_player, _enemy, _player.SelectedAbility);
+                    }
+                    else
+                    {
+                        Console.WriteLine("\nYou don't have an ability selected! Attacking instead.");
+                        return CombatAction.Attack(_player, _enemy);
+                    }
                 case "3":
-                    // TODO: Implement item selection
-                    Console.WriteLine("\nItems not implemented yet. Attacking instead!");
-                    return CombatAction.Attack(_player, _enemy);
+                    // Use item from inventory
+                    if (_player.Inventory.Count == 0)
+                    {
+                        Console.WriteLine("\nYour inventory is empty! Attacking instead.");
+                        return CombatAction.Attack(_player, _enemy);
+                    }
+
+                    // Show inventory
+                    Console.WriteLine("\nYour Inventory:");
+                    for (int i = 0; i < _player.Inventory.Count; i++)
+                    {
+                        Console.WriteLine($"{i + 1}. {_player.Inventory[i].Name}");
+                    }
+                    Console.WriteLine($"{_player.Inventory.Count + 1}. Cancel");
+
+                    Console.Write("\nSelect item: ");
+                    string itemChoice = Console.ReadLine();
+
+                    if (int.TryParse(itemChoice, out int itemIndex) && itemIndex > 0 && itemIndex <= _player.Inventory.Count)
+                    {
+                        var item = _player.Inventory[itemIndex - 1];
+                        return CombatAction.UseItem(_player, item);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid choice. Attacking instead!");
+                        return CombatAction.Attack(_player, _enemy);
+                    }
                 case "4":
                     return CombatAction.Defend(_player);
                 case "5":
@@ -154,16 +207,105 @@ namespace GameLogic.Combat
 
         /// <summary>
         /// Handle the enemy's turn
+        /// Uses AI to decide action based on behavior and situation
         /// </summary>
         private void EnemyTurn()
         {
+            // Reset defense status at start of turn
+            _enemyDefending = false;
+
             Console.WriteLine($"\n{_enemy.Name}'s Turn!");
 
-            // Simple AI: Always attack
-            // TODO: Implement more sophisticated AI (use abilities, etc.)
-            CombatAction action = CombatAction.Attack(_enemy, _player);
-            
+            // Determine action based on enemy behavior and situation
+            CombatAction action = DetermineEnemyAction();
+
             ProcessAction(action);
+        }
+
+        /// <summary>
+        /// Determine enemy action based on AI behavior
+        /// </summary>
+        private CombatAction DetermineEnemyAction()
+        {
+            // Calculate health percentage
+            float healthPercent = (float)_enemy.Health / _enemy.MaxHealth;
+
+            // Check if enemy has a special ability and can use it
+            bool canUseAbility = _enemy.SpecialAbility != null &&
+                                 _enemy.SpecialAbility.CurrentCooldown <= 0;
+
+            // Decision logic based on behavior type
+            switch (_enemy.Behavior)
+            {
+                case Entities.Enemies.EnemyBehavior.Aggressive:
+                    // Always attack, use ability when available
+                    if (canUseAbility && _rngManager.Roll(1, 100) <= 70)
+                    {
+                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                    }
+                    return CombatAction.Attack(_enemy, _player);
+
+                case Entities.Enemies.EnemyBehavior.Defensive:
+                    // Defend when low on health
+                    if (healthPercent < 0.3f && _rngManager.Roll(1, 100) <= 60)
+                    {
+                        return CombatAction.Defend(_enemy);
+                    }
+                    if (canUseAbility && _rngManager.Roll(1, 100) <= 40)
+                    {
+                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                    }
+                    return CombatAction.Attack(_enemy, _player);
+
+                case Entities.Enemies.EnemyBehavior.Tactical:
+                    // Use abilities strategically
+                    if (canUseAbility && _rngManager.Roll(1, 100) <= 80)
+                    {
+                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                    }
+                    if (healthPercent < 0.25f && _rngManager.Roll(1, 100) <= 50)
+                    {
+                        return CombatAction.Defend(_enemy);
+                    }
+                    return CombatAction.Attack(_enemy, _player);
+
+                case Entities.Enemies.EnemyBehavior.Berserker:
+                    // Always attack, rarely defend, use abilities aggressively
+                    if (canUseAbility && _rngManager.Roll(1, 100) <= 90)
+                    {
+                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                    }
+                    return CombatAction.Attack(_enemy, _player);
+
+                case Entities.Enemies.EnemyBehavior.Cautious:
+                    // Defend frequently when low health, flee if very low
+                    if (healthPercent < 0.15f && _rngManager.Roll(1, 100) <= 30)
+                    {
+                        return CombatAction.Flee(_enemy);
+                    }
+                    if (healthPercent < 0.4f && _rngManager.Roll(1, 100) <= 70)
+                    {
+                        return CombatAction.Defend(_enemy);
+                    }
+                    if (canUseAbility && _rngManager.Roll(1, 100) <= 50)
+                    {
+                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                    }
+                    return CombatAction.Attack(_enemy, _player);
+
+                case Entities.Enemies.EnemyBehavior.Balanced:
+                default:
+                    // Mix of all actions
+                    if (healthPercent < 0.3f && _rngManager.Roll(1, 100) <= 40)
+                    {
+                        return CombatAction.Defend(_enemy);
+                    }
+                    if (canUseAbility && _rngManager.Roll(1, 100) <= 60)
+                    {
+                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                    }
+                    return CombatAction.Attack(_enemy, _player);
+            }
         }
 
         /// <summary>
@@ -204,22 +346,31 @@ namespace GameLogic.Combat
             if (action.Actor == _player)
             {
                 result = _damageCalculator.CalculatePlayerAttackDamage(_player, _enemy);
-                
+
                 // Check if player is unarmed
                 if (_player.EquippedWeapon == null)
                 {
                     Console.WriteLine("(Fighting unarmed - find a weapon!)");
                 }
+
+                // Apply defense reduction if enemy is defending
+                if (_enemyDefending)
+                {
+                    int damageReduction = result.FinalDamage / 2;
+                    result.FinalDamage -= damageReduction;
+                    Console.WriteLine($"{_enemy.Name}'s defensive stance reduced damage by {damageReduction}!");
+                }
             }
             else
             {
                 result = _damageCalculator.CalculateEnemyAttackDamage(_enemy, _player);
-                
+
                 // Apply defense reduction if player is defending
                 if (_playerDefending && action.Target == _player)
                 {
-                    result.FinalDamage = result.FinalDamage / 2;
-                    Console.WriteLine($"Defensive stance reduced damage by {result.FinalDamage}!");
+                    int damageReduction = result.FinalDamage / 2;
+                    result.FinalDamage -= damageReduction;
+                    Console.WriteLine($"Defensive stance reduced damage by {damageReduction}!");
                 }
             }
 
@@ -251,9 +402,15 @@ namespace GameLogic.Combat
         /// </summary>
         private void ProcessAbility(CombatAction action)
         {
-            // TODO: Implement ability processing
-            // action.Ability.Execute(action.Actor, action.Target);
-            Console.WriteLine("Abilities not fully implemented yet!");
+            if (action.Ability != null)
+            {
+                // Execute the ability
+                action.Ability.Execute(action.Actor, action.Target, _rngManager);
+            }
+            else
+            {
+                Console.WriteLine("Error: No ability provided!");
+            }
         }
 
         /// <summary>
@@ -261,8 +418,42 @@ namespace GameLogic.Combat
         /// </summary>
         private void ProcessItem(CombatAction action)
         {
-            // TODO: Implement item processing
-            Console.WriteLine("Items not implemented yet!");
+            if (action.Item != null)
+            {
+                // Check if it's a consumable (most combat items)
+                if (action.Item is Items.Consumable consumable)
+                {
+                    // Special handling for combat consumables
+                    if (consumable.Type == Items.ConsumableType.Bomb)
+                    {
+                        // Apply bomb damage to enemy
+                        Console.WriteLine($"\n{action.Actor.Name} throws a {consumable.Name}!");
+                        _enemy.TakeDamage(consumable.EffectPower);
+                        Console.WriteLine($"The explosion dealt {consumable.EffectPower} damage to {_enemy.Name}!");
+                        consumable.RemoveFromStack(1);
+                    }
+                    else
+                    {
+                        // Use consumable normally (healing, etc.)
+                        consumable.Use(_player);
+                    }
+
+                    // Remove from inventory if stack is empty
+                    if (consumable.Quantity <= 0)
+                    {
+                        _player.Inventory.Remove(consumable);
+                    }
+                }
+                else
+                {
+                    // For non-consumable items, just use them
+                    action.Item.Use(_player);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Error: No item provided!");
+            }
         }
 
         /// <summary>
@@ -271,11 +462,16 @@ namespace GameLogic.Combat
         private void ProcessDefend(CombatAction action)
         {
             Console.WriteLine($"\n{action.Actor.Name} takes a defensive stance!");
-            
+
             if (action.Actor == _player)
             {
                 _playerDefending = true;
                 Console.WriteLine("Next incoming attack will deal reduced damage!");
+            }
+            else if (action.Actor == _enemy)
+            {
+                _enemyDefending = true;
+                Console.WriteLine($"{_enemy.Name} braces for impact!");
             }
         }
 
@@ -341,7 +537,21 @@ namespace GameLogic.Combat
             _player.AddExperience(xpGained);
             _player.Gold += goldGained;
 
-            // TODO: Roll for loot drops using LootTable
+            // Roll for loot drops
+            var lootDrops = _enemy.GetLootDrops(_rngManager);
+            if (lootDrops.Count > 0)
+            {
+                Console.WriteLine("\n--- LOOT DROPS ---");
+                foreach (var item in lootDrops)
+                {
+                    _player.AddToInventory(item);
+                    Console.WriteLine($"Obtained: {item.GetDisplayName()}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("\nNo items dropped.");
+            }
 
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();

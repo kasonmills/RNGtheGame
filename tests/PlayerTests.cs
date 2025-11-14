@@ -100,14 +100,13 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void Constructor_InitializesEmptyAbilitiesList()
+        public void Constructor_StartsWithNoAbility()
         {
             // Act
             var player = CreateTestPlayer();
 
             // Assert
-            Assert.NotNull(player.Abilities);
-            Assert.Empty(player.Abilities);
+            Assert.Null(player.SelectedAbility);
         }
 
         [Fact]

@@ -17,9 +17,10 @@ namespace GameLogic.Data
         public int MaxHealth { get; set; }
         public int Gold { get; set; }
         
-        // Player Ability
-        public string SelectedAbility { get; set; }
-        public int AbilityLevel { get; set; }
+        // Player Ability (permanent choice)
+        public string SelectedAbilityName { get; set; }
+        public int SelectedAbilityLevel { get; set; }
+        public int SelectedAbilityExperience { get; set; }
         
         // Equipment (store names/IDs to reconstruct later)
         public string EquippedWeaponName { get; set; }

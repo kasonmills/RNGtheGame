@@ -131,12 +131,12 @@ namespace GameLogic.Data
                 data.EquippedArmorName = player.EquippedArmor.Name;
             }
 
-            // Save ability (if player has abilities list, take first one)
-            // TODO: Update this when player ability system is fully implemented
-            if (player.Abilities != null && player.Abilities.Count > 0)
+            // Save selected ability
+            if (player.SelectedAbility != null)
             {
-                data.SelectedAbility = player.Abilities[0].Name;
-                data.AbilityLevel = player.Abilities[0].Level;
+                data.SelectedAbilityName = player.SelectedAbility.Name;
+                data.SelectedAbilityLevel = player.SelectedAbility.Level;
+                data.SelectedAbilityExperience = player.SelectedAbility.Experience;
             }
 
             // Save inventory
@@ -188,19 +188,8 @@ namespace GameLogic.Data
                 }
             }
 
-            // Restore ability
-            if (!string.IsNullOrEmpty(saveData.SelectedAbility))
-            {
-                // TODO: Implement ability restoration when ability database is created
-                // For now, skip ability restoration
-                // var ability = AbilityDatabase.GetAbility(saveData.SelectedAbility);
-                // if (ability != null)
-                // {
-                //     ability.Level = saveData.AbilityLevel;
-                //     player.Abilities.Clear();
-                //     player.Abilities.Add(ability);
-                // }
-            }
+            // Note: Ability restoration is now handled in Player.LoadFromSave()
+            // No need to restore ability here
         }
 
         /// <summary>
