@@ -436,7 +436,7 @@ namespace GameLogic.Progression
 
             foreach (var item in quest.Reward.Items)
             {
-                player.Inventory.Add(item);
+                player.Inventory.AddItem(item);
                 Console.WriteLine($"Received: {item.GetDisplayName()}");
             }
 

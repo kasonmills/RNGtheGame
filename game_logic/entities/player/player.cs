@@ -18,7 +18,7 @@ namespace GameLogic.Entities.Player
         private Random rd = new Random();
 
         // Inventory
-        public List<Item> Inventory { get; set; }
+        public PlayerInventory Inventory { get; private set; }
         public Weapon EquippedWeapon { get; set; }
         public Armor EquippedArmor { get; set; }
 
@@ -32,7 +32,7 @@ namespace GameLogic.Entities.Player
             Health = MaxHealth;
             Gold = 0;
             PlayTime = TimeSpan.Zero;
-            Inventory = new List<Item>();
+            Inventory = new PlayerInventory();
             SelectedAbility = null; // Will be set during character creation
         }
 
@@ -93,7 +93,7 @@ namespace GameLogic.Entities.Player
 
             // TODO: Reconstruct inventory from item names
             // For now, leave inventory empty until we build ItemDatabase
-            player.Inventory = new List<Item>();
+            player.Inventory = new PlayerInventory();
 
             // Restore selected ability
             if (!string.IsNullOrEmpty(data.SelectedAbilityName))
@@ -167,8 +167,7 @@ namespace GameLogic.Entities.Player
         // Add item to inventory
         public void AddToInventory(Item item)
         {
-            Inventory.Add(item);
-            Console.WriteLine($"{item.Name} has been added to your inventory.");
+            Inventory.AddItem(item);
         }
 
         // Equip weapon

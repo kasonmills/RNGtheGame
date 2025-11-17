@@ -420,21 +420,9 @@ namespace GameLogic.Core
         /// </summary>
         private void ShowInventory()
         {
-            Console.WriteLine("\n=== Inventory ===");
-            
-            if (_player.Inventory.Count == 0)
-            {
-                Console.WriteLine("Your inventory is empty.");
-            }
-            else
-            {
-                for (int i = 0; i < _player.Inventory.Count; i++)
-                {
-                    Console.WriteLine($"{i + 1}. {_player.Inventory[i].Name}");
-                }
-            }
-            
-            Console.WriteLine($"\nEquipped Weapon: {(_player.EquippedWeapon?.Name ?? "None")}");
+            _player.Inventory.DisplayInventory();
+
+            Console.WriteLine($"Equipped Weapon: {(_player.EquippedWeapon?.Name ?? "None")}");
             Console.WriteLine($"Equipped Armor: {(_player.EquippedArmor?.Name ?? "None")}");
             
             Console.WriteLine("\nPress any key to continue...");

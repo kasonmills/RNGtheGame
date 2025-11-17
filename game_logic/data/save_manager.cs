@@ -140,9 +140,9 @@ namespace GameLogic.Data
             }
 
             // Save inventory
-            if (player.Inventory != null)
+            if (player.Inventory != null && player.Inventory.Items != null)
             {
-                foreach (var item in player.Inventory)
+                foreach (var item in player.Inventory.Items)
                 {
                     data.InventoryItems.Add(item.Name);
                 }
@@ -184,7 +184,7 @@ namespace GameLogic.Data
                 Item item = ItemDatabase.GetItemByName(itemName, 1, 1);
                 if (item != null)
                 {
-                    player.Inventory.Add(item);
+                    player.Inventory.AddItem(item);
                 }
             }
 

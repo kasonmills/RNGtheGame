@@ -168,7 +168,7 @@ namespace GameLogic.Combat
                     }
                 case "3":
                     // Use item from inventory
-                    if (_player.Inventory.Count == 0)
+                    if (_player.Inventory.Items.Count == 0)
                     {
                         Console.WriteLine("\nYour inventory is empty! Attacking instead.");
                         return CombatAction.Attack(_player, _enemy);
@@ -176,18 +176,18 @@ namespace GameLogic.Combat
 
                     // Show inventory
                     Console.WriteLine("\nYour Inventory:");
-                    for (int i = 0; i < _player.Inventory.Count; i++)
+                    for (int i = 0; i < _player.Inventory.Items.Count; i++)
                     {
-                        Console.WriteLine($"{i + 1}. {_player.Inventory[i].Name}");
+                        Console.WriteLine($"{i + 1}. {_player.Inventory.Items[i].Name}");
                     }
-                    Console.WriteLine($"{_player.Inventory.Count + 1}. Cancel");
+                    Console.WriteLine($"{_player.Inventory.Items.Count + 1}. Cancel");
 
                     Console.Write("\nSelect item: ");
                     string itemChoice = Console.ReadLine();
 
-                    if (int.TryParse(itemChoice, out int itemIndex) && itemIndex > 0 && itemIndex <= _player.Inventory.Count)
+                    if (int.TryParse(itemChoice, out int itemIndex) && itemIndex > 0 && itemIndex <= _player.Inventory.Items.Count)
                     {
-                        var item = _player.Inventory[itemIndex - 1];
+                        var item = _player.Inventory.Items[itemIndex - 1];
                         return CombatAction.UseItem(_player, item);
                     }
                     else
@@ -441,7 +441,7 @@ namespace GameLogic.Combat
                     // Remove from inventory if stack is empty
                     if (consumable.Quantity <= 0)
                     {
-                        _player.Inventory.Remove(consumable);
+                        _player.Inventory.RemoveItem(consumable);
                     }
                 }
                 else
