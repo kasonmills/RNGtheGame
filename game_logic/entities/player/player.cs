@@ -84,18 +84,11 @@ namespace GameLogic.Entities.Player
         public static Player LoadFromSave(SaveData data)
         {
             Player player = new Player(data.PlayerName);
-            player.Level = data.Level;
-            player.Experience = data.Experience;
-            player.MaxHealth = data.MaxHealth;
-            player.Health = data.Health;
-            player.Gold = data.Gold;
-            player.PlayTime = data.PlayTime;
 
-            // TODO: Reconstruct inventory from item names
-            // For now, leave inventory empty until we build ItemDatabase
-            player.Inventory = new PlayerInventory();
+            // Use SaveManager to apply all save data (including inventory)
+            Data.SaveManager.ApplySaveDataToPlayer(data, player);
 
-            // Restore selected ability
+            // Restore selected ability (not handled by ApplySaveDataToPlayer)
             if (!string.IsNullOrEmpty(data.SelectedAbilityName))
             {
                 player.SelectedAbility = CreateAbilityFromName(data.SelectedAbilityName);

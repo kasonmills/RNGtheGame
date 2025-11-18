@@ -170,6 +170,7 @@ namespace GameLogic.Core
                 if (saveData.MapSeed != 0)
                 {
                     _mapManager.GenerateMapFromSeed(saveData.MapSeed);
+                    _mapManager.SetCurrentNode(saveData.CurrentMapNodeId);
                 }
                 else
                 {
@@ -504,7 +505,7 @@ namespace GameLogic.Core
         {
             Console.WriteLine("\nSaving game...");
 
-            bool success = Data.SaveManager.SaveGame(_player, "save1"); // Default save slot
+            bool success = Data.SaveManager.SaveGame(_player, "save1", _mapManager);
 
             if (success)
             {

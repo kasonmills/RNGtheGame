@@ -166,6 +166,32 @@ namespace GameLogic.Entities
         }
 
         /// <summary>
+        /// Remove all negative status effects (used by antidotes and cleansing items)
+        /// </summary>
+        public void RemoveNegativeEffects()
+        {
+            // Find all negative effects (Debuffs, DamageOverTime, CrowdControl)
+            var negativeEffects = ActiveEffects.Where(e =>
+                e.Type == EffectType.Debuff ||
+                e.Type == EffectType.DamageOverTime ||
+                e.Type == EffectType.CrowdControl).ToList();
+
+            if (negativeEffects.Count == 0)
+            {
+                Console.WriteLine($"{Name} has no negative effects to remove.");
+                return;
+            }
+
+            // Remove each negative effect
+            foreach (var effect in negativeEffects)
+            {
+                effect.OnExpired(this);
+                ActiveEffects.Remove(effect);
+                Console.WriteLine($"{effect.Name} was cured from {Name}!");
+            }
+        }
+
+        /// <summary>
         /// Abstract method for entity-specific behavior
         /// </summary>
         public abstract void Execute(Entity target = null);

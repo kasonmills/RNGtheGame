@@ -172,8 +172,22 @@ namespace GameLogic.Items
                     break;
 
                 case ConsumableType.BuffPotion:
-                    // TODO: Implement buff system
-                    Console.WriteLine($"{player.Name} used {Name} and gained a temporary buff!");
+                    Console.WriteLine($"{player.Name} used {Name}!");
+                    // Apply appropriate buff based on effect power
+                    // Higher power = stronger buff, 3 turn duration
+                    if (EffectPower <= 5)
+                    {
+                        player.AddEffect(new Abilities.StrengthBoostEffect(EffectPower, 3));
+                    }
+                    else if (EffectPower <= 10)
+                    {
+                        player.AddEffect(new Abilities.ResistanceEffect(EffectPower / 2, 3));
+                    }
+                    else
+                    {
+                        // Strong potions give regeneration
+                        player.AddEffect(new Abilities.RegenerationEffect(EffectPower / 3, 3));
+                    }
                     break;
 
                 case ConsumableType.Food:
@@ -192,8 +206,8 @@ namespace GameLogic.Items
                     break;
 
                 case ConsumableType.Antidote:
-                    Console.WriteLine($"{player.Name} used {Name} and cured status ailments!");
-                    // TODO: Implement status effect removal
+                    Console.WriteLine($"{player.Name} used {Name}!");
+                    player.RemoveNegativeEffects();
                     break;
 
                 case ConsumableType.RevivePotion:

@@ -2,6 +2,7 @@ using System;
 using GameLogic.Entities.Player;
 using GameLogic.Entities.Enemies;
 using GameLogic.Systems;
+using GameLogic.Abilities;
 using GameLogic.Abilities.PlayerAbilities;
 using GameLogic.Abilities.EnemyAbilities;
 using Enemy = GameLogic.Entities.Enemies.EnemyBase;
@@ -45,7 +46,10 @@ namespace GameLogic.Combat
             int levelBonus = attacker.Level / 2; // +1 damage per 2 levels
             baseDamage += levelBonus;
 
-            // Step 4: Apply AttackBoost effect if active
+            // Step 4: Apply passive ability modifiers
+            baseDamage = ApplyPlayerPassiveAbilities(attacker, baseDamage);
+
+            // Step 5: Apply AttackBoost effect if active
             if (attacker.HasEffect<AttackBoostEffect>())
             {
                 var attackBoost = attacker.GetEffect<AttackBoostEffect>();
@@ -53,7 +57,14 @@ namespace GameLogic.Combat
                 baseDamage = (int)(baseDamage * multiplier);
             }
 
-            // Step 5: Check for critical hit
+            // Step 5b: Apply StrengthBoost effect from consumables if active
+            if (attacker.HasEffect<StrengthBoostEffect>())
+            {
+                var strengthBoost = attacker.GetEffect<StrengthBoostEffect>();
+                baseDamage += strengthBoost.GetDamageBonus();
+            }
+
+            // Step 6: Check for critical hit
             int critChance = GetPlayerCritChance(attacker);
             int critRoll = _rngManager.Roll(1, 100);
 
@@ -150,23 +161,30 @@ namespace GameLogic.Combat
         /// </summary>
         private int GetPlayerAccuracy(Player player)
         {
+            int baseAccuracy;
+
             if (player.EquippedWeapon != null)
             {
-                int accuracy = player.EquippedWeapon.Accuracy;
-                
-                // TODO: Apply accuracy-boosting passive abilities
-                // if (player has AccuracyBoost ability)
-                // {
-                //     accuracy += 10;
-                // }
-                
-                return accuracy;
+                baseAccuracy = player.EquippedWeapon.Accuracy;
             }
             else
             {
                 // Unarmed: Lower accuracy
-                return 60;
+                baseAccuracy = 60;
             }
+
+            // Apply passive bonuses from selected ability
+            if (player.SelectedAbility != null)
+            {
+                // CriticalStrike ability provides small accuracy bonus (better precision)
+                if (player.SelectedAbility is CriticalStrike)
+                {
+                    int accuracyBonus = player.SelectedAbility.Level / 10; // +1 accuracy per 10 levels
+                    baseAccuracy += accuracyBonus;
+                }
+            }
+
+            return baseAccuracy;
         }
 
         /// <summary>
@@ -204,24 +222,33 @@ namespace GameLogic.Combat
 
         /// <summary>
         /// Apply passive ability modifiers to damage
+        /// Each ability provides a small passive bonus based on its level
         /// </summary>
         private int ApplyPlayerPassiveAbilities(Player player, int baseDamage)
         {
-            int modifiedDamage = baseDamage;
-            
-            // TODO: Check player's passive abilities and apply modifiers
-            // Example:
-            // if (player.SelectedAbility is AttackBoost && !ability.RequiresActivation)
-            // {
-            //     modifiedDamage += ability.BonusDamage;
-            // }
-            // 
-            // if (player.SelectedAbility is SwordBoost && player.EquippedWeapon.Type == WeaponType.Sword)
-            // {
-            //     modifiedDamage = (int)(modifiedDamage * 1.15f); // 15% bonus
-            // }
-            
-            return modifiedDamage;
+            if (player.SelectedAbility == null)
+                return baseDamage;
+
+            double damageMultiplier = 1.0;
+
+            // AttackBoost: Provides passive damage increase even when not activated
+            if (player.SelectedAbility is AttackBoost)
+            {
+                // Small passive bonus: 0.1% to 10% based on ability level
+                double passiveBonus = player.SelectedAbility.Level * 0.1; // 0.1% per level
+                damageMultiplier += passiveBonus / 100.0;
+            }
+            // CriticalStrike: Provides small passive damage bonus (precision strikes)
+            else if (player.SelectedAbility is CriticalStrike)
+            {
+                // Smaller passive bonus: 0.05% to 5% based on ability level
+                double passiveBonus = player.SelectedAbility.Level * 0.05; // 0.05% per level
+                damageMultiplier += passiveBonus / 100.0;
+            }
+            // DefenseBoost: No damage bonus (defensive ability)
+            // HealingAbility: No damage bonus (support ability)
+
+            return (int)(baseDamage * damageMultiplier);
         }
 
         /// <summary>
@@ -230,16 +257,27 @@ namespace GameLogic.Combat
         private int ApplyArmorReduction(int rawDamage, Player target)
         {
             double damageMultiplier = 1.0;
+            int flatReduction = 0;
 
-            // Apply DefenseBoost effect if active
+            // Apply DefenseBoost effect if active (percentage reduction)
             if (target.HasEffect<DefenseBoostEffect>())
             {
                 var defenseBoost = target.GetEffect<DefenseBoostEffect>();
                 damageMultiplier *= defenseBoost.GetDamageMultiplier();
             }
 
+            // Apply ResistanceEffect from consumables if active (flat reduction)
+            if (target.HasEffect<ResistanceEffect>())
+            {
+                var resistance = target.GetEffect<ResistanceEffect>();
+                flatReduction += resistance.GetDamageReduction();
+            }
+
             // Apply damage multiplier from effects first
             int adjustedDamage = (int)(rawDamage * damageMultiplier);
+
+            // Then apply flat reduction
+            adjustedDamage = Math.Max(1, adjustedDamage - flatReduction);
 
             if (target.EquippedArmor != null)
             {
@@ -251,7 +289,7 @@ namespace GameLogic.Combat
             }
             else
             {
-                // No armor: Return adjusted damage (with DefenseBoost if active)
+                // No armor: Return adjusted damage (with effects if active)
                 return Math.Max(1, adjustedDamage);
             }
         }
@@ -269,14 +307,29 @@ namespace GameLogic.Combat
         /// </summary>
         public int CalculateHealing(int baseHealing, Player target)
         {
-            int actualHealing = baseHealing;
-            
-            // TODO: Apply healing-boosting passive abilities
-            // if (target has HealingBoost ability)
-            // {
-            //     actualHealing = (int)(actualHealing * 1.25f); // 25% bonus
-            // }
-            
+            double healingMultiplier = 1.0;
+
+            // Apply passive healing bonuses from selected ability
+            if (target.SelectedAbility != null)
+            {
+                // HealingAbility: Provides passive healing increase
+                if (target.SelectedAbility is HealingAbility)
+                {
+                    // Passive bonus: 0.2% to 20% based on ability level
+                    double passiveBonus = target.SelectedAbility.Level * 0.2; // 0.2% per level
+                    healingMultiplier += passiveBonus / 100.0;
+                }
+                // DefenseBoost: Provides small healing bonus (regeneration)
+                else if (target.SelectedAbility is DefenseBoost)
+                {
+                    // Small passive bonus: 0.1% to 10% based on ability level
+                    double passiveBonus = target.SelectedAbility.Level * 0.1; // 0.1% per level
+                    healingMultiplier += passiveBonus / 100.0;
+                }
+            }
+
+            int actualHealing = (int)(baseHealing * healingMultiplier);
+
             // Can't heal above max health
             int maxPossibleHealing = target.MaxHealth - target.Health;
             return Math.Min(actualHealing, maxPossibleHealing);

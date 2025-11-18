@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GameLogic.Items;
+using GameLogic.Systems;
 
 namespace GameLogic.Entities.NPCs
 {
@@ -184,8 +185,7 @@ namespace GameLogic.Entities.NPCs
                     if (InParty && target != null)
                     {
                         // Companions attack enemies when in party
-                        Console.WriteLine($"{Name} attacks {target.Name}!");
-                        // TODO: Implement companion combat when combat system is ready
+                        AttackTarget(target, new RNGManager());
                     }
                     break;
 
@@ -201,6 +201,104 @@ namespace GameLogic.Entities.NPCs
                     // Generic NPCs just exist
                     Console.WriteLine($"{Name} is here.");
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Companion attacks a target (for combat)
+        /// </summary>
+        public void AttackTarget(Entity target, RNGManager rng)
+        {
+            if (!IsCompanion || !InParty)
+            {
+                Console.WriteLine($"{Name} cannot attack (not an active companion).");
+                return;
+            }
+
+            Console.WriteLine($"\n{Name} attacks {target.Name}!");
+
+            // Calculate accuracy
+            int accuracy = GetCompanionAccuracy();
+            int hitRoll = rng.Roll(1, 100);
+
+            if (hitRoll > accuracy)
+            {
+                Console.WriteLine($"{Name}'s attack missed!");
+                return;
+            }
+
+            // Calculate damage
+            int damage = GetCompanionDamage(rng);
+
+            // Apply level scaling
+            int levelBonus = Level / 2;
+            damage += levelBonus;
+
+            // Check for critical hit (5% base chance)
+            int critChance = GetCompanionCritChance();
+            int critRoll = rng.Roll(1, 100);
+
+            if (critRoll <= critChance)
+            {
+                Console.WriteLine("CRITICAL HIT!");
+                damage = (int)(damage * 1.5f);
+            }
+
+            // Deal damage
+            target.TakeDamage(damage);
+            Console.WriteLine($"{Name} dealt {damage} damage to {target.Name}!");
+        }
+
+        /// <summary>
+        /// Get companion's base damage
+        /// </summary>
+        private int GetCompanionDamage(RNGManager rng)
+        {
+            if (EquippedWeapon != null)
+            {
+                // Armed: Use weapon damage (80% effectiveness compared to player)
+                int minDamage = (int)(EquippedWeapon.MinDamage * 0.8);
+                int maxDamage = (int)(EquippedWeapon.MaxDamage * 0.8);
+                return rng.Roll(Math.Max(1, minDamage), Math.Max(1, maxDamage));
+            }
+            else
+            {
+                // Unarmed: Weak damage
+                return rng.Roll(1, 3);
+            }
+        }
+
+        /// <summary>
+        /// Get companion's accuracy
+        /// </summary>
+        private int GetCompanionAccuracy()
+        {
+            if (EquippedWeapon != null)
+            {
+                // Slightly lower accuracy than player (90%)
+                return (int)(EquippedWeapon.Accuracy * 0.9);
+            }
+            else
+            {
+                // Unarmed: Lower accuracy
+                return 55;
+            }
+        }
+
+        /// <summary>
+        /// Get companion's critical hit chance
+        /// </summary>
+        private int GetCompanionCritChance()
+        {
+            if (EquippedWeapon != null)
+            {
+                // Lower crit chance than player (75%)
+                return (int)(EquippedWeapon.CritChance * 0.75);
+            }
+            else
+            {
+                // Unarmed: Minimal crit chance
+                return 2;
             }
         }
 
