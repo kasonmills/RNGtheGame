@@ -84,7 +84,6 @@ namespace GameLogic.Entities.NPCs.Companions
             TargetType = AbilityTarget.Ally;  // Targets player/self
             Rarity = AbilityRarity.Rare;
 
-            ManaCost = 0;
             Cooldown = 4;  // 4 turn cooldown
             Level = healer.Level;
         }
@@ -128,11 +127,11 @@ namespace GameLogic.Entities.NPCs.Companions
             var regenEffect = new RegenerationEffect(regenDuration, regenPotency);
             target.AddEffect(regenEffect);
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
 
-            // Gain experience for using ability
-            GainExperience(10);
+            // Gain scaled combat experience
+            GainCombatExperience();
         }
 
         public override string GetInfo()

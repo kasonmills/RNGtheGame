@@ -20,7 +20,6 @@ namespace GameLogic.Abilities.EnemyAbilities
             TargetType = AbilityTarget.Self; // Targets the enemy itself
             Rarity = AbilityRarity.Uncommon;
 
-            ManaCost = 0;
             Cooldown = 5; // 5 turn cooldown
 
             // Override level to match enemy level
@@ -60,8 +59,8 @@ namespace GameLogic.Abilities.EnemyAbilities
 
             Console.WriteLine($"{user.Name} enters a furious rage! (+{damageBonus}% damage, -{defenseReduction}% defense for {duration} turns)");
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
         }
 
         /// <summary>

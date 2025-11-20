@@ -35,6 +35,11 @@ namespace GameLogic.Items
         public int Level { get; set; }
         public const int MaxLevel = 100;
 
+        // Experience System
+        public int Experience { get; set; }
+        public int ExperienceToNextLevel { get; private set; }
+        public bool ReadyForUpgrade { get; private set; }  // True when XP requirement is met
+
         // Base stats for level scaling
         private int _baseMinDamage;
         private int _baseMaxDamage;
@@ -69,15 +74,102 @@ namespace GameLogic.Items
             // Apply level scaling
             UpdateStatsForLevel();
 
-            // Weapons are not stackable
-            IsStackable = false;
-            MaxStackSize = 1;
+            // Initialize experience system
+            Experience = 0;
+            ExperienceToNextLevel = CalculateExperienceRequired(Level);
+            ReadyForUpgrade = false;
+
+            // Weapons are stackable if they have the same level
+            IsStackable = true;
+            MaxStackSize = 99;
         }
 
         /// <summary>
-        /// Level up the weapon (up to level 100)
-        /// Returns true if level up succeeded
+        /// Calculate experience required for next level
         /// </summary>
+        private int CalculateExperienceRequired(int currentLevel)
+        {
+            // Base formula: 100 * level
+            // Level 1->2: 200 XP, Level 2->3: 300 XP, etc.
+            return 100 * (currentLevel + 1);
+        }
+
+        /// <summary>
+        /// Gain experience towards next level
+        /// </summary>
+        public void GainExperience(int amount)
+        {
+            if (Level >= MaxLevel || ReadyForUpgrade)
+            {
+                return; // Already at max level or already ready for upgrade
+            }
+
+            Experience += amount;
+            Console.WriteLine($"{GetDisplayName()} gained {amount} XP! ({Experience}/{ExperienceToNextLevel})");
+
+            // Check if ready for upgrade
+            if (Experience >= ExperienceToNextLevel)
+            {
+                ReadyForUpgrade = true;
+                Console.WriteLine($"⚒️  {GetDisplayName()} has enough experience! Take it to a blacksmith to upgrade (Cost: {GetUpgradeCost()} gold)");
+            }
+        }
+
+        /// <summary>
+        /// Calculate the gold cost to upgrade at blacksmith
+        /// Cost scales with level and rarity
+        /// </summary>
+        public int GetUpgradeCost()
+        {
+            if (!ReadyForUpgrade || Level >= MaxLevel)
+            {
+                return 0;
+            }
+
+            // Base cost: 30 gold per level
+            int baseCost = 30 * (Level + 1);
+
+            // Rarity multiplier
+            double rarityMultiplier = Rarity switch
+            {
+                ItemRarity.Common => 1.0,
+                ItemRarity.Uncommon => 1.5,
+                ItemRarity.Rare => 2.0,
+                ItemRarity.Epic => 3.0,
+                ItemRarity.Legendary => 5.0,
+                ItemRarity.Mythic => 10.0,
+                _ => 1.0
+            };
+
+            return (int)(baseCost * rarityMultiplier);
+        }
+
+        /// <summary>
+        /// Complete the upgrade at the blacksmith (requires gold payment)
+        /// This should be called by the blacksmith NPC/shop after taking payment
+        /// </summary>
+        public bool CompleteUpgrade()
+        {
+            if (!ReadyForUpgrade || Level >= MaxLevel)
+            {
+                return false;
+            }
+
+            Level++;
+            Experience -= ExperienceToNextLevel;
+            ExperienceToNextLevel = CalculateExperienceRequired(Level);
+            ReadyForUpgrade = false;
+
+            UpdateStatsForLevel();
+            Console.WriteLine($"⚒️  {GetDisplayName()} has been upgraded! Now at +{Level}!");
+            return true;
+        }
+
+        /// <summary>
+        /// Legacy method - kept for backwards compatibility
+        /// Use CompleteUpgrade() instead for the new system
+        /// </summary>
+        [Obsolete("Use GainExperience() and CompleteUpgrade() instead")]
         public bool LevelUp()
         {
             if (Level >= MaxLevel)
@@ -164,6 +256,20 @@ namespace GameLogic.Items
             info += $"Type: {Type}\n";
             info += $"Rarity: {Rarity}\n";
             info += $"Level: {Level}/{MaxLevel}\n";
+
+            // Show experience progress
+            if (Level < MaxLevel)
+            {
+                if (ReadyForUpgrade)
+                {
+                    info += $"⚒️  READY FOR UPGRADE! (Cost: {GetUpgradeCost()} gold at blacksmith)\n";
+                }
+                else
+                {
+                    info += $"Experience: {Experience}/{ExperienceToNextLevel}\n";
+                }
+            }
+
             info += $"Damage: {MinDamage}-{MaxDamage}\n";
             info += $"Crit Chance: {CritChance}%\n";
             info += $"Accuracy: {Accuracy}%\n";

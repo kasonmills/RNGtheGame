@@ -80,7 +80,6 @@ namespace GameLogic.Entities.NPCs.Companions
             TargetType = AbilityTarget.SingleEnemy;
             Rarity = AbilityRarity.Uncommon;
 
-            ManaCost = 0;
             Cooldown = 3;  // 3 turn cooldown
             Level = ranger.Level;
         }
@@ -137,11 +136,11 @@ namespace GameLogic.Entities.NPCs.Companions
                 }
             }
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
 
-            // Gain experience for using ability
-            GainExperience(10);
+            // Gain scaled combat experience
+            GainCombatExperience();
         }
 
         public override string GetInfo()

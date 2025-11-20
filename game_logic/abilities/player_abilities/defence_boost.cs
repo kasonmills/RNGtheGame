@@ -17,7 +17,6 @@ namespace GameLogic.Abilities.PlayerAbilities
             TargetType = AbilityTarget.Self;
             Rarity = AbilityRarity.Common;
 
-            ManaCost = 0;  // Free to use
             Cooldown = 5;  // 5 turn cooldown after use
         }
 
@@ -41,11 +40,11 @@ namespace GameLogic.Abilities.PlayerAbilities
 
             Console.WriteLine($"Damage taken reduced by {defensePercentage:F1}% for 3 turns!");
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
 
-            // Gain experience for using the ability
-            GainExperience(10);
+            // Gain scaled combat experience
+            GainCombatExperience();
         }
 
         /// <summary>

@@ -19,10 +19,12 @@ namespace GameLogic.Abilities
         public int Experience { get; set; }
         public int ExperienceToNextLevel { get; protected set; } = 100; // Increases per level
 
-        // Resource Cost
-        public int ManaCost { get; protected set; }  // Could be energy/stamina instead
+        // Cooldown System
         public int Cooldown { get; protected set; }  // Turns until can use again
         public int CurrentCooldown { get; set; }     // Current cooldown remaining
+
+        // Combat Experience Tracking
+        public int CombatUsageCount { get; private set; }  // How many times used in current combat
 
         // Targeting
         public AbilityTarget TargetType { get; protected set; }
@@ -56,9 +58,6 @@ namespace GameLogic.Abilities
             {
                 return false;
             }
-
-            // Check if user has enough mana/energy (if implemented)
-            // if (user.CurrentMana < ManaCost) return false;
 
             return true;
         }
@@ -114,6 +113,55 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
+        /// Calculate experience gain based on usage count in current combat
+        /// First use: 10 XP
+        /// Each additional use: +15% more than previous (cumulative)
+        /// </summary>
+        public int GetCombatScaledExperience()
+        {
+            const int baseXP = 10;
+
+            if (CombatUsageCount == 0)
+            {
+                return baseXP; // First use: 10 XP
+            }
+
+            // Calculate scaled XP: 10 * (1.15^usageCount)
+            double multiplier = Math.Pow(1.15, CombatUsageCount);
+            int scaledXP = (int)Math.Round(baseXP * multiplier);
+
+            return scaledXP;
+        }
+
+        /// <summary>
+        /// Increment usage count and gain scaled experience
+        /// Called when ability is used in combat
+        /// </summary>
+        public void GainCombatExperience()
+        {
+            int xpGained = GetCombatScaledExperience();
+            CombatUsageCount++;
+            GainExperience(xpGained);
+
+            if (CombatUsageCount == 1)
+            {
+                Console.WriteLine($"{Name} gained {xpGained} XP!");
+            }
+            else
+            {
+                Console.WriteLine($"{Name} gained {xpGained} XP! (Combat use #{CombatUsageCount})");
+            }
+        }
+
+        /// <summary>
+        /// Reset combat usage count (called when combat ends)
+        /// </summary>
+        public void ResetCombatUsage()
+        {
+            CombatUsageCount = 0;
+        }
+
+        /// <summary>
         /// Reduce cooldown by 1 (called each turn)
         /// </summary>
         public void ReduceCooldown()
@@ -125,11 +173,39 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
+        /// Get the effective cooldown based on ability level
+        /// Levels 1-24: No reduction
+        /// Levels 25-74: -1 turn cooldown
+        /// Levels 75-100: -2 turns cooldown
+        /// </summary>
+        public int GetEffectiveCooldown()
+        {
+            int reduction = 0;
+
+            if (Level >= 75)
+            {
+                reduction = 2;
+            }
+            else if (Level >= 25)
+            {
+                reduction = 1;
+            }
+
+            // Cooldown can't go below 1 turn
+            return Math.Max(1, Cooldown - reduction);
+        }
+
+        /// <summary>
         /// Get ability info including level and power
         /// </summary>
         public virtual string GetInfo()
         {
-            return $"{Name} (Lv.{Level}/{MaxLevel})\n{Description}";
+            int effectiveCooldown = GetEffectiveCooldown();
+            string cooldownInfo = effectiveCooldown != Cooldown
+                ? $" (Cooldown: {effectiveCooldown} turns, reduced from {Cooldown})"
+                : $" (Cooldown: {effectiveCooldown} turns)";
+
+            return $"{Name} (Lv.{Level}/{MaxLevel}){cooldownInfo}\n{Description}";
         }
 
         /// <summary>

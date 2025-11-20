@@ -17,7 +17,6 @@ namespace GameLogic.Abilities.PlayerAbilities
             TargetType = AbilityTarget.Self;
             Rarity = AbilityRarity.Uncommon;
 
-            ManaCost = 0;  // Free to use
             Cooldown = 4;  // 4 turn cooldown after use
         }
 
@@ -41,11 +40,11 @@ namespace GameLogic.Abilities.PlayerAbilities
 
             Console.WriteLine($"Critical hit chance increased by {critChanceBonus:F1}% for 3 turns!");
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
 
-            // Gain experience for using the ability
-            GainExperience(10);
+            // Gain scaled combat experience
+            GainCombatExperience();
         }
 
         /// <summary>

@@ -19,7 +19,6 @@ namespace GameLogic.Abilities.EnemyAbilities
             TargetType = AbilityTarget.SingleEnemy; // Targets the player
             Rarity = AbilityRarity.Uncommon;
 
-            ManaCost = 0;
             Cooldown = 3; // 3 turn cooldown
 
             // Override level to match enemy level
@@ -55,8 +54,8 @@ namespace GameLogic.Abilities.EnemyAbilities
 
             Console.WriteLine($"The attack was venomous! Poison will deal {minPoisonDamage}-{maxPoisonDamage} damage per turn for {duration} turns!");
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
         }
 
         /// <summary>

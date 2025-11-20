@@ -18,7 +18,6 @@ namespace GameLogic.Abilities.PlayerAbilities
             TargetType = AbilityTarget.Self;
             Rarity = AbilityRarity.Common;
 
-            ManaCost = 0;  // Free to use
             Cooldown = 4;  // 4 turn cooldown
         }
 
@@ -52,11 +51,11 @@ namespace GameLogic.Abilities.PlayerAbilities
                 Console.WriteLine($"(Healed to full health!)");
             }
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
 
-            // Gain experience for using the ability
-            GainExperience(10);
+            // Gain scaled combat experience
+            GainCombatExperience();
         }
 
         /// <summary>

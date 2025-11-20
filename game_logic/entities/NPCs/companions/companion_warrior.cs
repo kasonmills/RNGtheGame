@@ -85,7 +85,6 @@ namespace GameLogic.Entities.NPCs.Companions
             TargetType = AbilityTarget.SingleEnemy;
             Rarity = AbilityRarity.Uncommon;
 
-            ManaCost = 0;
             Cooldown = 4;  // 4 turn cooldown
             Level = warrior.Level;
         }
@@ -110,11 +109,11 @@ namespace GameLogic.Entities.NPCs.Companions
 
             Console.WriteLine($"{target.Name} is stunned! Damage reduced by {damageReduction}% for {duration} turns!");
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
 
-            // Gain experience for using ability
-            GainExperience(10);
+            // Gain scaled combat experience
+            GainCombatExperience();
         }
 
         public override string GetInfo()

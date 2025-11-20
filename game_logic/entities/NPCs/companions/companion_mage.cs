@@ -84,7 +84,6 @@ namespace GameLogic.Entities.NPCs.Companions
             TargetType = AbilityTarget.SingleEnemy;  // Primary target
             Rarity = AbilityRarity.Rare;
 
-            ManaCost = 0;
             Cooldown = 5;  // 5 turn cooldown
             Level = mage.Level;
         }
@@ -111,11 +110,11 @@ namespace GameLogic.Entities.NPCs.Companions
                 Console.WriteLine($"⚡ The blast resonates! {target.Name} takes an additional {secondaryDamage} damage!");
             }
 
-            // Set cooldown
-            CurrentCooldown = Cooldown;
+            // Set cooldown (uses level-based reduction)
+            CurrentCooldown = GetEffectiveCooldown();
 
-            // Gain experience for using ability
-            GainExperience(10);
+            // Gain scaled combat experience
+            GainCombatExperience();
         }
 
         public override string GetInfo()

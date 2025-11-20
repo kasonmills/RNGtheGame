@@ -8,7 +8,6 @@ namespace GameLogic.Items
     public enum ConsumableType
     {
         HealthPotion,       // Restores health
-        ManaPotion,         // Restores mana (if mana system exists)
         BuffPotion,         // Applies temporary buff
         Food,               // Restores health over time
         Elixir,             // Powerful multi-effect consumables
@@ -164,11 +163,6 @@ namespace GameLogic.Items
                 case ConsumableType.HealthPotion:
                     player.Heal(EffectPower);
                     Console.WriteLine($"{player.Name} used {Name} and restored {EffectPower} HP!");
-                    break;
-
-                case ConsumableType.ManaPotion:
-                    // TODO: Implement mana system if needed
-                    Console.WriteLine($"{player.Name} used {Name} and restored {EffectPower} MP!");
                     break;
 
                 case ConsumableType.BuffPotion:

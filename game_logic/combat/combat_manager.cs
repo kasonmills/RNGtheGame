@@ -488,9 +488,15 @@ namespace GameLogic.Combat
                 Console.WriteLine($"\n{action.Actor.Name} successfully fled from combat!");
                 Console.WriteLine("You escaped, but gained no rewards...");
                 Console.WriteLine($"Remaining HP: {_player.Health}/{_player.MaxHealth}");
-                
+
+                // Reset combat usage for abilities
+                if (_player.SelectedAbility != null)
+                {
+                    _player.SelectedAbility.ResetCombatUsage();
+                }
+
                 _combatActive = false;
-                
+
                 Console.WriteLine("\nPress any key to continue...");
                 Console.ReadKey();
             }
@@ -553,6 +559,12 @@ namespace GameLogic.Combat
                 Console.WriteLine("\nNo items dropped.");
             }
 
+            // Reset combat usage for abilities
+            if (_player.SelectedAbility != null)
+            {
+                _player.SelectedAbility.ResetCombatUsage();
+            }
+
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
 
@@ -571,6 +583,12 @@ namespace GameLogic.Combat
 
             Console.WriteLine($"\n{_player.Name} has been defeated by {_enemy.Name}...");
             Console.WriteLine("\nGAME OVER");
+
+            // Reset combat usage for abilities
+            if (_player.SelectedAbility != null)
+            {
+                _player.SelectedAbility.ResetCombatUsage();
+            }
 
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
