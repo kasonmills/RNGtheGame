@@ -31,6 +31,9 @@ namespace GameLogic.Entities.NPCs.Companions
             MaxHealth = 100 + (startingLevel * 10);  // Standard health
             Health = MaxHealth;
 
+            // Speed: Very fast - light armor and agile
+            Speed = 15 + (startingLevel / 2); // Rogues are the fastest companions
+
             // Initialize unique ability
             UniqueAbility = new BackstabAbility(this);
 

@@ -31,6 +31,9 @@ namespace GameLogic.Entities.NPCs.Companions
             MaxHealth = 95 + (startingLevel * 9);
             Health = MaxHealth;
 
+            // Speed: Fast - light armor and nimble
+            Speed = 13 + (startingLevel / 2); // Rangers are quick and agile
+
             // Initialize unique ability
             UniqueAbility = new MultishotAbility(this);
 

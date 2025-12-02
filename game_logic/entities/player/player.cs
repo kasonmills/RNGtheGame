@@ -30,6 +30,7 @@ namespace GameLogic.Entities.Player
             Experience = 0;
             MaxHealth = 20;
             Health = MaxHealth;
+            Speed = 10; // Base speed for player (can be modified by equipment/buffs)
             Gold = 0;
             PlayTime = TimeSpan.Zero;
             Inventory = new PlayerInventory();
@@ -122,6 +123,14 @@ namespace GameLogic.Entities.Player
             Level++;
             MaxHealth += rd.Next(1, 7);
             Health = MaxHealth; // Full heal on level up
+
+            // Increase Speed every few levels (small incremental gains)
+            if (Level % 3 == 0) // Every 3 levels
+            {
+                Speed++;
+                Console.WriteLine($"{Name}'s speed increased to {Speed}!");
+            }
+
             Console.WriteLine($"{Name} leveled up to level {Level}!");
         }
 

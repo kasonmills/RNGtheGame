@@ -18,6 +18,9 @@ namespace GameLogic.Entities
         public int Health { get; set; }
         public int MaxHealth { get; set; }
 
+        // Combat Stats
+        public int Speed { get; set; }  // Determines turn order (higher = acts first)
+
         // Active Effects (buffs, debuffs, status effects)
         public List<AbilityEffect> ActiveEffects { get; set; }
 
@@ -109,7 +112,8 @@ namespace GameLogic.Entities
         }
 
         /// <summary>
-        /// Process all active effects (called at start of turn)
+        /// Process all active effects (called at start of entity's turn)
+        /// Effects tick down at the end of each round, not each turn
         /// </summary>
         public void ProcessEffects(RNGManager rng)
         {
@@ -122,9 +126,28 @@ namespace GameLogic.Entities
 
             foreach (var effect in effectsToProcess)
             {
-                // Apply the effect
+                // Apply the effect (damage, healing, etc.)
                 effect.ApplyEffect(this, rng);
 
+                // NOTE: Duration is NOT reduced here
+                // Duration ticks down at the END of each round (after all entities act)
+                // This is handled separately in the combat manager
+            }
+        }
+
+        /// <summary>
+        /// Tick down all effect durations by 1 round
+        /// Called at the end of each round by the combat manager
+        /// </summary>
+        public void TickEffectDurations()
+        {
+            if (ActiveEffects.Count == 0) return;
+
+            // Create a copy to avoid modification during iteration
+            var effectsToProcess = new List<AbilityEffect>(ActiveEffects);
+
+            foreach (var effect in effectsToProcess)
+            {
                 // Reduce duration
                 effect.TickDuration();
 

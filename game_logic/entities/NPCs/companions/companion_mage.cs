@@ -31,6 +31,9 @@ namespace GameLogic.Entities.NPCs.Companions
             MaxHealth = 80 + (startingLevel * 8);  // Squishier than warrior
             Health = MaxHealth;
 
+            // Speed: Average - focused on casting rather than physical movement
+            Speed = 9 + (startingLevel / 3); // Mages are moderate speed
+
             // Initialize unique ability
             UniqueAbility = new ArcaneBlastAbility(this);
 

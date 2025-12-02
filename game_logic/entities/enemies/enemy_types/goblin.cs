@@ -37,6 +37,9 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
             // Defense: Weak armor
             Defense = level / 2;
 
+            // Speed: Fast and nimble
+            Speed = 12 + (level / 2); // Goblins are quick
+
             // Rewards: Basic
             XPValue = level * 40;
             GoldValue = level * 8;

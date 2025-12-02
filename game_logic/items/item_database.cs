@@ -392,7 +392,7 @@ namespace GameLogic.Items
                     value: 8
                 ),
 
-                // Elixirs
+                // Elixirs (Rare and expensive multi-effect consumables)
                 "elixir of vitality" => new Consumable(
                     "Elixir of Vitality",
                     "A powerful elixir that greatly restores health.",
@@ -401,6 +401,16 @@ namespace GameLogic.Items
                     ItemRarity.Rare,
                     level,
                     value: 100
+                ),
+
+                "combat elixir" => new Consumable(
+                    "Combat Elixir",
+                    "A rare elixir that boosts both attack and defense simultaneously for 1 turn.",
+                    ConsumableType.Elixir,
+                    effectPower: 30, // Not directly used, effects calculated by level in Use()
+                    ItemRarity.Epic,
+                    level,
+                    value: 200
                 ),
 
                 // Bombs
@@ -445,6 +455,7 @@ namespace GameLogic.Items
                 ("Bread", ConsumableType.Food, ItemRarity.Common),
                 ("Cooked Meat", ConsumableType.Food, ItemRarity.Common),
                 ("Elixir of Vitality", ConsumableType.Elixir, ItemRarity.Rare),
+                ("Combat Elixir", ConsumableType.Elixir, ItemRarity.Epic),
                 ("Fire Bomb", ConsumableType.Bomb, ItemRarity.Uncommon),
                 ("Antidote", ConsumableType.Antidote, ItemRarity.Common)
             };

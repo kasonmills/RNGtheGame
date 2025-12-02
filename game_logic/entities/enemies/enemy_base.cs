@@ -11,7 +11,7 @@ namespace GameLogic.Entities.Enemies
     /// </summary>
     public abstract class EnemyBase : Entity
     {
-        // Basic Attributes (Name, Level, Health, MaxHealth inherited from Entity)
+        // Basic Attributes (Name, Level, Health, MaxHealth, Speed inherited from Entity)
 
         // Combat Stats - These define the enemy's combat capabilities
         public int MinDamage { get; set; }

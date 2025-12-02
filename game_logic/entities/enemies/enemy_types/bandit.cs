@@ -38,6 +38,9 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
             // Defense: Light armor for mobility
             Defense = 1 + level;
 
+            // Speed: Very fast - light armor and agile
+            Speed = 14 + (level / 2); // Bandits are among the fastest enemies
+
             // Rewards: Bandits carry stolen goods
             XPValue = level * 75;
             GoldValue = level * 20; // Higher gold than goblins

@@ -13,7 +13,11 @@ namespace GameLogic.Items
         Elixir,             // Powerful multi-effect consumables
         Bomb,               // Throwable damage items
         Antidote,           // Cures poison/debuffs
-        RevivePotion        // Revives in combat
+        RevivePotion,       // Revives in combat
+        AttackPotion,       // Temporary attack boost (like Attack Boost ability)
+        DefensePotion,      // Temporary defense boost (like Defense Boost ability)
+        CriticalPotion,     // Temporary crit chance boost (like Critical Strike ability)
+        HealingPotion       // Instant healing (like Healing ability)
     }
 
     /// <summary>
@@ -146,6 +150,78 @@ namespace GameLogic.Items
         }
 
         /// <summary>
+        /// Get the duration in turns for buff potions based on level
+        /// Level 1-5: 1 turn
+        /// Level 6-10: 2 turns
+        /// </summary>
+        private int GetPotionDuration()
+        {
+            return Level <= 5 ? 1 : 2;
+        }
+
+        /// <summary>
+        /// Use a revival potion on a target entity (player, companion, or enemy)
+        /// Scales from 1 HP at level 1 to full HP at level 10
+        /// </summary>
+        /// <param name="user">The entity using the potion</param>
+        /// <param name="target">The entity to be revived</param>
+        /// <returns>True if revival was successful, false if target is alive or other error</returns>
+        public bool UseRevivePotion(Entities.Entity user, Entities.Entity target)
+        {
+            // Check if target is already alive
+            if (target.IsAlive())
+            {
+                Console.WriteLine($"{target.Name} is still alive! Revival potions can only be used on defeated targets.");
+                return false;
+            }
+
+            // Check if we have any potions
+            if (Quantity <= 0)
+            {
+                Console.WriteLine($"No {Name} remaining!");
+                return false;
+            }
+
+            Console.WriteLine($"\n💚 {user.Name} used {Name} on {target.Name}!");
+            Console.WriteLine("✨ A warm light envelops the body...");
+
+            // Calculate revival HP based on potion level
+            // Level 1: 1 HP (minimum)
+            // Level 5: 50% of max HP
+            // Level 10: 100% of max HP (full revival)
+            float revivePercentage = (float)Level / MaxLevel;
+            int reviveHP = Math.Max(1, (int)(target.MaxHealth * revivePercentage));
+
+            // Revive the target
+            target.Health = reviveHP;
+
+            Console.WriteLine($"💚 {target.Name} has been revived with {reviveHP}/{target.MaxHealth} HP!");
+
+            // Show scaling info
+            if (Level == 1)
+            {
+                Console.WriteLine("(Level 1 Revival Potion - minimal restoration)");
+            }
+            else if (Level == MaxLevel)
+            {
+                Console.WriteLine("(Level 10 Revival Potion - full restoration!)");
+            }
+            else
+            {
+                Console.WriteLine($"(Level {Level} Revival Potion - {revivePercentage:P0} restoration)");
+            }
+
+            // Remove any lingering negative effects
+            target.ActiveEffects.Clear();
+            Console.WriteLine($"All negative effects have been cleared from {target.Name}.");
+
+            // Consume one from the stack
+            RemoveFromStack(1);
+
+            return true;
+        }
+
+        /// <summary>
         /// Use the consumable
         /// Applies the consumable's effect to the player
         /// </summary>
@@ -190,8 +266,36 @@ namespace GameLogic.Items
                     break;
 
                 case ConsumableType.Elixir:
-                    player.Heal(EffectPower);
-                    Console.WriteLine($"{player.Name} used {Name} - a powerful elixir!");
+                    // Elixirs are rare, expensive, multi-effect consumables
+                    // Currently implemented: Combat Elixir (attack + defense boost)
+                    // Future: Healing elixirs, specialty elixirs, etc.
+
+                    Console.WriteLine($"{player.Name} used {Name} - a powerful combat elixir!");
+
+                    // Combat elixirs provide dual benefits at reduced power
+                    // Level 1 = 10% of Lv100 ability power, Level 10 = 60% of Lv100 ability power
+                    // Attack ability maxes at 70%, so: Lv1 = 7%, Lv10 = 42%
+                    double elixirAttackBoost = 7 + (Level - 1) * 3.89;
+                    // Defense ability maxes at 60%, so: Lv1 = 6%, Lv10 = 36%
+                    double elixirDefenseBoost = 6 + (Level - 1) * 3.33;
+
+                    int elixirDuration = 1;  // Always 1 turn for elixirs (shorter than potions)
+
+                    // Apply attack boost
+                    var elixirAttackEffect = new Abilities.PlayerAbilities.AttackBoostEffect(
+                        duration: elixirDuration,
+                        potency: (int)elixirAttackBoost
+                    );
+                    player.AddEffect(elixirAttackEffect);
+
+                    // Apply defense boost
+                    var elixirDefenseEffect = new Abilities.PlayerAbilities.DefenseBoostEffect(
+                        duration: elixirDuration,
+                        potency: (int)elixirDefenseBoost
+                    );
+                    player.AddEffect(elixirDefenseEffect);
+
+                    Console.WriteLine($"Attack increased by {elixirAttackBoost:F0}% and defense increased by {elixirDefenseBoost:F0}% for 1 turn!");
                     break;
 
                 case ConsumableType.Bomb:
@@ -205,8 +309,58 @@ namespace GameLogic.Items
                     break;
 
                 case ConsumableType.RevivePotion:
-                    Console.WriteLine($"{player.Name} used {Name} - revival effect activated!");
-                    // TODO: Implement revival logic
+                    Console.WriteLine($"{player.Name} has a {Name}!");
+                    Console.WriteLine("Revival potions must be used on a specific target during combat.");
+                    Console.WriteLine("(Use the item targeting system in combat to revive fallen allies)");
+                    break;
+
+                case ConsumableType.AttackPotion:
+                    Console.WriteLine($"{player.Name} used {Name}!");
+                    // Calculate attack boost based on level (scales like AttackBoost ability)
+                    // Level 1: ~10%, Level 10: ~70%
+                    double attackBoost = 10 + (Level - 1) * 6.67; // Roughly 10% to 70%
+                    int duration = GetPotionDuration();
+                    var attackEffect = new Abilities.PlayerAbilities.AttackBoostEffect(
+                        duration: duration,
+                        potency: (int)attackBoost
+                    );
+                    player.AddEffect(attackEffect);
+                    Console.WriteLine($"Attack damage increased by {attackBoost:F0}% for {duration} turn{(duration > 1 ? "s" : "")}!");
+                    break;
+
+                case ConsumableType.DefensePotion:
+                    Console.WriteLine($"{player.Name} used {Name}!");
+                    // Calculate defense boost based on level (scales like DefenseBoost ability)
+                    // Level 1: ~10%, Level 10: ~60%
+                    double defenseBoost = 10 + (Level - 1) * 5.56; // Roughly 10% to 60%
+                    int defenseDuration = GetPotionDuration();
+                    var defenseEffect = new Abilities.PlayerAbilities.DefenseBoostEffect(
+                        duration: defenseDuration,
+                        potency: (int)defenseBoost
+                    );
+                    player.AddEffect(defenseEffect);
+                    Console.WriteLine($"Damage taken reduced by {defenseBoost:F0}% for {defenseDuration} turn{(defenseDuration > 1 ? "s" : "")}!");
+                    break;
+
+                case ConsumableType.CriticalPotion:
+                    Console.WriteLine($"{player.Name} used {Name}!");
+                    // Calculate crit chance boost based on level (scales like CriticalStrike ability)
+                    // Level 1: ~5%, Level 10: ~50%
+                    double critBoost = 5 + (Level - 1) * 5.0; // Roughly 5% to 50%
+                    int critDuration = GetPotionDuration();
+                    var critEffect = new Abilities.PlayerAbilities.CriticalStrikeEffect(
+                        duration: critDuration,
+                        potency: (int)critBoost
+                    );
+                    player.AddEffect(critEffect);
+                    Console.WriteLine($"Critical hit chance increased by {critBoost:F0}% for {critDuration} turn{(critDuration > 1 ? "s" : "")}!");
+                    break;
+
+                case ConsumableType.HealingPotion:
+                    Console.WriteLine($"{player.Name} used {Name}!");
+                    // Healing scales with effect power (which scales with level)
+                    player.Heal(EffectPower);
+                    Console.WriteLine($"Restored {EffectPower} HP! (Current: {player.Health}/{player.MaxHealth})");
                     break;
 
                 default:

@@ -5,7 +5,7 @@ namespace GameLogic.Abilities
 {
     /// <summary>
     /// Base class for ongoing status effects (buffs, debuffs, DoT, etc.)
-    /// These are applied TO entities and persist for multiple turns
+    /// These are applied TO entities and persist for multiple rounds
     /// Examples: Poison, Burn, Attack Boost, Defense Boost, Stun
     /// </summary>
     public abstract class AbilityEffect
@@ -14,8 +14,8 @@ namespace GameLogic.Abilities
         public string Name { get; protected set; }
         public string Description { get; protected set; }
 
-        // Duration (in turns)
-        public int Duration { get; set; }           // Turns remaining
+        // Duration (in rounds)
+        public int Duration { get; set; }           // Rounds remaining
         public int MaxDuration { get; protected set; }   // Original duration
 
         // Potency (how strong the effect is)
@@ -40,7 +40,7 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
-        /// Apply the effect each turn
+        /// Apply the effect each round
         /// This is called during the entity's turn processing
         /// </summary>
         public abstract void ApplyEffect(Entity target, RNGManager rng);
@@ -62,7 +62,7 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
-        /// Reduce duration by 1 turn
+        /// Reduce duration by 1 round
         /// </summary>
         public void TickDuration()
         {
@@ -105,7 +105,7 @@ namespace GameLogic.Abilities
         public virtual string GetDisplayInfo()
         {
             string stackInfo = CanStack && StackCount > 1 ? $" x{StackCount}" : "";
-            return $"{Name}{stackInfo} ({Duration} turns)";
+            return $"{Name}{stackInfo} ({Duration} rounds)";
         }
 
         /// <summary>
@@ -113,7 +113,7 @@ namespace GameLogic.Abilities
         /// </summary>
         public virtual string GetDetailedInfo()
         {
-            return $"{Name}\n{Description}\nDuration: {Duration}/{MaxDuration} turns\nPotency: {Potency}";
+            return $"{Name}\n{Description}\nDuration: {Duration}/{MaxDuration} rounds\nPotency: {Potency}";
         }
     }
 

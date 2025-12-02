@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GameLogic.Entities.Player;
 using GameLogic.Entities.Enemies;
 using GameLogic.Systems;
@@ -9,24 +10,35 @@ namespace GameLogic.Combat
     /// <summary>
     /// Orchestrates combat encounters between player and enemies
     /// Delegates to specialized managers for turn order, damage, and actions
+    /// Uses a round-based system where each entity acts once per round
     /// </summary>
     public class CombatManager
     {
         private RNGManager _rngManager;
         private TurnManager _turnManager;
         private DamageCalculator _damageCalculator;
-        
+
         private Player _player;
         private Enemy _enemy;
         private bool _combatActive;
-        private bool _playerDefending;
-        private bool _enemyDefending;
+
+        // Round-based combat tracking
+        private int _currentRound;
+        private List<Entity> _allCombatants;
+        private HashSet<Entity> _entitiesActedThisRound;
+
+        // Universal defend tracking - any entity can defend
+        private Dictionary<Entity, bool> _defendingEntities;
 
         public CombatManager(RNGManager rngManager)
         {
             _rngManager = rngManager;
             _turnManager = new TurnManager();
             _damageCalculator = new DamageCalculator(rngManager);
+            _defendingEntities = new Dictionary<Entity, bool>();
+            _allCombatants = new List<Entity>();
+            _entitiesActedThisRound = new HashSet<Entity>();
+            _currentRound = 0;
         }
 
         /// <summary>
@@ -38,8 +50,17 @@ namespace GameLogic.Combat
             _player = player;
             _enemy = enemy;
             _combatActive = true;
-            _playerDefending = false;
-            _enemyDefending = false;
+
+            // Setup combatants list
+            _allCombatants.Clear();
+            _allCombatants.Add(_player);
+            _allCombatants.Add(_enemy);
+            // TODO: Add companions here when implemented
+
+            // Clear tracking structures
+            _defendingEntities.Clear();
+            _entitiesActedThisRound.Clear();
+            _currentRound = 1;
 
             // Initialize turn manager
             _turnManager.InitializeCombat(player, enemy);
@@ -47,51 +68,57 @@ namespace GameLogic.Combat
             // Display combat start
             ShowCombatIntro();
 
-            // Main combat loop
+            // Main round-based combat loop
             while (_combatActive && _player.Health > 0 && _enemy.Health > 0)
             {
-                Console.WriteLine($"\n{_turnManager.GetTurnStatus()}");
-                
-                if (_turnManager.IsPlayerTurn())
+                // Start a new round
+                StartNewRound();
+
+                // Each entity gets one turn per round
+                foreach (var entity in _allCombatants)
                 {
-                    PlayerTurn();
-                }
-                else
-                {
-                    EnemyTurn();
+                    // Skip if entity is dead
+                    if (!entity.IsAlive())
+                        continue;
+
+                    // Skip if entity already acted this round
+                    if (_entitiesActedThisRound.Contains(entity))
+                        continue;
+
+                    // Execute entity's turn
+                    ExecuteEntityTurn(entity);
+
+                    // Mark entity as having acted
+                    _entitiesActedThisRound.Add(entity);
+
+                    // Check for combat end after each action
+                    if (_enemy.Health <= 0)
+                    {
+                        return HandleVictory();
+                    }
+                    else if (_player.Health <= 0)
+                    {
+                        return HandleDefeat();
+                    }
+
+                    // Show status between turns if combat is still active
+                    if (_combatActive && entity.IsAlive())
+                    {
+                        ShowCombatStatus();
+                    }
+
+                    // If player or enemy fled, exit
+                    if (!_combatActive)
+                    {
+                        return false;
+                    }
                 }
 
-                // Check for combat end
-                if (_enemy.Health <= 0)
-                {
-                    return HandleVictory();
-                }
-                else if (_player.Health <= 0)
-                {
-                    return HandleDefeat();
-                }
-
-                _turnManager.NextTurn();
-
-                // Reduce ability cooldowns
-                if (_player.SelectedAbility != null && _player.SelectedAbility.CurrentCooldown > 0)
-                {
-                    _player.SelectedAbility.CurrentCooldown--;
-                }
-
-                if (_enemy.SpecialAbility != null && _enemy.SpecialAbility.CurrentCooldown > 0)
-                {
-                    _enemy.SpecialAbility.CurrentCooldown--;
-                }
-
-                // Show status between turns
-                if (_combatActive)
-                {
-                    ShowCombatStatus();
-                }
+                // End of round - process end-of-round effects
+                EndRound();
             }
 
-            // Fled from combat
+            // Fled from combat or something else
             return false;
         }
 
@@ -110,20 +137,116 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
+        /// Start a new round - reset tracking and display round info
+        /// </summary>
+        private void StartNewRound()
+        {
+            Console.WriteLine("\n" + "=".PadRight(50, '='));
+            Console.WriteLine($"           ROUND {_currentRound}");
+            Console.WriteLine("=".PadRight(50, '='));
+
+            // Clear entities that acted this round
+            _entitiesActedThisRound.Clear();
+
+            // Sort combatants by speed (highest to lowest)
+            // Entities with higher speed act first in the turn order
+            _allCombatants.Sort((a, b) => b.Speed.CompareTo(a.Speed));
+
+            // Display turn order for this round
+            Console.WriteLine("\nTurn Order (by Speed):");
+            foreach (var entity in _allCombatants)
+            {
+                if (entity.IsAlive())
+                {
+                    Console.WriteLine($"  {entity.Name} (Speed: {entity.Speed})");
+                }
+            }
+            Console.WriteLine();
+
+            // Reset defend status for all entities at start of new round
+            foreach (var entity in _allCombatants)
+            {
+                if (_defendingEntities.ContainsKey(entity))
+                {
+                    _defendingEntities[entity] = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Execute a turn for the given entity
+        /// </summary>
+        private void ExecuteEntityTurn(Entity entity)
+        {
+            Console.WriteLine($"\n{entity.Name}'s Turn!");
+
+            // Process status effects at start of turn
+            entity.ProcessEffects(_rngManager);
+
+            // Check if entity died from effects
+            if (!entity.IsAlive())
+            {
+                Console.WriteLine($"{entity.Name} was defeated by status effects!");
+                return;
+            }
+
+            // Determine and execute action based on entity type
+            if (entity == _player)
+            {
+                PlayerTurn();
+            }
+            else if (entity == _enemy)
+            {
+                EnemyTurn();
+            }
+            // TODO: Add companion turn handling here
+        }
+
+        /// <summary>
+        /// End the current round - process end-of-round effects
+        /// </summary>
+        private void EndRound()
+        {
+            Console.WriteLine("\n--- End of Round ---");
+
+            // Tick down effect durations for all entities
+            foreach (var entity in _allCombatants)
+            {
+                if (entity.IsAlive())
+                {
+                    entity.TickEffectDurations();
+                }
+            }
+
+            // Reduce ability cooldowns for all entities at end of round
+            if (_player.SelectedAbility != null && _player.SelectedAbility.CurrentCooldown > 0)
+            {
+                _player.SelectedAbility.CurrentCooldown--;
+            }
+
+            if (_enemy.SpecialAbility != null && _enemy.SpecialAbility.CurrentCooldown > 0)
+            {
+                _enemy.SpecialAbility.CurrentCooldown--;
+            }
+
+            // Increment round counter
+            _currentRound++;
+
+            Console.WriteLine("\nPress any key to continue to next round...");
+            Console.ReadKey();
+        }
+
+        /// <summary>
         /// Handle the player's turn
         /// </summary>
         private void PlayerTurn()
         {
-            // Reset defense status at start of turn
-            _playerDefending = false;
-
-            Console.WriteLine($"\n{_player.Name}'s Turn!");
             Console.WriteLine($"Your HP: {_player.Health}/{_player.MaxHealth}");
             Console.WriteLine($"Enemy HP: {_enemy.Health}/{_enemy.MaxHealth}");
-            
+
             // Get player's action choice
             CombatAction action = GetPlayerAction();
-            
+
             // Process the action
             ProcessAction(action);
         }
@@ -154,7 +277,7 @@ namespace GameLogic.Combat
                         // Check if ability is on cooldown
                         if (_player.SelectedAbility.CurrentCooldown > 0)
                         {
-                            Console.WriteLine($"\n{_player.SelectedAbility.Name} is on cooldown for {_player.SelectedAbility.CurrentCooldown} more turns!");
+                            Console.WriteLine($"\n{_player.SelectedAbility.Name} is on cooldown for {_player.SelectedAbility.CurrentCooldown} more rounds!");
                             Console.WriteLine("Attacking instead.");
                             return CombatAction.Attack(_player, _enemy);
                         }
@@ -211,11 +334,6 @@ namespace GameLogic.Combat
         /// </summary>
         private void EnemyTurn()
         {
-            // Reset defense status at start of turn
-            _enemyDefending = false;
-
-            Console.WriteLine($"\n{_enemy.Name}'s Turn!");
-
             // Determine action based on enemy behavior and situation
             CombatAction action = DetermineEnemyAction();
 
@@ -354,7 +472,7 @@ namespace GameLogic.Combat
                 }
 
                 // Apply defense reduction if enemy is defending
-                if (_enemyDefending)
+                if (_defendingEntities.ContainsKey(_enemy) && _defendingEntities[_enemy])
                 {
                     int damageReduction = result.FinalDamage / 2;
                     result.FinalDamage -= damageReduction;
@@ -366,7 +484,7 @@ namespace GameLogic.Combat
                 result = _damageCalculator.CalculateEnemyAttackDamage(_enemy, _player);
 
                 // Apply defense reduction if player is defending
-                if (_playerDefending && action.Target == _player)
+                if (action.Target == _player && _defendingEntities.ContainsKey(_player) && _defendingEntities[_player])
                 {
                     int damageReduction = result.FinalDamage / 2;
                     result.FinalDamage -= damageReduction;
@@ -388,7 +506,15 @@ namespace GameLogic.Combat
 
                 if (result.DamageReduced > 0)
                 {
-                    Console.WriteLine($"Armor blocked {result.DamageReduced} damage!");
+                    // Display appropriate message based on who was attacked
+                    if (action.Target == _player)
+                    {
+                        Console.WriteLine($"Armor blocked {result.DamageReduced} damage!");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Defense blocked {result.DamageReduced} damage!");
+                    }
                 }
 
                 // Apply damage
@@ -463,15 +589,16 @@ namespace GameLogic.Combat
         {
             Console.WriteLine($"\n{action.Actor.Name} takes a defensive stance!");
 
+            // Set defending flag for any entity
+            _defendingEntities[action.Actor] = true;
+
             if (action.Actor == _player)
             {
-                _playerDefending = true;
                 Console.WriteLine("Next incoming attack will deal reduced damage!");
             }
-            else if (action.Actor == _enemy)
+            else
             {
-                _enemyDefending = true;
-                Console.WriteLine($"{_enemy.Name} braces for impact!");
+                Console.WriteLine($"{action.Actor.Name} braces for impact!");
             }
         }
 

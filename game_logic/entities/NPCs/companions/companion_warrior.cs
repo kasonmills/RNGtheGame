@@ -31,6 +31,9 @@ namespace GameLogic.Entities.NPCs.Companions
             MaxHealth = 120 + (startingLevel * 12);  // More health than other companions
             Health = MaxHealth;
 
+            // Speed: Slower due to heavy armor
+            Speed = 7 + (startingLevel / 3); // Warriors are slow but steady
+
             // Initialize unique ability
             UniqueAbility = new ShieldBashAbility(this);
 

@@ -9,19 +9,21 @@ namespace GameLogic.Combat
     /// <summary>
     /// Manages turn order in combat
     /// Determines who acts when during battle
+    /// Note: Combat now uses a round-based system where each entity acts once per round
+    /// This manager is maintained for backwards compatibility and future enhancements
     /// </summary>
     public class TurnManager
     {
-        private int _currentTurnNumber;
+        private int _currentRoundNumber;
         private Queue<CombatantTurn> _turnQueue;
         private Player _player;
         private Enemy _enemy;
 
-        public int CurrentTurnNumber => _currentTurnNumber;
+        public int CurrentRoundNumber => _currentRoundNumber;
 
         public TurnManager()
         {
-            _currentTurnNumber = 0;
+            _currentRoundNumber = 0;
             _turnQueue = new Queue<CombatantTurn>();
         }
 
@@ -32,7 +34,7 @@ namespace GameLogic.Combat
         {
             _player = player;
             _enemy = enemy;
-            _currentTurnNumber = 0;
+            _currentRoundNumber = 0;
             _turnQueue.Clear();
 
             // Set up initial turn order
@@ -78,7 +80,7 @@ namespace GameLogic.Combat
             // If queue is empty, we've completed a full round
             if (_turnQueue.Count == 0)
             {
-                _currentTurnNumber++;
+                _currentRoundNumber++;
                 SetupTurnOrder();
             }
         }
@@ -104,21 +106,21 @@ namespace GameLogic.Combat
         /// </summary>
         public void Reset()
         {
-            _currentTurnNumber = 0;
+            _currentRoundNumber = 0;
             _turnQueue.Clear();
             _player = null;
             _enemy = null;
         }
 
         /// <summary>
-        /// Get turn number for display
+        /// Get round/turn status for display
         /// </summary>
         public string GetTurnStatus()
         {
             TurnOwner currentOwner = GetCurrentTurnOwner();
             string ownerName = currentOwner == TurnOwner.Player ? _player?.Name : _enemy?.Name;
-            
-            return $"Turn {_currentTurnNumber + 1} - {ownerName}'s turn";
+
+            return $"Round {_currentRoundNumber + 1} - {ownerName}'s turn";
         }
 
         // === FUTURE ENHANCEMENTS ===

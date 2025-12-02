@@ -65,6 +65,7 @@ namespace GameLogic.Entities.NPCs
             Level = level;
             Health = health;
             MaxHealth = maxHealth;
+            Speed = 10; // Default speed - should be overridden by specific companion types
             Description = "A trusted companion who fights alongside you.";
         }
 

@@ -83,9 +83,12 @@ namespace GameLogic.Combat
                 baseDamage = (int)(baseDamage * defenseMultiplier);
             }
 
-            // Step 7: Apply enemy defense (future implementation)
+            // Step 7: Apply enemy defense
+            int finalDamage = ApplyEnemyDefenseReduction(baseDamage, target);
+
             result.RawDamage = baseDamage;
-            result.FinalDamage = baseDamage;
+            result.FinalDamage = finalDamage;
+            result.DamageReduced = baseDamage - finalDamage;
 
             return result;
         }
@@ -252,7 +255,7 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Apply armor reduction to incoming damage
+        /// Apply armor reduction to incoming damage (for player defense)
         /// </summary>
         private int ApplyArmorReduction(int rawDamage, Player target)
         {
@@ -292,6 +295,25 @@ namespace GameLogic.Combat
                 // No armor: Return adjusted damage (with effects if active)
                 return Math.Max(1, adjustedDamage);
             }
+        }
+
+        /// <summary>
+        /// Apply enemy defense reduction to incoming damage (for enemy defense)
+        /// </summary>
+        private int ApplyEnemyDefenseReduction(int rawDamage, Enemy target)
+        {
+            // Check if enemy has defense stat
+            if (target.Defense <= 0)
+            {
+                // No defense: Return raw damage
+                return Math.Max(1, rawDamage);
+            }
+
+            // Enemy defense works as flat damage reduction
+            // Defense reduces damage but never below 1 (always deal at least 1 damage)
+            int finalDamage = Math.Max(1, rawDamage - target.Defense);
+
+            return finalDamage;
         }
 
         /// <summary>

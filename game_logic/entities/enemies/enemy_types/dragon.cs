@@ -38,6 +38,9 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
             // Defense: Tough scales provide excellent armor
             Defense = 5 + (level * 2);
 
+            // Speed: Large but not slow
+            Speed = 8 + (level / 3); // Dragons are slower than smaller enemies but still formidable
+
             // Rewards: Dragons are valuable opponents
             XPValue = level * 200;
             GoldValue = level * 50;

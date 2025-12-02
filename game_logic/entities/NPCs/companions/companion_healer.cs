@@ -31,6 +31,9 @@ namespace GameLogic.Entities.NPCs.Companions
             MaxHealth = 90 + (startingLevel * 9);
             Health = MaxHealth;
 
+            // Speed: Moderate - focused on support rather than speed
+            Speed = 11 + (startingLevel / 3); // Healers are moderate speed
+
             // Initialize unique ability
             UniqueAbility = new DivineLightAbility(this);
 
