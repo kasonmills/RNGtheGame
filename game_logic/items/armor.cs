@@ -116,6 +116,17 @@ namespace GameLogic.Items
         }
 
         /// <summary>
+        /// Restore the ReadyForUpgrade state (used by save system)
+        /// </summary>
+        internal void RestoreUpgradeReadyState()
+        {
+            if (Level < MaxLevel && Experience >= ExperienceToNextLevel)
+            {
+                ReadyForUpgrade = true;
+            }
+        }
+
+        /// <summary>
         /// Calculate the gold cost to upgrade at blacksmith
         /// Cost scales with level and rarity
         /// </summary>

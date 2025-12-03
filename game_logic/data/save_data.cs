@@ -17,9 +17,17 @@ namespace GameLogic.Data
         // Weapon-specific
         public int? MinDamage { get; set; }
         public int? MaxDamage { get; set; }
+        public int? CritChance { get; set; }
+        public int? Accuracy { get; set; }
+        public int? Experience { get; set; }
+        public int? ExperienceToNextLevel { get; set; }
+        public bool? ReadyForUpgrade { get; set; }
 
         // Armor-specific
         public int? Defense { get; set; }
+        public int? ArmorExperience { get; set; }
+        public int? ArmorExperienceToNextLevel { get; set; }
+        public bool? ArmorReadyForUpgrade { get; set; }
 
         // Consumable-specific
         public string ConsumableType { get; set; }

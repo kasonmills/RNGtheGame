@@ -18,13 +18,26 @@
 - ✅ Weapon/Armor XP tracking
 - ✅ Two-stage level up (XP + Blacksmith payment)
 - ✅ Blacksmith NPC implementation
-- **Status**: COMPLETED!
+- ✅ Player-choice upgrade paths (3 options per level)
+- ✅ Weapon-specific upgrade ranges (data-driven)
+- ✅ All 9 weapon types defined with unique scaling
+- ✅ Safety checks (min damage can't exceed max)
+- ✅ Save system preserves custom-upgraded weapons
+- **Status**: FULLY COMPLETED!
 
-### 🔴 2. RevivePotion Logic
-- **File**: `game_logic/items/consumable.cs:209`
-- **Status**: ❌ Not Implemented
-- **Description**: RevivePotion exists but has no logic - needs to handle player death/revival mechanics
-- **Impact**: RevivePotion consumable type is currently useless
+### 🔴 2. RevivePotion System
+- **File**: `game_logic/items/item_database.cs`, `consumable.cs`, `combat_manager.cs`
+- **Status**: ✅ FULLY COMPLETED
+- **Description**: Complete revival potion system with logic and items
+- **Features**:
+  - ✅ UseRevivePotion() method with level-scaled revival (1 HP at Lv1, full HP at Lv10)
+  - ✅ Combat manager integration with target selection for dead allies
+  - ✅ Revival speed penalty (-2 to -4 speed on revival)
+  - ✅ Clears negative effects on revival
+  - ✅ Three revival potion tiers:
+    - Minor Revival Potion (Lv1-4): 10%-40% HP restoration (Uncommon)
+    - Revival Potion (Lv5-8): 50%-80% HP restoration (Rare)
+    - Greater Revival Potion (Lv9-10): 90%-100% HP restoration (Epic)
 
 ### 🔴 3. Shop Keeper Functionality
 - **File**: `game_logic/entities/NPCs/shop_keeper.cs:15`
@@ -58,12 +71,15 @@
   - Quest dialogue integration
 
 ### 🟡 6. Turn Order with Speed Stats
-- **File**: `game_logic/combat/turn_manager.cs:44`
-- **Status**: 🚧 Basic Implementation
-- **Description**: Combat uses simple alternating turns; could use speed/agility stats for dynamic turn order
-- **Impact**: Combat is less strategic without speed-based initiative
-- **Current**: Simple alternating turns (player -> enemy -> player)
-- **Future**: Speed-based turn queue system
+- **File**: `game_logic/combat/combat_manager.cs:168`
+- **Status**: ✅ COMPLETED
+- **Description**: Dynamic turn order based on speed stats with action-based modifiers
+- **Current**:
+  - ✅ Speed-based turn order (highest speed acts first)
+  - ✅ Action modifiers (Attack: -1 to -3, Defend: +1 to +3, Ability/Item: -1 to +1)
+  - ✅ Revival speed penalty (revived entities get -2 to -4 speed)
+  - ✅ Modifiers reset each round
+  - ✅ Turn order displayed at start of each round
 
 ### 🟡 7. Settings Menu
 - **File**: `game_logic/core/game_manager.cs:563`
@@ -134,16 +150,25 @@
   - AI decision-making for enemies
 
 ### 14. Expand Loot Tables
-- **Status**: 🚧 Partially Complete
+- **Status**: 🚧 Good Progress
 - **Current**:
   - ✅ Item database exists with weapons, armor, consumables
   - ✅ Basic loot drop system in enemies
-  - 🚧 Could use more item variety
-- **Needed**:
-  - More weapons (currently ~10)
-  - More armor pieces
-  - More consumables
-  - Rare/legendary items
+  - ✅ 19 weapons across 9 weapon types:
+    - Swords (3): Rusty, Iron, Steel
+    - Axes (2): Rusty Axe, Battle Axe
+    - Maces (2): Blunt Mace, Spiked Mace
+    - Spears (2): Hunting Spear, War Spear
+    - Staves (2): Wooden Staff, Arcane Staff
+    - Bows (2): Hunting Bow, Longbow
+    - Crossbows (2): Light Crossbow, Heavy Crossbow
+    - Wands (2): Apprentice Wand, Arcane Wand
+    - Daggers (2): Rusty Dagger, Assassin's Blade
+  - ✅ 9 armor pieces across slots/types
+  - ✅ 12 consumables (health potions, food, elixirs, bombs, antidotes, revival potions)
+- **Still Needed**:
+  - More high-tier weapons (Epic/Legendary)
+  - More armor variety
   - Set items (future)
 
 ---
@@ -151,12 +176,14 @@
 ## SAVE SYSTEM ENHANCEMENTS
 
 ### 15. Save Data for Selections
-- **Status**: 🚧 Partially Complete
+- **Status**: 🚧 Mostly Complete
 - **Current**:
   - ✅ Player stats, inventory, equipped items saved
   - ✅ Ability level/XP saved
   - ✅ Map position saved
-  - ❌ Weapon/Armor XP progress (NEW - needs adding)
+  - ✅ Weapon/Armor XP progress and custom stats
+  - ✅ Weapon upgrade choices preserved across saves
+  - ✅ ReadyForUpgrade state restoration
   - ❌ Quest progress (when quest system implemented)
   - ❌ Companion data (when companions integrated)
   - ❌ World state (defeated enemies, looted chests, etc.)
@@ -239,20 +266,21 @@
 
 ## SUMMARY BY STATUS
 
-**Completed**: 1
-- Equipment leveling system with blacksmith
+**Completed**: 4
+- Equipment leveling system with player-choice upgrade paths
+- Turn order with speed-based initiative
+- Weapon/Armor save system with custom stats
+- RevivePotion system with three tiers and combat integration
 
-**High Priority** (Next to tackle): 4
-1. RevivePotion logic
-2. Shop Keeper functionality
-3. Enemy defense application
-4. Quest event system
+**High Priority** (Next to tackle): 3
+1. Shop Keeper functionality
+2. Enemy defense application
+3. Quest event system
 
-**Medium Priority**: 4
-- Turn order with speed stats
+**Medium Priority**: 3
 - Settings menu
 - Companion integration
-- Save system enhancements
+- Save system enhancements (mostly done)
 
 **Low Priority**: 3
 - Alternative RNG algorithms
@@ -270,7 +298,31 @@
 
 ## NOTES
 - Core game logic is solid and functional
-- Combat system works well
-- Equipment and ability systems are complete
+- Combat system works excellently with speed-based turn order
+- Equipment and ability systems are complete with deep customization
+- Weapon upgrade system provides strategic player choice (9 weapon types with unique scaling)
+- Save system robustly preserves all custom-upgraded equipment
 - Main gaps are in NPC interactions (shops, quests) and system polish
 - GUI development is separate future phase after console version is complete
+
+## RECENT COMPLETIONS (Latest Session)
+- ✅ Weapon upgrade system redesigned with player choice at each level
+- ✅ All 9 weapon types defined with unique upgrade ranges:
+  - **Swords**: Balanced (1-2 min, 1/1 shift, 1-3 max)
+  - **Axes**: High ceiling, widens range (0-2 min, 1/2 shift, 1-4 max)
+  - **Maces**: High base, low growth (0-1 min, 0-1 shift, 0-2 max)
+  - **Daggers**: Small consistent growth (0-1 min, 1/1 shift, 0-2 max)
+  - **Spears**: High accuracy/crit, smaller growth (0-1 min, 1/1 shift, 0-2 max)
+  - **Staves**: Can miss max upgrades (1-3 min, 1/1 shift, 0-3 max)
+  - **Bows**: Extreme damage range (0-1 min, 0-2 random shift, 1-7 max)
+  - **Crossbows**: High accuracy, extreme range (0-1 min, 0-2 random shift, 1-7 max)
+  - **Wands**: Consistency weapon, narrows range (1-3 min, 2/1 shift, 0-2 max)
+- ✅ Added 8 new weapons (maces, spears, crossbows, wands)
+- ✅ Safety checks prevent min damage exceeding max damage
+- ✅ Data-driven design: each weapon stores its own upgrade ranges
+- ✅ Save system updated to preserve custom-upgraded weapon stats
+- ✅ Removed Fist from WeaponType (it's just unarmed fallback, not a weapon)
+- ✅ RevivePotion system completed with three tiers based on level ranges:
+  - Minor Revival Potion (Lv1-4): 10%-40% HP restoration
+  - Revival Potion (Lv5-8): 50%-80% HP restoration
+  - Greater Revival Potion (Lv9-10): 90%-100% HP restoration

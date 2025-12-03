@@ -65,6 +65,21 @@ namespace GameLogic.Entities.NPCs.Companions
         {
             return InParty ? _accuracyBonus : 0;
         }
+
+        /// <summary>
+        /// Ranger levels up - fast speed gain (light armor, quick reflexes)
+        /// </summary>
+        public override void LevelUp()
+        {
+            base.LevelUp(); // Handle health and base stats
+
+            // Ranger gains speed quickly: every 2 levels (same as rogue)
+            if (Level % 2 == 0)
+            {
+                Speed++;
+                Console.WriteLine($"{Name}'s reflexes sharpened! Speed increased to {Speed}!");
+            }
+        }
     }
 
     /// <summary>

@@ -179,11 +179,19 @@ namespace GameLogic.Data
                 serialized.ItemType = "Weapon";
                 serialized.MinDamage = weapon.MinDamage;
                 serialized.MaxDamage = weapon.MaxDamage;
+                serialized.CritChance = weapon.CritChance;
+                serialized.Accuracy = weapon.Accuracy;
+                serialized.Experience = weapon.Experience;
+                serialized.ExperienceToNextLevel = weapon.ExperienceToNextLevel;
+                serialized.ReadyForUpgrade = weapon.ReadyForUpgrade;
             }
             else if (item is Armor armor)
             {
                 serialized.ItemType = "Armor";
                 serialized.Defense = armor.Defense;
+                serialized.ArmorExperience = armor.Experience;
+                serialized.ArmorExperienceToNextLevel = armor.ExperienceToNextLevel;
+                serialized.ArmorReadyForUpgrade = armor.ReadyForUpgrade;
             }
             else if (item is Consumable consumable)
             {
@@ -218,21 +226,38 @@ namespace GameLogic.Data
                 case "Weapon":
                     // Get base weapon from database
                     item = ItemDatabase.GetWeapon(serialized.Name, serialized.Level);
-                    // Override with saved stats if they differ
-                    if (item is Weapon weapon && serialized.MinDamage.HasValue && serialized.MaxDamage.HasValue)
+                    // Override with saved stats (preserves custom upgrade choices)
+                    if (item is Weapon weapon)
                     {
-                        weapon.MinDamage = serialized.MinDamage.Value;
-                        weapon.MaxDamage = serialized.MaxDamage.Value;
+                        if (serialized.MinDamage.HasValue)
+                            weapon.MinDamage = serialized.MinDamage.Value;
+                        if (serialized.MaxDamage.HasValue)
+                            weapon.MaxDamage = serialized.MaxDamage.Value;
+                        if (serialized.CritChance.HasValue)
+                            weapon.CritChance = serialized.CritChance.Value;
+                        if (serialized.Accuracy.HasValue)
+                            weapon.Accuracy = serialized.Accuracy.Value;
+                        if (serialized.Experience.HasValue)
+                            weapon.Experience = serialized.Experience.Value;
+
+                        // Restore ReadyForUpgrade state if needed
+                        weapon.RestoreUpgradeReadyState();
                     }
                     break;
 
                 case "Armor":
                     // Get base armor from database
                     item = ItemDatabase.GetArmor(serialized.Name, serialized.Level);
-                    // Override with saved stats if they differ
-                    if (item is Armor armor && serialized.Defense.HasValue)
+                    // Override with saved stats (preserves custom upgrade choices)
+                    if (item is Armor armor)
                     {
-                        armor.Defense = serialized.Defense.Value;
+                        if (serialized.Defense.HasValue)
+                            armor.Defense = serialized.Defense.Value;
+                        if (serialized.ArmorExperience.HasValue)
+                            armor.Experience = serialized.ArmorExperience.Value;
+
+                        // Restore ReadyForUpgrade state if needed
+                        armor.RestoreUpgradeReadyState();
                     }
                     break;
 

@@ -69,6 +69,21 @@ namespace GameLogic.Entities.NPCs.Companions
             player.Heal(healAmount);
             Console.WriteLine($"✨ {Name}'s divine aura heals you for {healAmount} HP!");
         }
+
+        /// <summary>
+        /// Healer levels up - moderate speed gain (same as player)
+        /// </summary>
+        public override void LevelUp()
+        {
+            base.LevelUp(); // Handle health and base stats
+
+            // Healer gains speed at player rate: every 3 levels
+            if (Level % 3 == 0)
+            {
+                Speed++;
+                Console.WriteLine($"{Name}'s divine grace improved agility! Speed increased to {Speed}!");
+            }
+        }
     }
 
     /// <summary>

@@ -65,6 +65,21 @@ namespace GameLogic.Entities.NPCs.Companions
         {
             return InParty ? _goldBonus : 1.0;
         }
+
+        /// <summary>
+        /// Rogue levels up - fastest speed gain (very agile)
+        /// </summary>
+        public override void LevelUp()
+        {
+            base.LevelUp(); // Handle health and base stats
+
+            // Rogue gains speed quickly: every 2 levels (faster than player's 3)
+            if (Level % 2 == 0)
+            {
+                Speed++;
+                Console.WriteLine($"{Name} moved with incredible grace! Speed increased to {Speed}!");
+            }
+        }
     }
 
     /// <summary>

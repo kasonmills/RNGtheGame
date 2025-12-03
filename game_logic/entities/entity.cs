@@ -19,7 +19,11 @@ namespace GameLogic.Entities
         public int MaxHealth { get; set; }
 
         // Combat Stats
-        public int Speed { get; set; }  // Determines turn order (higher = acts first)
+        public int Speed { get; set; }  // Base speed - determines turn order (higher = acts first)
+        public int SpeedModifier { get; set; }  // Temporary speed adjustment from last action (resets each round)
+
+        // Action Tracking
+        public CombatAction LastAction { get; set; }  // Track what entity did last turn
 
         // Active Effects (buffs, debuffs, status effects)
         public List<AbilityEffect> ActiveEffects { get; set; }
@@ -30,6 +34,24 @@ namespace GameLogic.Entities
         protected Entity()
         {
             ActiveEffects = new List<AbilityEffect>();
+            SpeedModifier = 0;
+            LastAction = CombatAction.None;
+        }
+
+        /// <summary>
+        /// Get effective speed for turn order (base speed + temporary modifier)
+        /// </summary>
+        public int GetEffectiveSpeed()
+        {
+            return Math.Max(1, Speed + SpeedModifier);  // Minimum speed of 1
+        }
+
+        /// <summary>
+        /// Reset speed modifier to 0 (called at start of each round)
+        /// </summary>
+        public void ResetSpeedModifier()
+        {
+            SpeedModifier = 0;
         }
 
         /// <summary>
@@ -218,5 +240,17 @@ namespace GameLogic.Entities
         /// Abstract method for entity-specific behavior
         /// </summary>
         public abstract void Execute(Entity target = null);
+    }
+
+    /// <summary>
+    /// Types of combat actions that affect speed modifier for next round
+    /// </summary>
+    public enum CombatAction
+    {
+        None,           // No action taken yet
+        Attack,         // Basic attack (reduces speed next round: -1 to -3)
+        Defend,         // Defensive action (increases speed next round: +1 to +3)
+        UseAbility,     // Used special ability (variable speed: -1 to +1)
+        UseItem         // Used consumable item (similar to ability: -1 to +1)
     }
 }

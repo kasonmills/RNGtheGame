@@ -69,6 +69,21 @@ namespace GameLogic.Entities.NPCs.Companions
         {
             return _passiveApplied && InParty;
         }
+
+        /// <summary>
+        /// Mage levels up - moderate speed gain (same as player)
+        /// </summary>
+        public override void LevelUp()
+        {
+            base.LevelUp(); // Handle health and base stats
+
+            // Mage gains speed at player rate: every 3 levels
+            if (Level % 3 == 0)
+            {
+                Speed++;
+                Console.WriteLine($"{Name}'s magical prowess increased mobility! Speed increased to {Speed}!");
+            }
+        }
     }
 
     /// <summary>

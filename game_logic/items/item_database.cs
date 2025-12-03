@@ -30,7 +30,10 @@ namespace GameLogic.Items
                     accuracy: 70,
                     ItemRarity.Common,
                     level,
-                    value: 10
+                    value: 10,
+                    minDamageUpgradeRange: (1, 2),  // Sword: +1 to +2 min damage
+                    damageShiftRange: (1, 1),        // Sword: +1/+1 shift
+                    maxDamageUpgradeRange: (1, 3)    // Sword: +1 to +3 max damage
                 ),
 
                 "iron sword" => new Weapon(
@@ -43,7 +46,10 @@ namespace GameLogic.Items
                     accuracy: 75,
                     ItemRarity.Common,
                     level,
-                    value: 50
+                    value: 50,
+                    minDamageUpgradeRange: (1, 2),  // Sword: +1 to +2 min damage
+                    damageShiftRange: (1, 1),        // Sword: +1/+1 shift
+                    maxDamageUpgradeRange: (1, 3)    // Sword: +1 to +3 max damage
                 ),
 
                 "steel sword" => new Weapon(
@@ -56,7 +62,10 @@ namespace GameLogic.Items
                     accuracy: 80,
                     ItemRarity.Uncommon,
                     level,
-                    value: 150
+                    value: 150,
+                    minDamageUpgradeRange: (1, 2),  // Sword: +1 to +2 min damage
+                    damageShiftRange: (1, 1),        // Sword: +1/+1 shift
+                    maxDamageUpgradeRange: (1, 3)    // Sword: +1 to +3 max damage
                 ),
 
                 // Axes
@@ -70,7 +79,10 @@ namespace GameLogic.Items
                     accuracy: 65,
                     ItemRarity.Common,
                     level,
-                    value: 15
+                    value: 15,
+                    minDamageUpgradeRange: (0, 2),  // Axe: +0 to +2 min damage (can miss)
+                    damageShiftRange: (1, 2),        // Axe: +1 min, +2 max (widens range)
+                    maxDamageUpgradeRange: (1, 4)    // Axe: +1 to +4 max damage (huge ceiling)
                 ),
 
                 "battle axe" => new Weapon(
@@ -83,7 +95,76 @@ namespace GameLogic.Items
                     accuracy: 70,
                     ItemRarity.Uncommon,
                     level,
-                    value: 200
+                    value: 200,
+                    minDamageUpgradeRange: (0, 2),  // Axe: +0 to +2 min damage (can miss)
+                    damageShiftRange: (1, 2),        // Axe: +1 min, +2 max (widens range)
+                    maxDamageUpgradeRange: (1, 4)    // Axe: +1 to +4 max damage (huge ceiling)
+                ),
+
+                // Maces
+                "blunt mace" => new Weapon(
+                    "Blunt Mace",
+                    "A heavy mace designed to crush armor and bone.",
+                    WeaponType.Mace,
+                    minDamage: 8,
+                    maxDamage: 15,
+                    critChance: 18,
+                    accuracy: 60,
+                    ItemRarity.Common,
+                    level,
+                    value: 80,
+                    minDamageUpgradeRange: (0, 1),  // Mace: +0 to +1 min damage (low growth)
+                    damageShiftRange: (0, 1),        // Mace: +0 to +1 on both (slow growth)
+                    maxDamageUpgradeRange: (0, 2)    // Mace: +0 to +2 max damage (low growth)
+                ),
+
+                "spiked mace" => new Weapon(
+                    "Spiked Mace",
+                    "A brutal mace with metal spikes for maximum damage.",
+                    WeaponType.Mace,
+                    minDamage: 10,
+                    maxDamage: 18,
+                    critChance: 20,
+                    accuracy: 58,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 175,
+                    minDamageUpgradeRange: (0, 1),  // Mace: +0 to +1 min damage (low growth)
+                    damageShiftRange: (0, 1),        // Mace: +0 to +1 on both (slow growth)
+                    maxDamageUpgradeRange: (0, 2)    // Mace: +0 to +2 max damage (low growth)
+                ),
+
+                // Spears
+                "hunting spear" => new Weapon(
+                    "Hunting Spear",
+                    "A well-balanced spear with excellent reach and precision.",
+                    WeaponType.Spear,
+                    minDamage: 5,
+                    maxDamage: 11,
+                    critChance: 16,
+                    accuracy: 85,
+                    ItemRarity.Common,
+                    level,
+                    value: 60,
+                    minDamageUpgradeRange: (0, 1),  // Spear: +0 to +1 min damage (smaller growth)
+                    damageShiftRange: (1, 1),        // Spear: +1/+1 shift
+                    maxDamageUpgradeRange: (0, 2)    // Spear: +0 to +2 max damage (smaller growth)
+                ),
+
+                "war spear" => new Weapon(
+                    "War Spear",
+                    "A deadly spear designed for combat, offering superior accuracy and killing power.",
+                    WeaponType.Spear,
+                    minDamage: 8,
+                    maxDamage: 16,
+                    critChance: 18,
+                    accuracy: 88,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 150,
+                    minDamageUpgradeRange: (0, 1),  // Spear: +0 to +1 min damage (smaller growth)
+                    damageShiftRange: (1, 1),        // Spear: +1/+1 shift
+                    maxDamageUpgradeRange: (0, 2)    // Spear: +0 to +2 max damage (smaller growth)
                 ),
 
                 // Staves
@@ -97,7 +178,10 @@ namespace GameLogic.Items
                     accuracy: 85,
                     ItemRarity.Common,
                     level,
-                    value: 20
+                    value: 20,
+                    minDamageUpgradeRange: (1, 3),  // Staff: +1 to +3 min damage
+                    damageShiftRange: (1, 1),        // Staff: +1/+1 shift
+                    maxDamageUpgradeRange: (0, 3)    // Staff: +0 to +3 max damage (can miss)
                 ),
 
                 "arcane staff" => new Weapon(
@@ -110,7 +194,10 @@ namespace GameLogic.Items
                     accuracy: 90,
                     ItemRarity.Rare,
                     level,
-                    value: 300
+                    value: 300,
+                    minDamageUpgradeRange: (1, 3),  // Staff: +1 to +3 min damage
+                    damageShiftRange: (1, 1),        // Staff: +1/+1 shift
+                    maxDamageUpgradeRange: (0, 3)    // Staff: +0 to +3 max damage (can miss)
                 ),
 
                 // Bows
@@ -124,7 +211,10 @@ namespace GameLogic.Items
                     accuracy: 75,
                     ItemRarity.Common,
                     level,
-                    value: 40
+                    value: 40,
+                    minDamageUpgradeRange: (0, 1),  // Bow: +0 to +1 min damage
+                    damageShiftRange: (0, 2),        // Bow: +0 to +2 on BOTH (random shift amount)
+                    maxDamageUpgradeRange: (1, 7)    // Bow: +1 to +7 max damage (extreme range)
                 ),
 
                 "longbow" => new Weapon(
@@ -137,7 +227,76 @@ namespace GameLogic.Items
                     accuracy: 80,
                     ItemRarity.Uncommon,
                     level,
-                    value: 180
+                    value: 180,
+                    minDamageUpgradeRange: (0, 1),  // Bow: +0 to +1 min damage
+                    damageShiftRange: (0, 2),        // Bow: +0 to +2 on BOTH (random shift amount)
+                    maxDamageUpgradeRange: (1, 7)    // Bow: +1 to +7 max damage (extreme range)
+                ),
+
+                // Crossbows
+                "light crossbow" => new Weapon(
+                    "Light Crossbow",
+                    "A compact crossbow with reliable accuracy.",
+                    WeaponType.Crossbow,
+                    minDamage: 6,
+                    maxDamage: 12,
+                    critChance: 5,
+                    accuracy: 85,
+                    ItemRarity.Common,
+                    level,
+                    value: 70,
+                    minDamageUpgradeRange: (0, 1),  // Crossbow: +0 to +1 min damage
+                    damageShiftRange: (0, 2),        // Crossbow: +0 to +2 on BOTH (random shift like bow)
+                    maxDamageUpgradeRange: (1, 7)    // Crossbow: +1 to +7 max damage (extreme range like bow)
+                ),
+
+                "heavy crossbow" => new Weapon(
+                    "Heavy Crossbow",
+                    "A powerful crossbow that hits with devastating force.",
+                    WeaponType.Crossbow,
+                    minDamage: 10,
+                    maxDamage: 20,
+                    critChance: 7,
+                    accuracy: 88,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 200,
+                    minDamageUpgradeRange: (0, 1),  // Crossbow: +0 to +1 min damage
+                    damageShiftRange: (0, 2),        // Crossbow: +0 to +2 on BOTH (random shift like bow)
+                    maxDamageUpgradeRange: (1, 7)    // Crossbow: +1 to +7 max damage (extreme range like bow)
+                ),
+
+                // Wands
+                "apprentice wand" => new Weapon(
+                    "Apprentice Wand",
+                    "A simple wand for casting basic spells with consistent power.",
+                    WeaponType.Wand,
+                    minDamage: 4,
+                    maxDamage: 7,
+                    critChance: 8,
+                    accuracy: 82,
+                    ItemRarity.Common,
+                    level,
+                    value: 50,
+                    minDamageUpgradeRange: (1, 3),  // Wand: +1 to +3 min damage (strong min growth)
+                    damageShiftRange: (2, 1),        // Wand: +2 min, +1 max (narrows range)
+                    maxDamageUpgradeRange: (0, 2)    // Wand: +0 to +2 max damage (weak max growth)
+                ),
+
+                "arcane wand" => new Weapon(
+                    "Arcane Wand",
+                    "A finely crafted wand that channels magic with precise, focused energy.",
+                    WeaponType.Wand,
+                    minDamage: 8,
+                    maxDamage: 12,
+                    critChance: 10,
+                    accuracy: 85,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 160,
+                    minDamageUpgradeRange: (1, 3),  // Wand: +1 to +3 min damage (strong min growth)
+                    damageShiftRange: (2, 1),        // Wand: +2 min, +1 max (narrows range)
+                    maxDamageUpgradeRange: (0, 2)    // Wand: +0 to +2 max damage (weak max growth)
                 ),
 
                 // Daggers
@@ -151,7 +310,10 @@ namespace GameLogic.Items
                     accuracy: 80,
                     ItemRarity.Common,
                     level,
-                    value: 8
+                    value: 8,
+                    minDamageUpgradeRange: (0, 1),  // Dagger: +0 to +1 min damage
+                    damageShiftRange: (1, 1),        // Dagger: +1/+1 shift
+                    maxDamageUpgradeRange: (0, 2)    // Dagger: +0 to +2 max damage
                 ),
 
                 "assassin's blade" => new Weapon(
@@ -164,7 +326,10 @@ namespace GameLogic.Items
                     accuracy: 85,
                     ItemRarity.Rare,
                     level,
-                    value: 250
+                    value: 250,
+                    minDamageUpgradeRange: (0, 1),  // Dagger: +0 to +1 min damage
+                    damageShiftRange: (1, 1),        // Dagger: +1/+1 shift
+                    maxDamageUpgradeRange: (0, 2)    // Dagger: +0 to +2 max damage
                 ),
 
                 _ => throw new ArgumentException($"Weapon '{weaponName}' not found in database.")
@@ -183,10 +348,18 @@ namespace GameLogic.Items
                 ("Steel Sword", WeaponType.Sword, ItemRarity.Uncommon),
                 ("Rusty Axe", WeaponType.Axe, ItemRarity.Common),
                 ("Battle Axe", WeaponType.Axe, ItemRarity.Uncommon),
+                ("Blunt Mace", WeaponType.Mace, ItemRarity.Common),
+                ("Spiked Mace", WeaponType.Mace, ItemRarity.Uncommon),
+                ("Hunting Spear", WeaponType.Spear, ItemRarity.Common),
+                ("War Spear", WeaponType.Spear, ItemRarity.Uncommon),
                 ("Wooden Staff", WeaponType.Staff, ItemRarity.Common),
                 ("Arcane Staff", WeaponType.Staff, ItemRarity.Rare),
                 ("Hunting Bow", WeaponType.Bow, ItemRarity.Common),
                 ("Longbow", WeaponType.Bow, ItemRarity.Uncommon),
+                ("Light Crossbow", WeaponType.Crossbow, ItemRarity.Common),
+                ("Heavy Crossbow", WeaponType.Crossbow, ItemRarity.Uncommon),
+                ("Apprentice Wand", WeaponType.Wand, ItemRarity.Common),
+                ("Arcane Wand", WeaponType.Wand, ItemRarity.Uncommon),
                 ("Rusty Dagger", WeaponType.Dagger, ItemRarity.Common),
                 ("Assassin's Blade", WeaponType.Dagger, ItemRarity.Rare)
             };
@@ -435,6 +608,40 @@ namespace GameLogic.Items
                     value: 15
                 ),
 
+                // Revival Potions
+                // Level 1-4: Minor Revival Potion (10%-40% HP restoration)
+                "minor revival potion" => new Consumable(
+                    "Minor Revival Potion",
+                    "Revives a fallen ally with minimal health restoration.",
+                    ConsumableType.RevivePotion,
+                    effectPower: 0, // Not used - revival scales with level in UseRevivePotion()
+                    ItemRarity.Uncommon,
+                    Math.Clamp(level, 1, 4), // Levels 1-4
+                    value: 50
+                ),
+
+                // Level 5-8: Revival Potion (50%-80% HP restoration)
+                "revival potion" => new Consumable(
+                    "Revival Potion",
+                    "Revives a fallen ally with moderate health restoration.",
+                    ConsumableType.RevivePotion,
+                    effectPower: 0, // Not used - revival scales with level in UseRevivePotion()
+                    ItemRarity.Rare,
+                    Math.Clamp(level, 5, 8), // Levels 5-8
+                    value: 100
+                ),
+
+                // Level 9-10: Greater Revival Potion (90%-100% HP restoration)
+                "greater revival potion" => new Consumable(
+                    "Greater Revival Potion",
+                    "Revives a fallen ally with substantial health restoration, nearly full strength.",
+                    ConsumableType.RevivePotion,
+                    effectPower: 0, // Not used - revival scales with level in UseRevivePotion()
+                    ItemRarity.Epic,
+                    Math.Clamp(level, 9, 10), // Levels 9-10
+                    value: 200
+                ),
+
                 _ => throw new ArgumentException($"Consumable '{consumableName}' not found in database.")
             };
 
@@ -457,6 +664,9 @@ namespace GameLogic.Items
                 ("Elixir of Vitality", ConsumableType.Elixir, ItemRarity.Rare),
                 ("Combat Elixir", ConsumableType.Elixir, ItemRarity.Epic),
                 ("Fire Bomb", ConsumableType.Bomb, ItemRarity.Uncommon),
+                ("Minor Revival Potion", ConsumableType.RevivePotion, ItemRarity.Uncommon),
+                ("Revival Potion", ConsumableType.RevivePotion, ItemRarity.Rare),
+                ("Greater Revival Potion", ConsumableType.RevivePotion, ItemRarity.Epic),
                 ("Antidote", ConsumableType.Antidote, ItemRarity.Common)
             };
         }

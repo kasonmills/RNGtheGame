@@ -70,6 +70,21 @@ namespace GameLogic.Entities.NPCs.Companions
             Console.WriteLine($"{Name}'s bonus fades. (-{_playerMaxHealthBonus} Max HP)");
             _playerMaxHealthBonus = 0;
         }
+
+        /// <summary>
+        /// Warrior levels up - slower speed gain due to heavy armor
+        /// </summary>
+        public override void LevelUp()
+        {
+            base.LevelUp(); // Handle health and base stats
+
+            // Warrior gains speed slowly: every 5 levels (slower than player's 3)
+            if (Level % 5 == 0)
+            {
+                Speed++;
+                Console.WriteLine($"{Name}'s heavy armor training improved agility! Speed increased to {Speed}!");
+            }
+        }
     }
 
     /// <summary>

@@ -16,10 +16,11 @@ namespace GameLogic.Core
     {
         // === Core Systems ===
         private Player _player;
+        private List<Entities.NPCs.Companions.CompanionBase> _activeCompanions; // Companions in the party
         private MapManager _mapManager;
         private CombatManager _combatManager;
         private RNGManager _rngManager;
-        
+
         // === Game State Management ===
         private GameState _currentState;
         private Stack<GameState> _stateStack; // Remember previous states
@@ -43,6 +44,7 @@ namespace GameLogic.Core
             Data.SaveManager.Initialize(); // Initialize static SaveManager
             _mapManager = new MapManager();
             _combatManager = new CombatManager(_rngManager);
+            _activeCompanions = new List<Entities.NPCs.Companions.CompanionBase>();
 
             _currentState = GameState.MainMenu;
             _isRunning = false;
@@ -349,7 +351,7 @@ namespace GameLogic.Core
             PushState(GameState.Combat); // Save Playing state, go to Combat
 
             // CombatManager handles the actual combat (including XP and loot rewards)
-            bool playerWon = _combatManager.StartCombat(_player, enemy);
+            bool playerWon = _combatManager.StartCombat(_player, enemy, _activeCompanions);
 
             if (playerWon)
             {

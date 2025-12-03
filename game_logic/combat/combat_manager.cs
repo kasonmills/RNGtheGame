@@ -44,8 +44,11 @@ namespace GameLogic.Combat
         /// <summary>
         /// Start a combat encounter
         /// </summary>
+        /// <param name="player">The player character</param>
+        /// <param name="enemy">The enemy to fight</param>
+        /// <param name="companions">List of active companions (can be null or empty)</param>
         /// <returns>True if player won, False if player lost</returns>
-        public bool StartCombat(Player player, Enemy enemy)
+        public bool StartCombat(Player player, Enemy enemy, List<Entities.NPCs.Companions.CompanionBase> companions = null)
         {
             _player = player;
             _enemy = enemy;
@@ -54,8 +57,20 @@ namespace GameLogic.Combat
             // Setup combatants list
             _allCombatants.Clear();
             _allCombatants.Add(_player);
+
+            // Add companions that are in the party
+            if (companions != null)
+            {
+                foreach (var companion in companions)
+                {
+                    if (companion.InParty && companion.IsAlive())
+                    {
+                        _allCombatants.Add(companion);
+                    }
+                }
+            }
+
             _allCombatants.Add(_enemy);
-            // TODO: Add companions here when implemented
 
             // Clear tracking structures
             _defendingEntities.Clear();
@@ -148,9 +163,9 @@ namespace GameLogic.Combat
             // Clear entities that acted this round
             _entitiesActedThisRound.Clear();
 
-            // Sort combatants by speed (highest to lowest)
+            // Sort combatants by effective speed (base speed + modifier) - highest to lowest
             // Entities with higher speed act first in the turn order
-            _allCombatants.Sort((a, b) => b.Speed.CompareTo(a.Speed));
+            _allCombatants.Sort((a, b) => b.GetEffectiveSpeed().CompareTo(a.GetEffectiveSpeed()));
 
             // Display turn order for this round
             Console.WriteLine("\nTurn Order (by Speed):");
@@ -158,7 +173,8 @@ namespace GameLogic.Combat
             {
                 if (entity.IsAlive())
                 {
-                    Console.WriteLine($"  {entity.Name} (Speed: {entity.Speed})");
+                    string modifierText = entity.SpeedModifier != 0 ? $" ({entity.Speed}{(entity.SpeedModifier > 0 ? "+" : "")}{entity.SpeedModifier})" : "";
+                    Console.WriteLine($"  {entity.Name} (Speed: {entity.GetEffectiveSpeed()}{modifierText})");
                 }
             }
             Console.WriteLine();
@@ -199,7 +215,64 @@ namespace GameLogic.Combat
             {
                 EnemyTurn();
             }
-            // TODO: Add companion turn handling here
+            else if (entity is Entities.NPCs.Companions.CompanionBase companion)
+            {
+                CompanionTurn(companion);
+            }
+        }
+
+        /// <summary>
+        /// Calculate speed modifiers for next round based on actions taken this round
+        /// Attack: -1 to -3 speed (slower - recovering from offensive action)
+        /// Defend: +1 to +3 speed (faster - defensive stance allows quick reactions)
+        /// UseAbility: -1 to +1 speed (variable - depends on the ability)
+        /// UseItem: -1 to +1 speed (variable - similar to abilities)
+        /// </summary>
+        private void CalculateSpeedModifiers()
+        {
+            Console.WriteLine("\n--- Speed Adjustments for Next Round ---");
+
+            foreach (var entity in _allCombatants)
+            {
+                if (!entity.IsAlive())
+                    continue;
+
+                int modifier = 0;
+
+                switch (entity.LastAction)
+                {
+                    case Entities.CombatAction.Attack:
+                        // Attacking makes you slower next round (-1 to -3)
+                        modifier = -_rngManager.Roll(1, 3);
+                        break;
+
+                    case Entities.CombatAction.Defend:
+                        // Defending makes you faster next round (+1 to +3)
+                        modifier = _rngManager.Roll(1, 3);
+                        break;
+
+                    case Entities.CombatAction.UseAbility:
+                    case Entities.CombatAction.UseItem:
+                        // Abilities/items have variable effect (-1 to +1)
+                        modifier = _rngManager.Roll(-1, 1);
+                        break;
+
+                    case Entities.CombatAction.None:
+                        // No action taken (fled or failed to act)
+                        modifier = 0;
+                        break;
+                }
+
+                entity.SpeedModifier = modifier;
+
+                // Display speed change
+                if (modifier != 0)
+                {
+                    string changeText = modifier > 0 ? $"+{modifier}" : modifier.ToString();
+                    string actionText = entity.LastAction.ToString();
+                    Console.WriteLine($"{entity.Name}'s speed {changeText} from {actionText}");
+                }
+            }
         }
 
         /// <summary>
@@ -208,6 +281,18 @@ namespace GameLogic.Combat
         private void EndRound()
         {
             Console.WriteLine("\n--- End of Round ---");
+
+            // Reset speed modifiers from previous round before calculating new ones
+            foreach (var entity in _allCombatants)
+            {
+                if (entity.IsAlive())
+                {
+                    entity.ResetSpeedModifier();
+                }
+            }
+
+            // Calculate speed modifiers for next round based on actions taken
+            CalculateSpeedModifiers();
 
             // Tick down effect durations for all entities
             foreach (var entity in _allCombatants)
@@ -227,6 +312,18 @@ namespace GameLogic.Combat
             if (_enemy.SpecialAbility != null && _enemy.SpecialAbility.CurrentCooldown > 0)
             {
                 _enemy.SpecialAbility.CurrentCooldown--;
+            }
+
+            // Reduce companion ability cooldowns
+            foreach (var entity in _allCombatants)
+            {
+                if (entity is Entities.NPCs.Companions.CompanionBase companion)
+                {
+                    if (companion.UniqueAbility != null && companion.UniqueAbility.CurrentCooldown > 0)
+                    {
+                        companion.UniqueAbility.CurrentCooldown--;
+                    }
+                }
             }
 
             // Increment round counter
@@ -311,12 +408,56 @@ namespace GameLogic.Combat
                     if (int.TryParse(itemChoice, out int itemIndex) && itemIndex > 0 && itemIndex <= _player.Inventory.Items.Count)
                     {
                         var item = _player.Inventory.Items[itemIndex - 1];
+
+                        // Check if it's a revival potion - needs target selection
+                        if (item is Items.Consumable consumable && consumable.Type == Items.ConsumableType.RevivePotion)
+                        {
+                            // Get dead allies to revive
+                            var deadAllies = new List<Entity>();
+                            foreach (var entity in _allCombatants)
+                            {
+                                if (!entity.IsAlive() && entity != _enemy)
+                                {
+                                    deadAllies.Add(entity);
+                                }
+                            }
+
+                            if (deadAllies.Count == 0)
+                            {
+                                Console.WriteLine("\nNo one needs reviving! Choose a different item.");
+                                return GetPlayerAction(); // Return to menu
+                            }
+
+                            // Show dead allies
+                            Console.WriteLine("\nWho do you want to revive?");
+                            for (int i = 0; i < deadAllies.Count; i++)
+                            {
+                                Console.WriteLine($"{i + 1}. {deadAllies[i].Name}");
+                            }
+                            Console.WriteLine($"{deadAllies.Count + 1}. Cancel");
+
+                            Console.Write("\nSelect target: ");
+                            string targetChoice = Console.ReadLine();
+
+                            if (int.TryParse(targetChoice, out int targetIndex) && targetIndex > 0 && targetIndex <= deadAllies.Count)
+                            {
+                                var target = deadAllies[targetIndex - 1];
+                                return CombatAction.UseItem(_player, item, target);
+                            }
+                            else
+                            {
+                                Console.WriteLine("Cancelled.");
+                                return GetPlayerAction(); // Return to menu
+                            }
+                        }
+
+                        // Regular item (no target needed)
                         return CombatAction.UseItem(_player, item);
                     }
                     else
                     {
-                        Console.WriteLine("Invalid choice. Attacking instead!");
-                        return CombatAction.Attack(_player, _enemy);
+                        Console.WriteLine("Invalid choice.");
+                        return GetPlayerAction(); // Return to menu
                     }
                 case "4":
                     return CombatAction.Defend(_player);
@@ -338,6 +479,37 @@ namespace GameLogic.Combat
             CombatAction action = DetermineEnemyAction();
 
             ProcessAction(action);
+        }
+
+        /// <summary>
+        /// Handle a companion's turn
+        /// Uses companion AI to decide action
+        /// </summary>
+        private void CompanionTurn(Entities.NPCs.Companions.CompanionBase companion)
+        {
+            Console.WriteLine($"{companion.Name}'s HP: {companion.Health}/{companion.MaxHealth}");
+
+            // Use companion AI to decide whether to use ability or attack
+            bool useAbility = companion.DecideCombatAction(_enemy, _rngManager);
+
+            if (useAbility && companion.UniqueAbility != null && !companion.UniqueAbility.IsOnCooldown())
+            {
+                // Use unique ability
+                Console.WriteLine($"{companion.Name} uses {companion.UniqueAbility.Name}!");
+                companion.UniqueAbility.Execute(companion, _enemy, _rngManager);
+
+                // Track action for speed modifier
+                companion.LastAction = Entities.CombatAction.UseAbility;
+            }
+            else
+            {
+                // Regular attack
+                Console.WriteLine($"{companion.Name} attacks!");
+                companion.AttackEnemy(_enemy, _damageCalculator, _rngManager);
+
+                // Track action for speed modifier
+                companion.LastAction = Entities.CombatAction.Attack;
+            }
         }
 
         /// <summary>
@@ -458,6 +630,9 @@ namespace GameLogic.Combat
         {
             Console.WriteLine($"\n{action.Actor.Name} attacks {action.Target.Name}!");
 
+            // Track action for speed modifier calculation
+            action.Actor.LastAction = Entities.CombatAction.Attack;
+
             DamageResult result;
 
             // Calculate damage based on attacker type
@@ -528,6 +703,9 @@ namespace GameLogic.Combat
         /// </summary>
         private void ProcessAbility(CombatAction action)
         {
+            // Track action for speed modifier calculation
+            action.Actor.LastAction = Entities.CombatAction.UseAbility;
+
             if (action.Ability != null)
             {
                 // Execute the ability
@@ -544,6 +722,9 @@ namespace GameLogic.Combat
         /// </summary>
         private void ProcessItem(CombatAction action)
         {
+            // Track action for speed modifier calculation
+            action.Actor.LastAction = Entities.CombatAction.UseItem;
+
             if (action.Item != null)
             {
                 // Check if it's a consumable (most combat items)
@@ -557,6 +738,33 @@ namespace GameLogic.Combat
                         _enemy.TakeDamage(consumable.EffectPower);
                         Console.WriteLine($"The explosion dealt {consumable.EffectPower} damage to {_enemy.Name}!");
                         consumable.RemoveFromStack(1);
+                    }
+                    else if (consumable.Type == Items.ConsumableType.RevivePotion)
+                    {
+                        // Revival potion requires a target
+                        if (action.Target == null)
+                        {
+                            Console.WriteLine($"\nError: Revival potion requires a target!");
+                            return;
+                        }
+
+                        // Use the revival potion on the target
+                        bool success = consumable.UseRevivePotion(action.Actor, action.Target);
+
+                        if (success)
+                        {
+                            // Apply revival penalty: revived entities are disoriented and slower
+                            int speedPenalty = _rngManager.Roll(2, 4);
+                            action.Target.SpeedModifier = -speedPenalty;
+                            Console.WriteLine($"{action.Target.Name} is disoriented from revival! Speed -{speedPenalty} for this round.");
+
+                            // Add revived entity back to combat tracking if they were removed
+                            if (!_entitiesActedThisRound.Contains(action.Target))
+                            {
+                                // Entity was revived - they haven't acted this round yet
+                                Console.WriteLine($"{action.Target.Name} can act again this round!");
+                            }
+                        }
                     }
                     else
                     {
@@ -588,6 +796,9 @@ namespace GameLogic.Combat
         private void ProcessDefend(CombatAction action)
         {
             Console.WriteLine($"\n{action.Actor.Name} takes a defensive stance!");
+
+            // Track action for speed modifier calculation
+            action.Actor.LastAction = Entities.CombatAction.Defend;
 
             // Set defending flag for any entity
             _defendingEntities[action.Actor] = true;
@@ -666,9 +877,18 @@ namespace GameLogic.Combat
             Console.WriteLine($"\nYou gained {xpGained} XP!");
             Console.WriteLine($"You gained {goldGained} gold!");
 
-            // Apply rewards
+            // Apply rewards to player
             _player.AddExperience(xpGained);
             _player.Gold += goldGained;
+
+            // Share XP with companions
+            foreach (var entity in _allCombatants)
+            {
+                if (entity is Entities.NPCs.Companions.CompanionBase companion && companion.IsAlive())
+                {
+                    companion.GainExperience(xpGained);
+                }
+            }
 
             // Roll for loot drops
             var lootDrops = _enemy.GetLootDrops(_rngManager);
@@ -690,6 +910,18 @@ namespace GameLogic.Combat
             if (_player.SelectedAbility != null)
             {
                 _player.SelectedAbility.ResetCombatUsage();
+            }
+
+            // Reset companion abilities
+            foreach (var entity in _allCombatants)
+            {
+                if (entity is Entities.NPCs.Companions.CompanionBase companion)
+                {
+                    if (companion.UniqueAbility != null)
+                    {
+                        companion.UniqueAbility.ResetCombatUsage();
+                    }
+                }
             }
 
             Console.WriteLine("\nPress any key to continue...");
