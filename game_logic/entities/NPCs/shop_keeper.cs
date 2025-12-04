@@ -6,20 +6,56 @@ using GameLogic.Items;
 namespace GameLogic.Entities.NPCs
 {
     /// <summary>
-    /// ShopKeeper NPC - Buys and sells items
-    /// Players can purchase items from shop inventory and sell their own items
+    /// ShopKeeper NPC - Buys and sells items with dynamic pricing and time-based restocking
+    ///
+    /// FEATURES:
+    /// - 3-layer price variability (personality, market conditions, per-item)
+    /// - Dual restock system: 25±(1-5) minutes OR 4±(1-2) combat encounters
+    /// - Tier-based shops (1-5) with quality and price differences
+    /// - Anti-scumming flee penalty system
+    ///
+    /// INTEGRATION:
+    /// After combat victory: ShopKeeper.NotifyAllShopsOfCombat() - counts encounter, resets flee counter
+    /// After successful flee: ShopKeeper.NotifyAllShopsOfFlee() - first flee counts, consecutive flees add penalties
     /// </summary>
     public class ShopKeeper : NPCBase
     {
+        // Static list to track all shops for combat encounter updates
+        private static List<ShopKeeper> _allShops = new List<ShopKeeper>();
+
         // Shop tier affects inventory quality
         public int ShopTier { get; set; }  // 1-5, higher tier = better items
+
+        // Price variability system (Option 4: Combination approach)
+        // Layer 1: Shop personality (set at creation, permanent)
+        public double ShopPersonalityModifier { get; set; }  // 0.85-1.15 (greedy to generous)
+
+        // Layer 2: Market conditions (changes per restock)
+        public double MarketConditionsModifier { get; set; }  // 0.95-1.05 (market fluctuations)
+
+        // Layer 3: Per-item variations (stored with each item)
+        private Dictionary<Item, double> _itemPriceModifiers = new Dictionary<Item, double>();
+
+        // RNG for price calculations
+        private Random _rng;
+
+        // Restock tracking (dual system: time-based OR combat-based)
+        public DateTime LastRestockTime { get; private set; }
+        public int CombatEncountersSinceRestock { get; private set; }
+        private static int _consecutiveFlees = 0; // Track consecutive flee attempts across all combat
+
+        // Restock requirements (with randomness applied at creation)
+        private int _restockMinutes;           // Base: 25 minutes ± 1-5 minutes
+        private int _restockCombatEncounters;  // Base: 4 encounters ± 1-2 encounters
 
         /// <summary>
         /// Constructor for shopkeeper NPCs
         /// </summary>
-        public ShopKeeper(string name, int shopTier = 1, string greeting = null)
+        public ShopKeeper(string name, int shopTier = 1, string greeting = null, Random rng = null, int initialPlayerLevel = 1)
             : base(name, NPCType.Merchant, greeting)
         {
+            _rng = rng ?? new Random();
+
             ShopTier = Math.Clamp(shopTier, 1, 5);
 
             // Set price multipliers based on tier
@@ -27,16 +63,60 @@ namespace GameLogic.Entities.NPCs
             BuyPriceMultiplier = 100 + ((5 - ShopTier) * 10);  // Tier 1: 140%, Tier 5: 100%
             SellPriceMultiplier = 50 - ((5 - ShopTier) * 5);   // Tier 1: 30%, Tier 5: 50%
 
+            // Layer 1: Set shop personality modifier (permanent, varies by ±15%)
+            // 0.85 = generous (15% cheaper to buy), 1.15 = greedy (15% more expensive)
+            ShopPersonalityModifier = 0.85 + (_rng.NextDouble() * 0.30);
+
+            // Layer 2: Initialize market conditions (will change with restock)
+            MarketConditionsModifier = 0.95 + (_rng.NextDouble() * 0.10);
+
+            // Initialize restock requirements with randomness
+            // Time: 25 minutes ± (1-5 minutes)
+            int timeVariation = _rng.Next(1, 6); // 1-5 minutes
+            int timeDirection = _rng.Next(0, 2) == 0 ? -1 : 1; // Add or subtract
+            _restockMinutes = 25 + (timeVariation * timeDirection);
+
+            // Combat: 4 encounters ± (1-2 encounters)
+            int combatVariation = _rng.Next(1, 3); // 1-2 encounters
+            int combatDirection = _rng.Next(0, 2) == 0 ? -1 : 1; // Add or subtract
+            _restockCombatEncounters = Math.Max(2, 4 + (combatVariation * combatDirection)); // Minimum 2 encounters
+
+            // Initialize restock tracking
+            LastRestockTime = DateTime.Now;
+            CombatEncountersSinceRestock = 0;
+
+            // Perform initial stock
+            RestockShop(initialPlayerLevel, _rng);
+
+            // Register this shop to the global list
+            _allShops.Add(this);
+
             // Set default greeting
             if (greeting == null)
             {
                 Greeting = "Welcome to my shop! Looking to buy or sell?";
             }
 
-            // Add some shopkeeper dialogues
-            AddDialogue("I've got the finest goods in town!");
-            AddDialogue("Come back anytime, I'm always open for business.");
-            AddDialogue("Quality merchandise at fair prices!");
+            // Add some shopkeeper dialogues (personality-based)
+            if (ShopPersonalityModifier < 0.95) // Generous
+            {
+                AddDialogue("I believe in fair prices for all adventurers!");
+                AddDialogue("Your coin goes further here than anywhere else!");
+                AddDialogue("I give the best deals in town!");
+            }
+            else if (ShopPersonalityModifier > 1.05) // Greedy
+            {
+                AddDialogue("Quality has a price, you know.");
+                AddDialogue("These are premium goods, worth every coin!");
+                AddDialogue("You won't find better... though you might find cheaper elsewhere.");
+            }
+            else // Neutral
+            {
+                AddDialogue("I've got the finest goods in town!");
+                AddDialogue("Come back anytime, I'm always open for business.");
+                AddDialogue("Quality merchandise at fair prices!");
+            }
+
             AddDialogue("Need supplies? You've come to the right place.");
             AddDialogue("Every adventurer needs good equipment. Take a look around!");
         }
@@ -52,8 +132,22 @@ namespace GameLogic.Entities.NPCs
             Console.WriteLine("=".PadRight(50, '='));
             Greet();
             Console.WriteLine($"\nShop Tier: {ShopTier}/5");
-            Console.WriteLine($"Buy Price: {BuyPriceMultiplier}% of value");
-            Console.WriteLine($"Sell Price: {SellPriceMultiplier}% of value");
+
+            // Show shop personality
+            string personalityDesc = ShopPersonalityModifier < 0.95 ? "(Generous Prices)" :
+                                     ShopPersonalityModifier > 1.05 ? "(Premium Prices)" :
+                                     "(Fair Prices)";
+            Console.WriteLine($"Shop Style: {personalityDesc}");
+
+            // Show current market conditions
+            string marketDesc = MarketConditionsModifier < 0.98 ? "Buyer's Market" :
+                               MarketConditionsModifier > 1.02 ? "Seller's Market" :
+                               "Stable Market";
+            Console.WriteLine($"Market: {marketDesc}");
+
+            // Show next restock info
+            Console.WriteLine($"\nNext Restock: {GetTimeUntilRestock()} OR {GetCombatUntilRestock()}");
+
             Console.WriteLine($"\nYour Gold: {player.Gold}");
 
             Console.WriteLine("\nWhat would you like to do?");
@@ -252,7 +346,7 @@ namespace GameLogic.Entities.NPCs
             for (int i = 0; i < sellableItems.Count; i++)
             {
                 var item = sellableItems[i];
-                int sellPrice = CalculateSellPrice(item);
+                int sellPrice = CalculateSellPrice(item, _rng);
                 Console.WriteLine($"{i + 1}. {item.GetDisplayName()} - {sellPrice} gold");
             }
 
@@ -272,7 +366,7 @@ namespace GameLogic.Entities.NPCs
         /// </summary>
         private void ConfirmSell(Player.Player player, Item item)
         {
-            int sellPrice = CalculateSellPrice(item);
+            int sellPrice = CalculateSellPrice(item, _rng);
 
             Console.Clear();
             Console.WriteLine("=== CONFIRM SALE ===\n");
@@ -321,7 +415,7 @@ namespace GameLogic.Entities.NPCs
                 Console.WriteLine("Armor unequipped.");
             }
 
-            int sellPrice = CalculateSellPrice(item);
+            int sellPrice = CalculateSellPrice(item, _rng);
 
             // Complete the transaction
             player.Gold += sellPrice;
@@ -340,22 +434,61 @@ namespace GameLogic.Entities.NPCs
 
         /// <summary>
         /// Calculate purchase price (what player pays to buy)
+        /// Uses 3-layer price variability system:
+        /// Layer 1: Shop personality (permanent)
+        /// Layer 2: Market conditions (per restock)
+        /// Layer 3: Per-item variation (tiny individual modifier)
         /// </summary>
         public int CalculateBuyPrice(Item item)
         {
             int basePrice = item.Value;
-            int finalPrice = (int)(basePrice * (BuyPriceMultiplier / 100.0));
-            return Math.Max(1, finalPrice);
+
+            // Apply tier-based multiplier
+            double price = basePrice * (BuyPriceMultiplier / 100.0);
+
+            // Layer 1: Shop personality modifier
+            price *= ShopPersonalityModifier;
+
+            // Layer 2: Market conditions modifier
+            price *= MarketConditionsModifier;
+
+            // Layer 3: Per-item variation (if exists)
+            if (_itemPriceModifiers.ContainsKey(item))
+            {
+                price *= _itemPriceModifiers[item];
+            }
+
+            return Math.Max(1, (int)Math.Round(price));
         }
 
         /// <summary>
         /// Calculate sell price (what player receives for selling)
+        /// Uses inverse of shop personality (greedy shops pay less, generous pay more)
+        /// Includes per-transaction randomness for items player is selling
         /// </summary>
-        public int CalculateSellPrice(Item item)
+        public int CalculateSellPrice(Item item, Random rng = null)
         {
             int basePrice = item.Value;
-            int finalPrice = (int)(basePrice * (SellPriceMultiplier / 100.0));
-            return Math.Max(1, finalPrice);
+
+            // Apply tier-based multiplier
+            double price = basePrice * (SellPriceMultiplier / 100.0);
+
+            // Layer 1: Inverse shop personality (greedy = 1.15 becomes 0.87, generous = 0.85 becomes 1.18)
+            // This makes greedy shops pay less when buying from player
+            double inversePersonality = 2.0 - ShopPersonalityModifier;
+            price *= inversePersonality;
+
+            // Layer 2: Market conditions affect sell prices too (but less impact)
+            price *= (1.0 + ((MarketConditionsModifier - 1.0) * 0.5));
+
+            // Layer 3: Per-transaction variation for player's items (±2% tiny haggling variation)
+            if (rng != null)
+            {
+                double transactionModifier = 0.98 + (rng.NextDouble() * 0.04);
+                price *= transactionModifier;
+            }
+
+            return Math.Max(1, (int)Math.Round(price));
         }
 
         /// <summary>
@@ -370,29 +503,212 @@ namespace GameLogic.Entities.NPCs
             Console.WriteLine($"Shop Tier: {ShopTier}/5");
             Console.WriteLine("Higher tier shops have better prices!\n");
 
+            // Show shop personality explanation
+            string personalityExplanation;
+            if (ShopPersonalityModifier < 0.95)
+                personalityExplanation = "I run a GENEROUS shop - my prices are lower than most!";
+            else if (ShopPersonalityModifier > 1.05)
+                personalityExplanation = "I deal in PREMIUM goods - quality costs more here.";
+            else
+                personalityExplanation = "I offer FAIR prices - right in the middle.";
+
+            Console.WriteLine($"Shop Personality: {personalityExplanation}\n");
+
+            Console.WriteLine("PRICING SYSTEM:");
+            Console.WriteLine("  Prices are affected by:");
+            Console.WriteLine("    1. Shop Tier (base multiplier)");
+            Console.WriteLine("    2. My personal pricing style (permanent)");
+            Console.WriteLine("    3. Current market conditions (changes with restock)");
+            Console.WriteLine("    4. Individual item variations (small differences)\n");
+
             Console.WriteLine("BUY PRICES:");
-            Console.WriteLine($"  You pay {BuyPriceMultiplier}% of an item's base value");
-            Console.WriteLine($"  Example: A 100g sword costs you {CalculateBuyPrice(new Weapon("Example", "", WeaponType.Sword, 1, 1, 1, 1, ItemRarity.Common, 1, 100))}g\n");
+            var exampleWeapon = new Weapon("Example", "", WeaponType.Sword, 1, 1, 1, 1, ItemRarity.Common, 1, 100,
+                minDamageUpgradeRange: (1, 2), damageShiftRange: (1, 1), maxDamageUpgradeRange: (1, 3));
+            Console.WriteLine($"  Base: {BuyPriceMultiplier}% of item value (tier-based)");
+            Console.WriteLine($"  Example: A 100g sword costs you ~{CalculateBuyPrice(exampleWeapon)}g\n");
 
             Console.WriteLine("SELL PRICES:");
-            Console.WriteLine($"  You receive {SellPriceMultiplier}% of an item's base value");
-            Console.WriteLine($"  Example: A 100g sword sells for {CalculateSellPrice(new Weapon("Example", "", WeaponType.Sword, 1, 1, 1, 1, ItemRarity.Common, 1, 100))}g\n");
+            Console.WriteLine($"  Base: {SellPriceMultiplier}% of item value (tier-based)");
+            Console.WriteLine($"  Example: A 100g sword sells for ~{CalculateSellPrice(exampleWeapon, _rng)}g");
+            Console.WriteLine("  Note: Prices vary slightly with each transaction!\n");
+
+            Console.WriteLine("RESTOCKING SYSTEM:");
+            Console.WriteLine("  My shop restocks when EITHER condition is met:");
+            Console.WriteLine($"    - Time: Every ~{_restockMinutes} minutes (varies slightly)");
+            Console.WriteLine($"    - Combat: Every ~{_restockCombatEncounters} encounters (varies slightly)");
+            Console.WriteLine("  Upon restock:");
+            Console.WriteLine("    - New random inventory");
+            Console.WriteLine("    - Market conditions change");
+            Console.WriteLine("    - New item price variations\n");
 
             Console.WriteLine("NOTES:");
             Console.WriteLine("  - Quest items cannot be sold");
-            Console.WriteLine("  - Shop inventory refreshes periodically");
-            Console.WriteLine("  - Better prices at higher tier shops\n");
+            Console.WriteLine("  - Can't force restock by leaving and returning");
+            Console.WriteLine("  - Check 'Next Restock' timer at main menu");
+            Console.WriteLine("  - Shop around for the best deals!\n");
 
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey();
         }
 
         /// <summary>
+        /// Check if shop needs restocking based on time or combat encounters
+        /// Returns true if either condition is met
+        /// </summary>
+        public bool ShouldRestock()
+        {
+            // Check time-based condition
+            TimeSpan timeSinceRestock = DateTime.Now - LastRestockTime;
+            bool timeConditionMet = timeSinceRestock.TotalMinutes >= _restockMinutes;
+
+            // Check combat-based condition
+            bool combatConditionMet = CombatEncountersSinceRestock >= _restockCombatEncounters;
+
+            return timeConditionMet || combatConditionMet;
+        }
+
+        /// <summary>
+        /// Increment combat encounter counter (call this after each combat)
+        /// </summary>
+        public void IncrementCombatEncounter()
+        {
+            CombatEncountersSinceRestock++;
+        }
+
+        /// <summary>
+        /// Static method to notify all shops that a combat encounter occurred (victory)
+        /// Call this from the combat manager after each battle victory
+        /// Resets consecutive flee counter on victory
+        /// </summary>
+        public static void NotifyAllShopsOfCombat()
+        {
+            // Reset flee counter on successful combat completion
+            _consecutiveFlees = 0;
+
+            foreach (var shop in _allShops)
+            {
+                shop.IncrementCombatEncounter();
+            }
+        }
+
+        /// <summary>
+        /// Static method to notify all shops that player fled from combat
+        /// Applies penalties to restock requirements if fleeing multiple times
+        /// </summary>
+        public static void NotifyAllShopsOfFlee()
+        {
+            _consecutiveFlees++;
+
+            // Only count as encounter if first flee (no penalty)
+            if (_consecutiveFlees == 1)
+            {
+                foreach (var shop in _allShops)
+                {
+                    shop.IncrementCombatEncounter();
+                }
+                Console.WriteLine("(First flee - combat counted for shop restocks)");
+            }
+            else
+            {
+                // Apply penalty: increase requirements for all shops
+                foreach (var shop in _allShops)
+                {
+                    shop.ApplyFleePenalty();
+                }
+                Console.WriteLine($"(Consecutive flee #{_consecutiveFlees} - shop restock requirements increased!)");
+            }
+        }
+
+        /// <summary>
+        /// Apply penalty for fleeing from combat multiple times
+        /// Increases both time and combat requirements
+        /// </summary>
+        private void ApplyFleePenalty()
+        {
+            // Add 5 minutes per consecutive flee after the first
+            _restockMinutes += 5;
+
+            // Add 1 encounter per consecutive flee after the first
+            _restockCombatEncounters += 1;
+        }
+
+        /// <summary>
+        /// Get all registered shops (for debugging/save system)
+        /// </summary>
+        public static List<ShopKeeper> GetAllShops()
+        {
+            return new List<ShopKeeper>(_allShops);
+        }
+
+        /// <summary>
+        /// Clear all registered shops (useful for testing or new game)
+        /// </summary>
+        public static void ClearAllShops()
+        {
+            _allShops.Clear();
+        }
+
+        /// <summary>
+        /// Get time remaining until next restock (for display purposes)
+        /// </summary>
+        public string GetTimeUntilRestock()
+        {
+            TimeSpan timeSinceRestock = DateTime.Now - LastRestockTime;
+            double minutesRemaining = _restockMinutes - timeSinceRestock.TotalMinutes;
+
+            if (minutesRemaining <= 0)
+            {
+                return "Ready to restock!";
+            }
+
+            return $"{Math.Ceiling(minutesRemaining)} minutes";
+        }
+
+        /// <summary>
+        /// Get combat encounters remaining until restock (for display purposes)
+        /// </summary>
+        public string GetCombatUntilRestock()
+        {
+            int encountersRemaining = _restockCombatEncounters - CombatEncountersSinceRestock;
+
+            if (encountersRemaining <= 0)
+            {
+                return "Ready to restock!";
+            }
+
+            return $"{encountersRemaining} encounter{(encountersRemaining > 1 ? "s" : "")}";
+        }
+
+        /// <summary>
         /// Populate shop with random items based on tier and player level
+        /// Also refreshes market conditions and applies per-item price variations
         /// </summary>
         public void RestockShop(int playerLevel, Random rng)
         {
             ShopInventory.Clear();
+            _itemPriceModifiers.Clear();
+
+            // Reset restock tracking
+            LastRestockTime = DateTime.Now;
+            CombatEncountersSinceRestock = 0;
+
+            // Re-randomize restock requirements for next time
+            // Time: 25 minutes ± (1-5 minutes)
+            int timeVariation = rng.Next(1, 6);
+            int timeDirection = rng.Next(0, 2) == 0 ? -1 : 1;
+            _restockMinutes = 25 + (timeVariation * timeDirection);
+
+            // Combat: 4 encounters ± (1-2 encounters)
+            int combatVariation = rng.Next(1, 3);
+            int combatDirection = rng.Next(0, 2) == 0 ? -1 : 1;
+            _restockCombatEncounters = Math.Max(2, 4 + (combatVariation * combatDirection));
+
+            // Layer 2: Refresh market conditions (±5% variation per restock)
+            MarketConditionsModifier = 0.95 + (rng.NextDouble() * 0.10);
+
+            string marketCondition = MarketConditionsModifier < 0.98 ? "Buyer's market!" :
+                                     MarketConditionsModifier > 1.02 ? "Seller's market!" :
+                                     "Market is stable.";
 
             // Number of items based on tier
             int itemCount = 5 + (ShopTier * 2);  // Tier 1: 7 items, Tier 5: 15 items
@@ -428,10 +744,15 @@ namespace GameLogic.Entities.NPCs
                     item.Rarity = ItemRarity.Epic;
                 }
 
+                // Layer 3: Apply per-item price variation (±3% tiny random modifier)
+                double itemModifier = 0.97 + (rng.NextDouble() * 0.06);
+                _itemPriceModifiers[item] = itemModifier;
+
                 ShopInventory.Add(item);
             }
 
             Console.WriteLine($"\n{Name}'s shop has been restocked with {itemCount} items!");
+            Console.WriteLine($"Market conditions: {marketCondition}");
         }
 
         /// <summary>
@@ -439,6 +760,15 @@ namespace GameLogic.Entities.NPCs
         /// </summary>
         public void Interact(Player.Player player)
         {
+            // Check if shop should restock
+            if (ShouldRestock())
+            {
+                Console.WriteLine($"\n✨ {Name} has new inventory!");
+                RestockShop(player.Level, _rng);
+                Console.WriteLine("\nPress any key to continue...");
+                Console.ReadKey();
+            }
+
             bool shopping = true;
 
             while (shopping)

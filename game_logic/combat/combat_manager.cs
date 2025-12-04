@@ -833,6 +833,9 @@ namespace GameLogic.Combat
                     _player.SelectedAbility.ResetCombatUsage();
                 }
 
+                // Notify all shops about flee (may apply penalties for consecutive flees)
+                Entities.NPCs.ShopKeeper.NotifyAllShopsOfFlee();
+
                 _combatActive = false;
 
                 Console.WriteLine("\nPress any key to continue...");
@@ -923,6 +926,9 @@ namespace GameLogic.Combat
                     }
                 }
             }
+
+            // Notify all shops that a combat encounter occurred (for restock tracking)
+            Entities.NPCs.ShopKeeper.NotifyAllShopsOfCombat();
 
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();

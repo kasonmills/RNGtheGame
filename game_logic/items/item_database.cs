@@ -717,6 +717,114 @@ namespace GameLogic.Items
                     isKeyItem: false
                 ),
 
+                // CHAMPION BOSS KEYS (15 unique keys, one per boss)
+                // These keys are required to unlock the Final Gate (need 10 of 15)
+
+                "flame_warden_key" => new QuestItem(
+                    "Eternal Flame Key",
+                    "A key forged from the heart of the Flame Warden. Burns with eternal fire and radiates immense heat. Can unlock flame-sealed doors and counts toward the Final Gate.",
+                    "flame_warden_key",
+                    isKeyItem: true
+                ),
+
+                "frost_tyrant_key" => new QuestItem(
+                    "Frozen Heart Key",
+                    "Carved from the frozen core of the Frost Tyrant. Ice-cold to the touch, yet never melts. Unlocks frost-sealed passages and counts toward the Final Gate.",
+                    "frost_tyrant_key",
+                    isKeyItem: true
+                ),
+
+                "thunder_lord_key" => new QuestItem(
+                    "Storm Core Key",
+                    "Crystallized essence of the Thunder Lord's power. Crackles with electricity and emits a faint hum. Opens storm barriers and counts toward the Final Gate.",
+                    "thunder_lord_key",
+                    isKeyItem: true
+                ),
+
+                "shadow_reaper_key" => new QuestItem(
+                    "Void Shard Key",
+                    "A fragment of pure shadow from the Shadow Reaper. Absorbs light around it and feels unnaturally cold. Pierces shadow seals and counts toward the Final Gate.",
+                    "shadow_reaper_key",
+                    isKeyItem: true
+                ),
+
+                "stone_guardian_key" => new QuestItem(
+                    "Earth Titan Key",
+                    "Carved from the heart-stone of the ancient Stone Guardian. Impossibly heavy yet perfectly balanced. Breaks through stone barriers and counts toward the Final Gate.",
+                    "stone_guardian_key",
+                    isKeyItem: true
+                ),
+
+                "serpent_queen_key" => new QuestItem(
+                    "Venom Fang Key",
+                    "Crafted from the Serpent Queen's fang, dripping with eternal venom. The poison never fades. Dissolves venom-locked gates and counts toward the Final Gate.",
+                    "serpent_queen_key",
+                    isKeyItem: true
+                ),
+
+                "iron_colossus_key" => new QuestItem(
+                    "Forged Iron Key",
+                    "Molded from the indestructible plating of the Iron Colossus. Unbreakable and perfectly machined. Opens reinforced doors and counts toward the Final Gate.",
+                    "iron_colossus_key",
+                    isKeyItem: true
+                ),
+
+                "blood_knight_key" => new QuestItem(
+                    "Crimson Soul Key",
+                    "Crystallized from the Blood Knight's essence. Pulses with a faint heartbeat. Unlocks blood-sealed chambers and counts toward the Final Gate.",
+                    "blood_knight_key",
+                    isKeyItem: true
+                ),
+
+                "arcane_archon_key" => new QuestItem(
+                    "Prismatic Arcane Key",
+                    "Pure condensed magic from the Arcane Archon. Shifts through rainbow colors. Dispels magical wards and counts toward the Final Gate.",
+                    "arcane_archon_key",
+                    isKeyItem: true
+                ),
+
+                "plague_bearer_key" => new QuestItem(
+                    "Pestilence Key",
+                    "Extracted from the Plague Bearer's corrupted heart. Emits a sickly green glow. Cleaves through plague barriers and counts toward the Final Gate.",
+                    "plague_bearer_key",
+                    isKeyItem: true
+                ),
+
+                "sky_sovereign_key" => new QuestItem(
+                    "Celestial Wing Key",
+                    "A feather-shaped key from the Sky Sovereign's wings. Impossibly light and glows with starlight. Opens sky gates and counts toward the Final Gate.",
+                    "sky_sovereign_key",
+                    isKeyItem: true
+                ),
+
+                "abyssal_horror_key" => new QuestItem(
+                    "Deep Abyss Key",
+                    "Dredged from the depths by the Abyssal Horror. Dark water perpetually drips from it. Parts deep-sea seals and counts toward the Final Gate.",
+                    "abyssal_horror_key",
+                    isKeyItem: true
+                ),
+
+                "solar_phoenix_key" => new QuestItem(
+                    "Phoenix Ember Key",
+                    "Reborn from the Solar Phoenix's ashes. Burns eternally with holy fire. Ignites sacred locks and counts toward the Final Gate.",
+                    "solar_phoenix_key",
+                    isKeyItem: true
+                ),
+
+                "void_dragon_key" => new QuestItem(
+                    "Void Scale Key",
+                    "A scale from the Void Dragon that exists between dimensions. Phases in and out of reality. Transcends dimensional barriers and counts toward the Final Gate.",
+                    "void_dragon_key",
+                    isKeyItem: true
+                ),
+
+                "time_keeper_key" => new QuestItem(
+                    "Eternal Hourglass Key",
+                    "Stolen from the Time Keeper's collection. Sand flows upward within it. Unlocks temporal seals and counts toward the Final Gate.",
+                    "time_keeper_key",
+                    isKeyItem: true
+                ),
+
                 _ => throw new ArgumentException($"Quest item '{questItemName}' not found in database.")
             };
         }
