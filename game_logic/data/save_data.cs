@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GameLogic.Items;
+using GameLogic.Quests;
 
 namespace GameLogic.Data
 {
@@ -32,6 +33,41 @@ namespace GameLogic.Data
         // Consumable-specific
         public string ConsumableType { get; set; }
         public int? EffectPower { get; set; }
+    }
+
+    /// <summary>
+    /// Serializable representation of a quest objective
+    /// </summary>
+    public class SerializedQuestObjective
+    {
+        public string Description { get; set; }
+        public int CurrentProgress { get; set; }
+        public int RequiredProgress { get; set; }
+    }
+
+    /// <summary>
+    /// Serializable representation of a quest for saving
+    /// </summary>
+    public class SerializedQuest
+    {
+        public string QuestId { get; set; }
+        public string QuestName { get; set; }
+        public string Description { get; set; }
+        public string QuestState { get; set; }  // Store as string for compatibility
+        public List<SerializedQuestObjective> Objectives { get; set; }
+
+        // Rewards
+        public int GoldReward { get; set; }
+        public int XPReward { get; set; }
+
+        // Additional data for specific quest types
+        public int? TotalGoldEarned { get; set; }  // For GoldCollectionQuest
+        public string QuestType { get; set; }  // Type of quest for reconstruction
+
+        public SerializedQuest()
+        {
+            Objectives = new List<SerializedQuestObjective>();
+        }
     }
 
     /// <summary>
@@ -70,12 +106,26 @@ namespace GameLogic.Data
         // Timestamps
         public DateTime SaveDate { get; set; }
         public TimeSpan PlayTime { get; set; }
-        
+
+        // Boss Progression
+        public List<string> DefeatedBossIds { get; set; }          // IDs of defeated bosses
+        public string FinalBossId { get; set; }                    // Selected final boss
+        public int BossesDefeated { get; set; }                    // Count of unique bosses defeated
+        public bool FinalGateUnlocked { get; set; }                // Is final gate accessible
+        public Dictionary<string, int> BossTimesDefeated { get; set; }  // bossId -> defeat count
+
+        // Quest System
+        public List<SerializedQuest> Quests { get; set; }          // All quest states and progress
+        public string ActiveQuestId { get; set; }                   // Currently focused quest
+
         // Constructor
         public SaveData()
         {
             InventoryItems = new List<SerializedItem>();
             SaveDate = DateTime.Now;
+            DefeatedBossIds = new List<string>();
+            BossTimesDefeated = new Dictionary<string, int>();
+            Quests = new List<SerializedQuest>();
         }
     }
 }

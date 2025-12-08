@@ -17,6 +17,7 @@ namespace GameLogic.Combat
         private RNGManager _rngManager;
         private TurnManager _turnManager;
         private DamageCalculator _damageCalculator;
+        private Progression.BossManager _bossManager;
 
         private Player _player;
         private Enemy _enemy;
@@ -47,12 +48,20 @@ namespace GameLogic.Combat
         /// <param name="player">The player character</param>
         /// <param name="enemy">The enemy to fight</param>
         /// <param name="companions">List of active companions (can be null or empty)</param>
+        /// <param name="bossManager">Optional boss manager for boss encounters</param>
         /// <returns>True if player won, False if player lost</returns>
-        public bool StartCombat(Player player, Enemy enemy, List<Entities.NPCs.Companions.CompanionBase> companions = null)
+        public bool StartCombat(Player player, Enemy enemy, List<Entities.NPCs.Companions.CompanionBase> companions = null, Progression.BossManager bossManager = null)
         {
             _player = player;
             _enemy = enemy;
             _combatActive = true;
+            _bossManager = bossManager;
+
+            // If this is a boss fight, apply strength scaling
+            if (_enemy is BossEnemy boss && _bossManager != null)
+            {
+                _bossManager.ApplyBossScaling(boss);
+            }
 
             // Setup combatants list
             _allCombatants.Clear();
@@ -907,6 +916,12 @@ namespace GameLogic.Combat
             else
             {
                 Console.WriteLine("\nNo items dropped.");
+            }
+
+            // Handle boss defeats
+            if (_enemy is BossEnemy defeatedBoss && _bossManager != null)
+            {
+                _bossManager.DefeatBoss(defeatedBoss.BossId);
             }
 
             // Reset combat usage for abilities

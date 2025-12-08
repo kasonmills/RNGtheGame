@@ -88,43 +88,62 @@
 ## MEDIUM PRIORITY - Systems & Features
 
 ### 🟡 5. Boss Key Progression System
-- **Files**: `game_logic/entities/enemies/boss_enemy.cs`, `game_logic/progression/boss_manager.cs`, `game_logic/progression/boss_definitions.cs`
-- **Status**: 🚧 Phase 1 COMPLETED (Core Framework)
-- **Description**: Boss-based progression using champion keys to unlock final gate
+- **Files**: `game_logic/entities/enemies/boss_enemy.cs`, `game_logic/progression/boss_manager.cs`, `game_logic/progression/boss_definitions.cs`, `game_logic/world/boss_encounter.cs`
+- **Status**: ✅ FULLY COMPLETED (Phases 1 & 2)
+- **Description**: Complete boss progression system using champion keys to unlock final gate
 - **Phase 1 Complete** (✅ Framework):
   - ✅ BossEnemy class with unique mechanics (12 mechanic types)
   - ✅ BossManager for tracking and strength scaling
   - ✅ 15 unique champion bosses defined
   - ✅ 15 unique champion keys as QuestItems
-  - ✅ Strength scaling system (15% per boss defeated)
+  - ✅ Dual strength scaling system:
+    - 15% stronger per unique boss defeated (progression scaling)
+    - 50% stronger per repeat defeat of same boss (anti-farming)
   - ✅ Final gate unlock logic (need 10 of 15 keys)
-  - ✅ Random final boss selection
-- **Phase 2 Needed** (❌ Integration):
-  - Combat manager integration (boss defeats → key drops)
-  - Player class integration (BossManager instance)
-  - Game initialization (register bosses, select final boss)
-  - Save system integration (persist boss progress)
-  - Map integration (boss locations)
-  - Final gate location/encounter
+  - ✅ Random final boss selection per save file
+- **Phase 2 Complete** (✅ Integration):
+  - ✅ Combat manager integration (boss defeats tracked, key drops working)
+  - ✅ BossManager integrated with GameManager
+  - ✅ Game initialization complete (bosses registered, final boss selected)
+  - ✅ Save system integration (boss progress, defeats, repeat counts persisted)
+  - ✅ Boss encounter system with player warnings for repeat fights
+  - ✅ Final gate encounter with key consumption
+  - ✅ Champion menu for boss selection and status display
+  - ✅ Final gate unlock bug fixed (keys consumed = gate unlocked, prevents save/load exploit)
+- **Documentation**: See `docs/boss_system_phase2_plan.md`, `docs/boss_final_gate_fix.md`, `docs/boss_combat_verification.md`
 
 ### 🟡 6. Quest Event System
-- **File**: `game_logic/progression/quest_system.cs`
-- **Status**: 🚧 Framework Complete, Integration Needed
-- **Description**: Quest framework exists but not integrated with gameplay
-- **Current**:
-  - ✅ Quest system framework complete (QuestSystem class)
-  - ✅ Quest types, objectives, rewards all defined
-  - ✅ Quest templates for easy creation
-  - ❌ No integration with NPCs (QuestGiver)
-  - ❌ No automatic progress tracking
-  - ❌ No quest content defined
-- **Needed for Integration**:
-  - QuestGiver NPC class
-  - Hook quest progress to combat (kill tracking)
-  - Hook quest progress to inventory (collection tracking)
-  - Player quest menu/UI
-  - Create starter quests
-  - Optional: "Path of Champions" quest to track boss keys
+- **Files**: `game_logic/quests/`, `game_logic/entities/npcs/quest_giver.cs`, `game_logic/menus/job_board.cs`
+- **Status**: ✅ FULLY COMPLETED
+- **Description**: Complete quest system with 34+ quests, two quest hubs, and RNG variety
+- **Features Implemented**:
+  - ✅ Quest base classes (Quest, QuestObjective, QuestReward)
+  - ✅ QuestManager for centralized tracking and active quest management
+  - ✅ 8 quest types:
+    - BossDefeatQuest (14 quests - one per champion boss)
+    - FinalBossQuest (1 quest - requires acceptance before completion)
+    - LevelQuest (5 quests - reach level milestones)
+    - EnemyKillQuest (3 quests - defeat X enemies with RNG variance)
+    - GoldCollectionQuest (3 quests - earn total gold with RNG variance)
+    - WeaponUpgradeQuest (2 quests - upgrade weapon to level X with RNG variance)
+    - EquipmentQuest (2 quests - equip full gear set with RNG variance)
+    - ChallengeQuest (4 quests - flawless victory, crit master, survivor, win streak)
+  - ✅ **Quest Giver NPC** for boss-related quests (fixed rewards: 100g + 50 XP)
+  - ✅ **Job Board menu** for all other quests (randomized requirements & rewards)
+  - ✅ Quest states: NotDiscovered → Available → Accepted → Completed → Claimed
+  - ✅ **Retroactive completion**: Progress tracks even if quest not accepted (except final boss)
+  - ✅ **Active quest tracking**: Focus on one quest with ★ marker
+  - ✅ Quest log display with progress tracking
+  - ✅ **RNG quest generation** (once per save file):
+    - Job board quest requirements randomized (±1-6 variance)
+    - Job board quest rewards randomized (±20-30% variance)
+    - Rewards scale with difficulty naturally
+  - ✅ **Complete save/load support**:
+    - Quest data serialized with requirements and rewards
+    - ReconstructQuests() rebuilds quests with original RNG values
+    - No re-randomization on load - quests stay consistent per save
+  - ✅ Full integration with GameManager (menu options 8, 9, 10)
+- **Documentation**: See `docs/quest_system_implementation.md`, `docs/quest_rng_system.md`
 
 ### 🟡 7. Turn Order with Speed Stats
 - **File**: `game_logic/combat/combat_manager.cs:168`
@@ -366,17 +385,18 @@
 
 ## SUMMARY BY STATUS
 
-**Completed**: 7
+**Completed**: 9
 - Equipment leveling system with player-choice upgrade paths
 - Turn order with speed-based initiative
 - Weapon/Armor save system with custom stats
 - RevivePotion system with three tiers and combat integration
 - ShopKeeper system with 3-layer dynamic pricing and restock system
 - Enemy defense application (flat damage reduction)
-- Boss Key System Phase 1 (15 bosses, keys, strength scaling)
+- **Boss Key Progression System (Phases 1 & 2) - 15 bosses, dual scaling, final gate**
+- **Quest Event System - 34+ quests with RNG variety and save/load support**
 
-**High Priority** (Next to tackle): 1
-1. Boss Key System Phase 2 (combat/gameplay integration)
+**High Priority** (Next to tackle): 0
+- All high priority items completed!
 
 **Medium Priority**: 3
 - Settings menu
@@ -406,31 +426,50 @@
 - Main gaps are in NPC interactions (shops, quests) and system polish
 - GUI development is separate future phase after console version is complete
 
-## RECENT COMPLETIONS (Latest Session)
-- ✅ Weapon upgrade system redesigned with player choice at each level
-- ✅ All 9 weapon types defined with unique upgrade ranges:
-  - **Swords**: Balanced (1-2 min, 1/1 shift, 1-3 max)
-  - **Axes**: High ceiling, widens range (0-2 min, 1/2 shift, 1-4 max)
-  - **Maces**: High base, low growth (0-1 min, 0-1 shift, 0-2 max)
-  - **Daggers**: Small consistent growth (0-1 min, 1/1 shift, 0-2 max)
-  - **Spears**: High accuracy/crit, smaller growth (0-1 min, 1/1 shift, 0-2 max)
-  - **Staves**: Can miss max upgrades (1-3 min, 1/1 shift, 0-3 max)
-  - **Bows**: Extreme damage range (0-1 min, 0-2 random shift, 1-7 max)
-  - **Crossbows**: High accuracy, extreme range (0-1 min, 0-2 random shift, 1-7 max)
-  - **Wands**: Consistency weapon, narrows range (1-3 min, 2/1 shift, 0-2 max)
-- ✅ Added 8 new weapons (maces, spears, crossbows, wands)
-- ✅ Safety checks prevent min damage exceeding max damage
-- ✅ Data-driven design: each weapon stores its own upgrade ranges
-- ✅ Save system updated to preserve custom-upgraded weapon stats
-- ✅ Removed Fist from WeaponType (it's just unarmed fallback, not a weapon)
-- ✅ RevivePotion system completed with three tiers based on level ranges:
-  - Minor Revival Potion (Lv1-4): 10%-40% HP restoration
-  - Revival Potion (Lv5-8): 50%-80% HP restoration
-  - Greater Revival Potion (Lv9-10): 90%-100% HP restoration
-- ✅ ShopKeeper system with 3-layer dynamic pricing and dual restock system:
-  - **Pricing Layer 1**: Shop personality (generous/fair/greedy, permanent per merchant)
-  - **Pricing Layer 2**: Market conditions (buyer's/seller's market, changes per restock)
-  - **Pricing Layer 3**: Per-item/transaction variations (tiny ±2-3% randomness)
-  - Inverse personality for sell prices (greedy shops pay less, generous pay more)
-  - **Restock system**: Time-based (25±5 min) OR Combat-based (4±2 encounters)
-  - Prevents shop scumming, displays countdown timers to player
+## RECENT COMPLETIONS (Latest Session - 2025-12-05)
+
+### Boss Progression System (Phase 2 Complete)
+- ✅ Full combat integration with boss scaling and key drops
+- ✅ BossManager integrated into GameManager
+- ✅ Boss encounter system with warnings for repeat fights
+- ✅ Final gate key consumption (10 keys required)
+- ✅ Final gate unlock bug fixed (prevents save/load exploit)
+- ✅ Dual scaling system:
+  - 15% stronger per unique boss defeated
+  - 50% stronger per repeat defeat of same boss
+- ✅ Diminishing returns on key drops (100% → 50% → 25% → 12.5%...)
+- ✅ Save system preserves boss progression, defeats, and repeat counts
+- ✅ Boss combat verified - uses same combat system as regular enemies
+
+### Quest System (Complete Implementation)
+- ✅ Quest base architecture (Quest, QuestObjective, QuestReward, QuestManager)
+- ✅ 8 quest types with 34+ total quests:
+  - 14 Boss defeat quests
+  - 1 Final boss quest (special: requires acceptance)
+  - 5 Level progression quests
+  - 3 Enemy kill quests
+  - 3 Gold collection quests
+  - 2 Weapon upgrade quests
+  - 2 Equipment quests
+  - 4 Challenge quests
+- ✅ **Quest Giver NPC**: "Veteran Ranger" for all boss quests
+- ✅ **Job Board Menu**: Browse, accept, track, and claim all other quests
+- ✅ **RNG Quest Generation**:
+  - Job board quests randomized once per save file
+  - Requirements: ±1-6 variance depending on quest type
+  - Rewards: ±20-30% variance for gold and XP
+  - Boss quests remain fixed (100g + 50 XP) for consistency
+- ✅ **Quest Persistence**:
+  - Complete quest data saved (requirements, rewards, progress, state)
+  - ReconstructQuests() rebuilds with original RNG values on load
+  - Each save file has unique quest challenges
+- ✅ Retroactive completion (progress tracks before acceptance)
+- ✅ Active quest tracking with ★ marker
+- ✅ Quest log with detailed progress display
+- ✅ Menu integration (Options 8, 9, 10 in main game loop)
+
+### Previous Session Completions
+- ✅ Weapon upgrade system with player choice at each level (9 weapon types)
+- ✅ RevivePotion system with three tiers
+- ✅ ShopKeeper system with 3-layer dynamic pricing
+- ✅ Dual restock system (time + combat based)

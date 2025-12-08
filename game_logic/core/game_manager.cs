@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using GameLogic.Entities.Player;
 using GameLogic.World;
 using GameLogic.Systems;
 using GameLogic.Combat;
 using GameLogic.Data;
+using GameLogic.Quests;
+using GameLogic.Entities.NPCs;
 
 namespace GameLogic.Core
 {
@@ -20,6 +23,9 @@ namespace GameLogic.Core
         private MapManager _mapManager;
         private CombatManager _combatManager;
         private RNGManager _rngManager;
+        private Progression.BossManager _bossManager;
+        private QuestManager _questManager;
+        private QuestGiver _questGiver;
 
         // === Game State Management ===
         private GameState _currentState;
@@ -146,11 +152,31 @@ namespace GameLogic.Core
             // Let player choose starting ability
             ChooseStartingAbility();
 
+            Console.WriteLine("\n🎲 Initializing Champion Bosses...");
+
+            // Create new boss manager and register all 15 bosses
+            _bossManager = new Progression.BossManager();
+            var championBosses = Progression.BossDefinitions.GetAllChampionBosses();
+            _bossManager.RegisterBosses(championBosses.ToArray());
+
+            // Randomly select the final boss
+            _bossManager.SelectRandomFinalBoss(_rngManager);
+
+            Console.WriteLine("\nThe champions await your challenge!");
+            Console.WriteLine("Defeat 10 of the 15 Champions to unlock the Final Gate.\n");
+
+            // Initialize quest system
+            Console.WriteLine("🎲 Initializing Quest System...");
+            _questManager = new QuestManager();
+            InitializeQuests();
+            _questGiver = new QuestGiver("Veteran Ranger", _questManager, _bossManager);
+            Console.WriteLine("Quests are now available at the Job Board and Quest Giver!\n");
+
             Console.WriteLine("\nYour adventure begins...\n");
-            
+
             // Generate starting map
             _mapManager.GenerateNewMap();
-            
+
             ChangeState(GameState.Playing);
             _isRunning = true;
         }
@@ -167,6 +193,27 @@ namespace GameLogic.Core
             if (saveData != null)
             {
                 _player = Player.LoadFromSave(saveData);
+
+                // Load boss manager from save data
+                _bossManager = Data.SaveManager.LoadBossManager(saveData, _rngManager);
+
+                // Initialize quest system and reconstruct quests from save
+                _questManager = new QuestManager();
+                if (saveData.Quests != null && saveData.Quests.Count > 0)
+                {
+                    // Reconstruct quests with their original RNG values from save
+                    QuestSerializationHelper.ReconstructQuests(_questManager, saveData.Quests, _bossManager);
+                    if (!string.IsNullOrEmpty(saveData.ActiveQuestId))
+                    {
+                        _questManager.SetActiveQuestId(saveData.ActiveQuestId);
+                    }
+                }
+                else
+                {
+                    // Fallback: If no quests in save (old save file), initialize new quests
+                    InitializeQuests();
+                }
+                _questGiver = new QuestGiver("Veteran Ranger", _questManager, _bossManager);
 
                 // Load/regenerate map based on saved seed
                 if (saveData.MapSeed != 0)
@@ -246,7 +293,11 @@ namespace GameLogic.Core
             Console.WriteLine("4. Rest (restore health)");
             Console.WriteLine("5. Save Game");
             Console.WriteLine("6. Pause Menu");
-            Console.WriteLine("7. Quit");
+            Console.WriteLine("7. ⚔️  Champion Challenges (Boss Fights)");
+            Console.WriteLine("8. 📋 Quest Giver (Boss Quests)");
+            Console.WriteLine("9. 📌 Job Board (Other Quests)");
+            Console.WriteLine("10. 📖 Quest Log");
+            Console.WriteLine("11. Quit");
             
             Console.Write("\nChoice: ");
             string choice = Console.ReadLine();
@@ -272,6 +323,20 @@ namespace GameLogic.Core
                     PushState(GameState.Paused); // Save current state and go to pause
                     break;
                 case "7":
+                    ShowChampionMenu();
+                    break;
+                case "8":
+                    _questGiver.Interact();
+                    break;
+                case "9":
+                    Menus.JobBoard.DisplayJobBoard(_questManager);
+                    break;
+                case "10":
+                    _questManager.DisplayQuestLog();
+                    Console.WriteLine("\nPress any key to continue...");
+                    Console.ReadKey();
+                    break;
+                case "11":
                     _isRunning = false;
                     break;
                 default:
@@ -507,7 +572,7 @@ namespace GameLogic.Core
         {
             Console.WriteLine("\nSaving game...");
 
-            bool success = Data.SaveManager.SaveGame(_player, "save1", _mapManager);
+            bool success = Data.SaveManager.SaveGame(_player, "save1", _bossManager, _mapManager, _questManager);
 
             if (success)
             {
@@ -580,6 +645,192 @@ namespace GameLogic.Core
         }
 
         /// <summary>
+        /// Show Champion Challenges menu (Boss Fights)
+        /// </summary>
+        private void ShowChampionMenu()
+        {
+            Console.Clear();
+
+            // Display boss progression summary
+            Console.WriteLine(_bossManager.GetProgressionSummary());
+            Console.WriteLine();
+
+            // Display final gate status
+            int keyCount = _bossManager.CountChampionKeys(_player.Inventory);
+            Console.WriteLine(_bossManager.GetFinalGateStatus(_player.Inventory));
+            Console.WriteLine();
+
+            // Main menu options
+            Console.WriteLine("═══ CHAMPION CHALLENGES ═══");
+            Console.WriteLine("1. Challenge a Champion Boss");
+            Console.WriteLine("2. View Boss List");
+            Console.WriteLine("3. Enter Final Gate (Requires 10 Keys)");
+            Console.WriteLine("4. Return to Adventure");
+            Console.Write("\nChoice: ");
+
+            string choice = Console.ReadLine();
+
+            switch (choice)
+            {
+                case "1":
+                    SelectAndChallengeBoss();
+                    break;
+                case "2":
+                    ViewBossList();
+                    break;
+                case "3":
+                    ChallengeFinalBoss();
+                    break;
+                case "4":
+                    // Return to game loop
+                    break;
+                default:
+                    Console.WriteLine("Invalid choice.");
+                    Console.WriteLine("Press any key to continue...");
+                    Console.ReadKey();
+                    ShowChampionMenu(); // Re-show menu
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Select and challenge a champion boss
+        /// </summary>
+        private void SelectAndChallengeBoss()
+        {
+            Console.Clear();
+
+            // Display available bosses
+            World.BossEncounter.DisplayBossSelectionMenu(_bossManager, true);
+
+            var availableBosses = World.BossEncounter.GetAvailableChampionBosses(_bossManager);
+
+            Console.WriteLine($"[{availableBosses.Count + 1}] Return to Champion Menu");
+            Console.Write("\nSelect a boss to challenge: ");
+
+            string choice = Console.ReadLine();
+
+            if (int.TryParse(choice, out int bossIndex))
+            {
+                if (bossIndex >= 1 && bossIndex <= availableBosses.Count)
+                {
+                    var selectedBoss = availableBosses[bossIndex - 1];
+
+                    // Start boss encounter
+                    bool victory = World.BossEncounter.StartBossEncounter(
+                        _player,
+                        selectedBoss,
+                        _bossManager,
+                        _combatManager,
+                        null); // TODO: Add companion support when implemented
+
+                    if (victory)
+                    {
+                        Console.WriteLine("\n✨ You may now save your progress or continue your adventure.");
+                    }
+                    else
+                    {
+                        // Player lost or fled
+                        if (_player.Health <= 0)
+                        {
+                            ChangeState(GameState.GameOver);
+                            return;
+                        }
+                    }
+                }
+                else if (bossIndex == availableBosses.Count + 1)
+                {
+                    // Return to champion menu
+                    ShowChampionMenu();
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid choice.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid input.");
+            }
+
+            Console.WriteLine("Press any key to continue...");
+            Console.ReadKey();
+            ShowChampionMenu();
+        }
+
+        /// <summary>
+        /// View detailed list of all bosses
+        /// </summary>
+        private void ViewBossList()
+        {
+            Console.Clear();
+            Console.WriteLine("═══ ALL CHAMPION BOSSES ═══\n");
+
+            var allBosses = _bossManager.AllBosses.Values.OrderBy(b => b.Level).ToList();
+
+            foreach (var boss in allBosses)
+            {
+                bool isDefeated = _bossManager.IsBossDefeated(boss.BossId);
+                bool isFinalBoss = boss.BossId == _bossManager.FinalBossId;
+
+                string status = isFinalBoss ? " [FINAL BOSS]" :
+                               isDefeated ? " [✓ DEFEATED]" : " [NEW]";
+
+                Console.WriteLine($"{boss.Name}{status}");
+                Console.WriteLine($"  Level: {boss.Level} | Mechanic: {boss.MechanicType}");
+
+                if (isDefeated)
+                {
+                    Console.WriteLine($"  Times Defeated: {boss.TimesDefeated}");
+                }
+
+                if (isFinalBoss)
+                {
+                    Console.WriteLine($"  ⚠️  Requires 10 Champion Keys to unlock");
+                }
+
+                Console.WriteLine($"  {boss.Title}");
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("Press any key to return to Champion Menu...");
+            Console.ReadKey();
+            ShowChampionMenu();
+        }
+
+        /// <summary>
+        /// Challenge the final boss
+        /// </summary>
+        private void ChallengeFinalBoss()
+        {
+            bool victory = World.BossEncounter.StartFinalBossEncounter(
+                _player,
+                _bossManager,
+                _combatManager,
+                null); // TODO: Add companion support when implemented
+
+            if (victory)
+            {
+                Console.WriteLine("\n🎉 YOU HAVE COMPLETED THE GAME! 🎉");
+                Console.WriteLine("You may continue playing to explore or challenge bosses again.");
+            }
+            else
+            {
+                // Player lost or didn't meet requirements
+                if (_player.Health <= 0)
+                {
+                    ChangeState(GameState.GameOver);
+                    return;
+                }
+            }
+
+            Console.WriteLine("Press any key to continue...");
+            Console.ReadKey();
+            ShowChampionMenu();
+        }
+
+        /// <summary>
         /// Handle game over state
         /// </summary>
         private void HandleGameOver()
@@ -611,6 +862,182 @@ namespace GameLogic.Core
                     HandleGameOver(); // Ask again
                     break;
             }
+        }
+
+        /// <summary>
+        /// Initialize all quests for the game (ONLY called on new game creation)
+        /// </summary>
+        private void InitializeQuests()
+        {
+            // Create boss defeat quests for each champion (except final boss)
+            foreach (var boss in _bossManager.AllBosses.Values)
+            {
+                if (boss.BossId != _bossManager.FinalBossId)
+                {
+                    // Boss quests: 100 gold + 50 XP per quest (no RNG - these are fixed)
+                    var bossQuest = new BossDefeatQuest(boss.BossId, boss.Name, 100, 50);
+                    bossQuest.Discover(); // Make available immediately
+                    _questManager.RegisterQuest(bossQuest);
+                }
+            }
+
+            // Create final boss quest (no RNG - this is fixed)
+            var finalBoss = _bossManager.GetFinalBoss();
+            if (finalBoss != null)
+            {
+                var finalQuest = new FinalBossQuest(finalBoss.BossId, finalBoss.Name);
+                finalQuest.Discover(); // Make available immediately
+                _questManager.RegisterQuest(finalQuest);
+            }
+
+            // Create level progression quests (no RNG - fixed milestones)
+            int[] levelMilestones = { 5, 10, 15, 20, 25 };
+            foreach (int level in levelMilestones)
+            {
+                // Add RNG to rewards: ±20% variation
+                int baseGold = level * 50;
+                int baseXP = level * 25;
+                int gold = ApplyRewardVariation(baseGold, 0.2);
+                int xp = ApplyRewardVariation(baseXP, 0.2);
+
+                var levelQuest = new LevelQuest(level, gold, xp);
+                levelQuest.Discover();
+                _questManager.RegisterQuest(levelQuest);
+            }
+
+            // Create enemy kill quests with RNG on requirements and rewards
+            // Tier 1: 10 enemies (±6 = 4-16 range)
+            int tier1Kills = ApplyRequirementVariation(10, 6);
+            int tier1Gold = ApplyRewardVariation(75, 0.3);  // ±30% variation
+            int tier1XP = ApplyRewardVariation(40, 0.3);
+            var enemyQuest1 = new EnemyKillQuest("kill_tier1_enemies", "Novice Hunter", tier1Kills, tier1Gold, tier1XP);
+            enemyQuest1.Discover();
+            _questManager.RegisterQuest(enemyQuest1);
+
+            // Tier 2: 25 enemies (±6 = 19-31 range)
+            int tier2Kills = ApplyRequirementVariation(25, 6);
+            int tier2Gold = ApplyRewardVariation(150, 0.3);
+            int tier2XP = ApplyRewardVariation(75, 0.3);
+            var enemyQuest2 = new EnemyKillQuest("kill_tier2_enemies", "Experienced Hunter", tier2Kills, tier2Gold, tier2XP);
+            enemyQuest2.Discover();
+            _questManager.RegisterQuest(enemyQuest2);
+
+            // Tier 3: 50 enemies (±6 = 44-56 range)
+            int tier3Kills = ApplyRequirementVariation(50, 6);
+            int tier3Gold = ApplyRewardVariation(300, 0.3);
+            int tier3XP = ApplyRewardVariation(150, 0.3);
+            var enemyQuest3 = new EnemyKillQuest("kill_tier3_enemies", "Master Hunter", tier3Kills, tier3Gold, tier3XP);
+            enemyQuest3.Discover();
+            _questManager.RegisterQuest(enemyQuest3);
+
+            // Create gold collection quests with RNG on requirements and rewards
+            // Tier 1: 500 gold (±6 * 25 = ±150 = 350-650 range)
+            int tier1GoldReq = ApplyRequirementVariation(500, 6 * 25);
+            int tier1GoldReward = ApplyRewardVariation(100, 0.3);
+            int tier1GoldXP = ApplyRewardVariation(50, 0.3);
+            var goldQuest1 = new GoldCollectionQuest(tier1GoldReq, tier1GoldReward, tier1GoldXP);
+            goldQuest1.Discover();
+            _questManager.RegisterQuest(goldQuest1);
+
+            // Tier 2: 1000 gold (±150 = 850-1150 range)
+            int tier2GoldReq = ApplyRequirementVariation(1000, 150);
+            int tier2GoldReward = ApplyRewardVariation(200, 0.3);
+            int tier2GoldXP = ApplyRewardVariation(100, 0.3);
+            var goldQuest2 = new GoldCollectionQuest(tier2GoldReq, tier2GoldReward, tier2GoldXP);
+            goldQuest2.Discover();
+            _questManager.RegisterQuest(goldQuest2);
+
+            // Tier 3: 2500 gold (±300 = 2200-2800 range)
+            int tier3GoldReq = ApplyRequirementVariation(2500, 300);
+            int tier3GoldReward = ApplyRewardVariation(500, 0.3);
+            int tier3GoldXP = ApplyRewardVariation(250, 0.3);
+            var goldQuest3 = new GoldCollectionQuest(tier3GoldReq, tier3GoldReward, tier3GoldXP);
+            goldQuest3.Discover();
+            _questManager.RegisterQuest(goldQuest3);
+
+            // Create weapon upgrade quests with RNG on requirements and rewards
+            // Tier 1: Level 5 (±2 = 3-7 range)
+            int tier1WeaponLevel = ApplyRequirementVariation(5, 2);
+            int tier1WeaponGold = ApplyRewardVariation(150, 0.3);
+            int tier1WeaponXP = ApplyRewardVariation(75, 0.3);
+            var weaponQuest1 = new WeaponUpgradeQuest(tier1WeaponLevel, tier1WeaponGold, tier1WeaponXP);
+            weaponQuest1.Discover();
+            _questManager.RegisterQuest(weaponQuest1);
+
+            // Tier 2: Level 10 (±3 = 7-13 range)
+            int tier2WeaponLevel = ApplyRequirementVariation(10, 3);
+            int tier2WeaponGold = ApplyRewardVariation(300, 0.3);
+            int tier2WeaponXP = ApplyRewardVariation(150, 0.3);
+            var weaponQuest2 = new WeaponUpgradeQuest(tier2WeaponLevel, tier2WeaponGold, tier2WeaponXP);
+            weaponQuest2.Discover();
+            _questManager.RegisterQuest(weaponQuest2);
+
+            // Create equipment quests with RNG on requirements and rewards
+            // Tier 1: Level 3 (±1 = 2-4 range)
+            int tier1EquipLevel = ApplyRequirementVariation(3, 1);
+            int tier1EquipGold = ApplyRewardVariation(100, 0.3);
+            int tier1EquipXP = ApplyRewardVariation(50, 0.3);
+            var equipQuest1 = new EquipmentQuest(tier1EquipLevel, tier1EquipGold, tier1EquipXP);
+            equipQuest1.Discover();
+            _questManager.RegisterQuest(equipQuest1);
+
+            // Tier 2: Level 5 (±2 = 3-7 range)
+            int tier2EquipLevel = ApplyRequirementVariation(5, 2);
+            int tier2EquipGold = ApplyRewardVariation(200, 0.3);
+            int tier2EquipXP = ApplyRewardVariation(100, 0.3);
+            var equipQuest2 = new EquipmentQuest(tier2EquipLevel, tier2EquipGold, tier2EquipXP);
+            equipQuest2.Discover();
+            _questManager.RegisterQuest(equipQuest2);
+
+            // Create challenge quests with RNG on rewards
+            int challenge1Gold = ApplyRewardVariation(200, 0.3);
+            int challenge1XP = ApplyRewardVariation(100, 0.3);
+            var challenge1 = new ChallengeQuest("flawless_victory", "Flawless Victory", "Win a battle without taking any damage. Perfect defense and timing are key!", ChallengeType.FlawlessVictory, challenge1Gold, challenge1XP);
+            challenge1.Discover();
+            _questManager.RegisterQuest(challenge1);
+
+            int challenge2Gold = ApplyRewardVariation(150, 0.3);
+            int challenge2XP = ApplyRewardVariation(75, 0.3);
+            var challenge2 = new ChallengeQuest("crit_master", "Critical Master", "Land 5 critical hits in a single battle. Show your mastery of precision strikes!", ChallengeType.CriticalMaster, challenge2Gold, challenge2XP);
+            challenge2.Discover();
+            _questManager.RegisterQuest(challenge2);
+
+            int challenge3Gold = ApplyRewardVariation(175, 0.3);
+            int challenge3XP = ApplyRewardVariation(90, 0.3);
+            var challenge3 = new ChallengeQuest("survivor", "Survivor", "Win a battle with less than 10% health remaining. Live on the edge!", ChallengeType.Survivor, challenge3Gold, challenge3XP);
+            challenge3.Discover();
+            _questManager.RegisterQuest(challenge3);
+
+            // Win streak: 5 battles (±2 = 3-7 range)
+            int winStreakReq = ApplyRequirementVariation(5, 2);
+            int challenge4Gold = ApplyRewardVariation(250, 0.3);
+            int challenge4XP = ApplyRewardVariation(125, 0.3);
+            // Update description dynamically based on RNG requirement
+            string winStreakDesc = $"Win {winStreakReq} battles in a row without fleeing. Prove your consistency!";
+            var challenge4 = new ChallengeQuest("win_streak", "Undefeated", winStreakDesc, ChallengeType.WinStreak, challenge4Gold, challenge4XP, winStreakReq);
+            challenge4.Discover();
+            _questManager.RegisterQuest(challenge4);
+
+            Console.WriteLine($"✓ {_questManager.AllQuests.Count} quests initialized with randomized requirements and rewards");
+        }
+
+        /// <summary>
+        /// Apply RNG variation to quest requirements (±variance)
+        /// </summary>
+        private int ApplyRequirementVariation(int baseValue, int maxVariance)
+        {
+            int variation = _rngManager.Roll(-maxVariance, maxVariance);
+            return Math.Max(1, baseValue + variation); // Ensure minimum of 1
+        }
+
+        /// <summary>
+        /// Apply percentage-based RNG variation to rewards
+        /// </summary>
+        private int ApplyRewardVariation(int baseValue, double variancePercent)
+        {
+            int maxVariance = (int)(baseValue * variancePercent);
+            int variation = _rngManager.Roll(-maxVariance, maxVariance);
+            return Math.Max(1, baseValue + variation); // Ensure minimum of 1
         }
     }
 }

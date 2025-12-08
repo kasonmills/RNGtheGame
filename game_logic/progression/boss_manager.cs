@@ -17,6 +17,11 @@ namespace GameLogic.Progression
         private List<string> _defeatedBossIds;                       // IDs of defeated bosses
         private int _bossesDefeated;                                 // Count of defeated bosses
 
+        // Public getters for save system
+        public Dictionary<string, BossEnemy> AllBosses { get { return _allBosses; } }
+        public List<string> DefeatedBossIds { get { return _defeatedBossIds; } }
+        public int BossesDefeated { get { return _bossesDefeated; } }
+
         // Final boss configuration
         public string FinalBossId { get; private set; }             // Randomly selected final boss
         public bool FinalGateUnlocked { get; private set; }         // Is final boss accessible?
@@ -126,8 +131,7 @@ namespace GameLogic.Progression
                 Console.WriteLine($"{boss.Name} has fallen for the first time!");
                 Console.WriteLine($"Unique bosses defeated: {_bossesDefeated}/{TOTAL_BOSSES}");
 
-                // Check if final gate should unlock
-                CheckFinalGateUnlock();
+                // Note: Final gate unlocks when keys are consumed, not when bosses are defeated
             }
             else
             {
@@ -154,15 +158,15 @@ namespace GameLogic.Progression
         }
 
         /// <summary>
-        /// Check if player has enough keys to unlock final gate
+        /// Unlock the final gate (called when keys are consumed)
         /// </summary>
-        private void CheckFinalGateUnlock()
+        public void UnlockFinalGate()
         {
-            if (_bossesDefeated >= KEYS_REQUIRED && !FinalGateUnlocked)
+            if (!FinalGateUnlocked)
             {
                 FinalGateUnlocked = true;
                 Console.WriteLine($"\n✨✨✨ THE FINAL GATE HAS BEEN UNLOCKED! ✨✨✨");
-                Console.WriteLine($"You have proven yourself against {KEYS_REQUIRED} Champions.");
+                Console.WriteLine($"The 10 Champion Keys resonate with ancient power!");
                 Console.WriteLine($"The path to {_allBosses[FinalBossId].Name} is now open!");
             }
         }
@@ -257,11 +261,17 @@ namespace GameLogic.Progression
                 status += $"Final Boss: {_allBosses[FinalBossId].Name}\n";
                 status += "You may now challenge the ultimate Champion!\n";
             }
+            else if (keyCount >= KEYS_REQUIRED)
+            {
+                status += "🔑 READY TO UNLOCK\n";
+                status += $"Champion Keys: {keyCount}/{KEYS_REQUIRED}\n";
+                status += "You have enough keys! Enter the Final Gate to unlock it.\n";
+            }
             else
             {
                 status += "🔒 SEALED\n";
                 status += $"Champion Keys: {keyCount}/{KEYS_REQUIRED}\n";
-                status += $"Defeat {KEYS_REQUIRED - keyCount} more Champions to unlock.\n";
+                status += $"Collect {KEYS_REQUIRED - keyCount} more unique Champion Key{(KEYS_REQUIRED - keyCount > 1 ? "s" : "")} to unlock.\n";
             }
 
             return status;
@@ -349,6 +359,43 @@ namespace GameLogic.Progression
                 boss.BossNumber = 0;
                 boss.TimesDefeated = 0;  // Reset repeat counter
             }
+        }
+
+        // === Setter Methods for Save System ===
+
+        /// <summary>
+        /// Set the final boss (used when loading from save)
+        /// </summary>
+        public void SetFinalBoss(string bossId)
+        {
+            FinalBossId = bossId;
+        }
+
+        /// <summary>
+        /// Add a defeated boss ID (used when loading from save)
+        /// </summary>
+        public void AddDefeatedBoss(string bossId)
+        {
+            if (!_defeatedBossIds.Contains(bossId))
+            {
+                _defeatedBossIds.Add(bossId);
+            }
+        }
+
+        /// <summary>
+        /// Set the boss defeated count (used when loading from save)
+        /// </summary>
+        public void SetBossesDefeated(int count)
+        {
+            _bossesDefeated = count;
+        }
+
+        /// <summary>
+        /// Set the final gate unlocked status (used when loading from save)
+        /// </summary>
+        public void SetFinalGateUnlocked(bool unlocked)
+        {
+            FinalGateUnlocked = unlocked;
         }
     }
 }

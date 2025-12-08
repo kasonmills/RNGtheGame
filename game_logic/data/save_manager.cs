@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Linq;
 using GameLogic.Entities.Player;
 using GameLogic.Items;
+using GameLogic.Quests;
 
 namespace GameLogic.Data
 {
@@ -40,9 +42,11 @@ namespace GameLogic.Data
         /// </summary>
         /// <param name="player">The player to save</param>
         /// <param name="saveSlotName">Name of the save slot (e.g., "save1", "autosave")</param>
+        /// <param name="bossManager">Boss manager containing boss progression state</param>
         /// <param name="mapManager">Optional map manager to save map state</param>
+        /// <param name="questManager">Quest manager containing quest progression state</param>
         /// <returns>True if save was successful</returns>
-        public static bool SaveGame(Player player, string saveSlotName, World.MapManager mapManager = null)
+        public static bool SaveGame(Player player, string saveSlotName, Progression.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null)
         {
             try
             {
@@ -50,6 +54,32 @@ namespace GameLogic.Data
 
                 // Create SaveData from player
                 SaveData saveData = CreateSaveDataFromPlayer(player, mapManager);
+
+                // Save boss progression data
+                if (bossManager != null)
+                {
+                    saveData.DefeatedBossIds = new System.Collections.Generic.List<string>(bossManager.DefeatedBossIds);
+                    saveData.FinalBossId = bossManager.FinalBossId;
+                    saveData.BossesDefeated = bossManager.BossesDefeated;
+                    saveData.FinalGateUnlocked = bossManager.FinalGateUnlocked;
+
+                    // Save individual boss repeat counts
+                    saveData.BossTimesDefeated = new System.Collections.Generic.Dictionary<string, int>();
+                    foreach (var boss in bossManager.AllBosses.Values)
+                    {
+                        if (boss.TimesDefeated > 0)
+                        {
+                            saveData.BossTimesDefeated[boss.BossId] = boss.TimesDefeated;
+                        }
+                    }
+                }
+
+                // Save quest progression data
+                if (questManager != null)
+                {
+                    saveData.Quests = QuestSerializationHelper.SerializeQuests(questManager);
+                    saveData.ActiveQuestId = questManager.ActiveQuestId;
+                }
 
                 // Serialize to JSON
                 string json = JsonSerializer.Serialize(saveData, new JsonSerializerOptions
@@ -465,6 +495,71 @@ namespace GameLogic.Data
         {
             return Path.Combine(SaveDirectory, saveSlotName + SaveFileExtension);
         }
+
+        /// <summary>
+        /// Load and reconstruct BossManager from save data
+        /// </summary>
+        /// <param name="data">SaveData containing boss progression</param>
+        /// <param name="rng">RNG manager for random final boss selection</param>
+        /// <returns>Reconstructed BossManager</returns>
+        public static Progression.BossManager LoadBossManager(SaveData data, Systems.RNGManager rng)
+        {
+            var bossManager = new Progression.BossManager();
+
+            // Register all 15 champion bosses
+            var allBosses = Progression.BossDefinitions.GetAllChampionBosses();
+            bossManager.RegisterBosses(allBosses.ToArray());
+
+            // Restore final boss selection
+            if (!string.IsNullOrEmpty(data.FinalBossId))
+            {
+                bossManager.SetFinalBoss(data.FinalBossId);
+                var finalBoss = bossManager.GetFinalBoss();
+                if (finalBoss != null)
+                {
+                    Console.WriteLine($"Final Boss: {finalBoss.Name}");
+                }
+            }
+            else
+            {
+                // Fallback: select random final boss if not set
+                bossManager.SelectRandomFinalBoss(rng);
+            }
+
+            // Restore defeated boss list
+            if (data.DefeatedBossIds != null)
+            {
+                foreach (var bossId in data.DefeatedBossIds)
+                {
+                    var boss = bossManager.GetBoss(bossId);
+                    if (boss != null)
+                    {
+                        boss.MarkDefeated();
+                        bossManager.AddDefeatedBoss(bossId);
+                    }
+                }
+            }
+
+            // Restore boss defeat counts
+            bossManager.SetBossesDefeated(data.BossesDefeated);
+            bossManager.SetFinalGateUnlocked(data.FinalGateUnlocked);
+
+            // Restore individual boss repeat counts
+            if (data.BossTimesDefeated != null)
+            {
+                foreach (var kvp in data.BossTimesDefeated)
+                {
+                    var boss = bossManager.GetBoss(kvp.Key);
+                    if (boss != null)
+                    {
+                        boss.TimesDefeated = kvp.Value;
+                    }
+                }
+            }
+
+            Console.WriteLine($"Boss Progress: {data.BossesDefeated}/{Progression.BossManager.TOTAL_BOSSES} defeated");
+            return bossManager;
+        }
     }
 
     /// <summary>
@@ -482,6 +577,181 @@ namespace GameLogic.Data
         public override string ToString()
         {
             return $"{SlotName}: {PlayerName} (Lv.{Level}) - {SaveDate:g} - Playtime: {PlayTime:hh\\:mm\\:ss}";
+        }
+    }
+
+    // === Quest Serialization Helper Methods ===
+    public static class QuestSerializationHelper
+    {
+        /// <summary>
+        /// Serialize all quests from QuestManager (saves complete quest data including requirements and rewards)
+        /// </summary>
+        public static System.Collections.Generic.List<SerializedQuest> SerializeQuests(QuestManager questManager)
+        {
+            var serializedQuests = new System.Collections.Generic.List<SerializedQuest>();
+
+            foreach (var quest in questManager.AllQuests.Values)
+            {
+                var serializedQuest = new SerializedQuest
+                {
+                    QuestId = quest.QuestId,
+                    QuestName = quest.QuestName,
+                    Description = quest.Description,
+                    QuestState = quest.State.ToString(),
+                    QuestType = quest.GetType().Name,
+                    GoldReward = quest.Reward.Gold,
+                    XPReward = quest.Reward.Experience
+                };
+
+                // Serialize objectives (includes requirements)
+                foreach (var objective in quest.Objectives)
+                {
+                    serializedQuest.Objectives.Add(new SerializedQuestObjective
+                    {
+                        Description = objective.Description,
+                        CurrentProgress = objective.CurrentProgress,
+                        RequiredProgress = objective.RequiredProgress
+                    });
+                }
+
+                // Save additional data for specific quest types
+                if (quest is GoldCollectionQuest goldQuest)
+                {
+                    serializedQuest.TotalGoldEarned = goldQuest.GetTotalGoldEarned();
+                }
+
+                serializedQuests.Add(serializedQuest);
+            }
+
+            return serializedQuests;
+        }
+
+        /// <summary>
+        /// Reconstruct quests from serialized data (rebuilds quests with original RNG values)
+        /// </summary>
+        public static void ReconstructQuests(QuestManager questManager, System.Collections.Generic.List<SerializedQuest> serializedQuests, Progression.BossManager bossManager)
+        {
+            if (serializedQuests == null || questManager == null)
+                return;
+
+            foreach (var savedQuest in serializedQuests)
+            {
+                Quest quest = null;
+
+                // Reconstruct quest based on type
+                switch (savedQuest.QuestType)
+                {
+                    case "BossDefeatQuest":
+                        // Extract boss ID from quest ID
+                        string bossId = savedQuest.QuestId.Replace("boss_defeat_", "");
+                        var boss = bossManager.GetBoss(bossId);
+                        if (boss != null)
+                        {
+                            quest = new BossDefeatQuest(bossId, boss.Name, savedQuest.GoldReward, savedQuest.XPReward);
+                        }
+                        break;
+
+                    case "FinalBossQuest":
+                        var finalBoss = bossManager.GetFinalBoss();
+                        if (finalBoss != null)
+                        {
+                            quest = new FinalBossQuest(finalBoss.BossId, finalBoss.Name);
+                        }
+                        break;
+
+                    case "LevelQuest":
+                        // Extract level from first objective's required progress
+                        if (savedQuest.Objectives.Count > 0)
+                        {
+                            int targetLevel = savedQuest.Objectives[0].RequiredProgress;
+                            quest = new LevelQuest(targetLevel, savedQuest.GoldReward, savedQuest.XPReward);
+                        }
+                        break;
+
+                    case "EnemyKillQuest":
+                        // Extract kill count from first objective
+                        if (savedQuest.Objectives.Count > 0)
+                        {
+                            int killCount = savedQuest.Objectives[0].RequiredProgress;
+                            quest = new EnemyKillQuest(savedQuest.QuestId, savedQuest.QuestName, killCount, savedQuest.GoldReward, savedQuest.XPReward);
+                        }
+                        break;
+
+                    case "GoldCollectionQuest":
+                        // Extract gold requirement from first objective
+                        if (savedQuest.Objectives.Count > 0)
+                        {
+                            int goldRequired = savedQuest.Objectives[0].RequiredProgress;
+                            var goldQuest = new GoldCollectionQuest(goldRequired, savedQuest.GoldReward, savedQuest.XPReward);
+                            if (savedQuest.TotalGoldEarned.HasValue)
+                            {
+                                goldQuest.SetTotalGoldEarned(savedQuest.TotalGoldEarned.Value);
+                            }
+                            quest = goldQuest;
+                        }
+                        break;
+
+                    case "WeaponUpgradeQuest":
+                        // Extract level from first objective
+                        if (savedQuest.Objectives.Count > 0)
+                        {
+                            int weaponLevel = savedQuest.Objectives[0].RequiredProgress;
+                            quest = new WeaponUpgradeQuest(weaponLevel, savedQuest.GoldReward, savedQuest.XPReward);
+                        }
+                        break;
+
+                    case "EquipmentQuest":
+                        // Extract level from description (stored in quest name pattern)
+                        if (savedQuest.QuestName.Contains("Level "))
+                        {
+                            string levelStr = savedQuest.QuestName.Replace("Equip Full Level ", "").Replace("+ Gear", "").Trim();
+                            if (int.TryParse(levelStr, out int equipLevel))
+                            {
+                                quest = new EquipmentQuest(equipLevel, savedQuest.GoldReward, savedQuest.XPReward);
+                            }
+                        }
+                        break;
+
+                    case "ChallengeQuest":
+                        // Determine challenge type from quest ID
+                        ChallengeType challengeType = ChallengeType.FlawlessVictory;
+                        int customReq = 0;
+
+                        if (savedQuest.QuestId.Contains("flawless"))
+                            challengeType = ChallengeType.FlawlessVictory;
+                        else if (savedQuest.QuestId.Contains("crit"))
+                            challengeType = ChallengeType.CriticalMaster;
+                        else if (savedQuest.QuestId.Contains("survivor"))
+                            challengeType = ChallengeType.Survivor;
+                        else if (savedQuest.QuestId.Contains("win_streak"))
+                        {
+                            challengeType = ChallengeType.WinStreak;
+                            if (savedQuest.Objectives.Count > 0)
+                                customReq = savedQuest.Objectives[0].RequiredProgress;
+                        }
+
+                        quest = new ChallengeQuest(savedQuest.QuestId, savedQuest.QuestName, savedQuest.Description, challengeType, savedQuest.GoldReward, savedQuest.XPReward, customReq);
+                        break;
+                }
+
+                if (quest != null)
+                {
+                    // Restore quest state
+                    if (Enum.TryParse<QuestState>(savedQuest.QuestState, out QuestState state))
+                    {
+                        quest.State = state;
+                    }
+
+                    // Restore objective progress
+                    for (int i = 0; i < savedQuest.Objectives.Count && i < quest.Objectives.Count; i++)
+                    {
+                        quest.Objectives[i].SetProgress(savedQuest.Objectives[i].CurrentProgress);
+                    }
+
+                    // Register the reconstructed quest
+                    questManager.RegisterQuest(quest);
+                }
+            }
         }
     }
 }
