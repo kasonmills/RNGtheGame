@@ -155,9 +155,38 @@ namespace GameLogic.Combat
             Console.WriteLine("=".PadRight(50, '='));
             Console.WriteLine($"    COMBAT: {_player.Name} vs {_enemy.Name}");
             Console.WriteLine("=".PadRight(50, '='));
-            Console.WriteLine($"\nEnemy Level: {_enemy.Level}");
-            Console.WriteLine($"Enemy HP: {_enemy.Health}/{_enemy.MaxHealth}");
+
+            // Show party composition
+            Console.WriteLine($"\nYour Party:");
+            Console.WriteLine($"  {_player.Name} (Level {_player.Level}) - HP: {_player.Health}/{_player.MaxHealth}");
+
+            foreach (var entity in _allCombatants)
+            {
+                if (entity is Entities.NPCs.Companions.CompanionBase companion && entity != _player && entity != _enemy)
+                {
+                    Console.WriteLine($"  {companion.Name} (Level {companion.Level}) - HP: {companion.Health}/{companion.MaxHealth}");
+                }
+            }
+
+            Console.WriteLine($"\nEnemy:");
+            Console.WriteLine($"  {_enemy.Name} (Level {_enemy.Level}) - HP: {_enemy.Health}/{_enemy.MaxHealth}");
             Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Get the effective speed for an entity, accounting for Swift Tactics if applicable
+        /// </summary>
+        private int GetEntityEffectiveSpeed(Entity entity)
+        {
+            // Check if entity is a companion
+            if (entity is Entities.NPCs.Companions.CompanionBase companion)
+            {
+                // Use companion's version that applies Swift Tactics
+                return companion.GetEffectiveSpeed(_player);
+            }
+
+            // For player and enemies, use base GetEffectiveSpeed()
+            return entity.GetEffectiveSpeed();
         }
 
         /// <summary>
@@ -172,9 +201,14 @@ namespace GameLogic.Combat
             // Clear entities that acted this round
             _entitiesActedThisRound.Clear();
 
-            // Sort combatants by effective speed (base speed + modifier) - highest to lowest
+            // Sort combatants by effective speed (base speed + modifier + Swift Tactics) - highest to lowest
             // Entities with higher speed act first in the turn order
-            _allCombatants.Sort((a, b) => b.GetEffectiveSpeed().CompareTo(a.GetEffectiveSpeed()));
+            _allCombatants.Sort((a, b) =>
+            {
+                int speedA = GetEntityEffectiveSpeed(a);
+                int speedB = GetEntityEffectiveSpeed(b);
+                return speedB.CompareTo(speedA);
+            });
 
             // Display turn order for this round
             Console.WriteLine("\nTurn Order (by Speed):");
@@ -182,8 +216,21 @@ namespace GameLogic.Combat
             {
                 if (entity.IsAlive())
                 {
+                    int effectiveSpeed = GetEntityEffectiveSpeed(entity);
                     string modifierText = entity.SpeedModifier != 0 ? $" ({entity.Speed}{(entity.SpeedModifier > 0 ? "+" : "")}{entity.SpeedModifier})" : "";
-                    Console.WriteLine($"  {entity.Name} (Speed: {entity.GetEffectiveSpeed()}{modifierText})");
+
+                    // Show Swift Tactics bonus for companions
+                    if (entity is Entities.NPCs.Companions.CompanionBase && _player.SelectedAbility is Abilities.SwiftTacticsAbility swiftTactics)
+                    {
+                        int baseSpeed = entity.Speed + entity.SpeedModifier;
+                        int speedBonus = effectiveSpeed - baseSpeed;
+                        if (speedBonus > 0)
+                        {
+                            modifierText += $" [+{speedBonus} Swift Tactics]";
+                        }
+                    }
+
+                    Console.WriteLine($"  {entity.Name} (Speed: {effectiveSpeed}{modifierText})");
                 }
             }
             Console.WriteLine();
@@ -498,26 +545,39 @@ namespace GameLogic.Combat
         {
             Console.WriteLine($"{companion.Name}'s HP: {companion.Health}/{companion.MaxHealth}");
 
-            // Use companion AI to decide whether to use ability or attack
-            bool useAbility = companion.DecideCombatAction(_enemy, _rngManager);
+            // Use companion AI to decide action: 0 = Attack, 1 = Ability, 2 = Defend
+            int actionDecision = companion.DecideCombatAction(_enemy, _rngManager);
 
-            if (useAbility && companion.UniqueAbility != null && !companion.UniqueAbility.IsOnCooldown())
+            switch (actionDecision)
             {
-                // Use unique ability
-                Console.WriteLine($"{companion.Name} uses {companion.UniqueAbility.Name}!");
-                companion.UniqueAbility.Execute(companion, _enemy, _rngManager);
+                case 1: // Use Ability
+                    if (companion.UniqueAbility != null && !companion.UniqueAbility.IsOnCooldown())
+                    {
+                        Console.WriteLine($"{companion.Name} uses {companion.UniqueAbility.Name}!");
+                        companion.UniqueAbility.Execute(companion, _enemy, _rngManager);
+                        companion.LastAction = Entities.CombatAction.UseAbility;
+                    }
+                    else
+                    {
+                        // Fallback to attack if ability not available
+                        Console.WriteLine($"{companion.Name} attacks!");
+                        companion.AttackEnemy(_enemy, _damageCalculator, _rngManager, _player);
+                        companion.LastAction = Entities.CombatAction.Attack;
+                    }
+                    break;
 
-                // Track action for speed modifier
-                companion.LastAction = Entities.CombatAction.UseAbility;
-            }
-            else
-            {
-                // Regular attack
-                Console.WriteLine($"{companion.Name} attacks!");
-                companion.AttackEnemy(_enemy, _damageCalculator, _rngManager);
+                case 2: // Defend
+                    Console.WriteLine($"{companion.Name} takes a defensive stance!");
+                    _defendingEntities[companion] = true;
+                    companion.LastAction = Entities.CombatAction.Defend;
+                    break;
 
-                // Track action for speed modifier
-                companion.LastAction = Entities.CombatAction.Attack;
+                case 0: // Attack
+                default:
+                    Console.WriteLine($"{companion.Name} attacks!");
+                    companion.AttackEnemy(_enemy, _damageCalculator, _rngManager, _player);
+                    companion.LastAction = Entities.CombatAction.Attack;
+                    break;
             }
         }
 
@@ -533,6 +593,9 @@ namespace GameLogic.Combat
             bool canUseAbility = _enemy.SpecialAbility != null &&
                                  _enemy.SpecialAbility.CurrentCooldown <= 0;
 
+            // Select target - enemies can target player or companions
+            Entity target = SelectEnemyTarget();
+
             // Decision logic based on behavior type
             switch (_enemy.Behavior)
             {
@@ -540,9 +603,9 @@ namespace GameLogic.Combat
                     // Always attack, use ability when available
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 70)
                     {
-                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
                     }
-                    return CombatAction.Attack(_enemy, _player);
+                    return CombatAction.Attack(_enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Defensive:
                     // Defend when low on health
@@ -552,29 +615,29 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 40)
                     {
-                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
                     }
-                    return CombatAction.Attack(_enemy, _player);
+                    return CombatAction.Attack(_enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Tactical:
                     // Use abilities strategically
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 80)
                     {
-                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
                     }
                     if (healthPercent < 0.25f && _rngManager.Roll(1, 100) <= 50)
                     {
                         return CombatAction.Defend(_enemy);
                     }
-                    return CombatAction.Attack(_enemy, _player);
+                    return CombatAction.Attack(_enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Berserker:
                     // Always attack, rarely defend, use abilities aggressively
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 90)
                     {
-                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
                     }
-                    return CombatAction.Attack(_enemy, _player);
+                    return CombatAction.Attack(_enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Cautious:
                     // Defend frequently when low health, flee if very low
@@ -588,9 +651,9 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 50)
                     {
-                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
                     }
-                    return CombatAction.Attack(_enemy, _player);
+                    return CombatAction.Attack(_enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Balanced:
                 default:
@@ -601,9 +664,58 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 60)
                     {
-                        return CombatAction.UseAbility(_enemy, _player, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
                     }
-                    return CombatAction.Attack(_enemy, _player);
+                    return CombatAction.Attack(_enemy, target);
+            }
+        }
+
+        /// <summary>
+        /// Select a target for the enemy to attack
+        /// Prioritizes low health targets and wounded allies
+        /// </summary>
+        private Entity SelectEnemyTarget()
+        {
+            // Get all alive allies (player + companions)
+            var aliveAllies = new List<Entity> { _player };
+            foreach (var entity in _allCombatants)
+            {
+                if (entity is Entities.NPCs.Companions.CompanionBase companion && companion.IsAlive())
+                {
+                    aliveAllies.Add(companion);
+                }
+            }
+
+            if (aliveAllies.Count == 1)
+            {
+                // Only player alive, target them
+                return _player;
+            }
+
+            // Tactical enemy behavior - 70% chance to target wounded allies
+            if (_rngManager.Roll(1, 100) <= 70)
+            {
+                // Find the most wounded ally
+                Entity mostWounded = _player;
+                float lowestHealthPercent = (float)_player.Health / _player.MaxHealth;
+
+                foreach (var ally in aliveAllies)
+                {
+                    float healthPercent = (float)ally.Health / ally.MaxHealth;
+                    if (healthPercent < lowestHealthPercent)
+                    {
+                        lowestHealthPercent = healthPercent;
+                        mostWounded = ally;
+                    }
+                }
+
+                return mostWounded;
+            }
+            else
+            {
+                // 30% chance to target randomly
+                int randomIndex = _rngManager.Roll(0, aliveAllies.Count - 1);
+                return aliveAllies[randomIndex];
             }
         }
 
@@ -644,9 +756,10 @@ namespace GameLogic.Combat
 
             DamageResult result;
 
-            // Calculate damage based on attacker type
+            // Calculate damage based on attacker and target types
             if (action.Actor == _player)
             {
+                // Player attacking enemy
                 result = _damageCalculator.CalculatePlayerAttackDamage(_player, _enemy);
 
                 // Check if player is unarmed
@@ -663,16 +776,59 @@ namespace GameLogic.Combat
                     Console.WriteLine($"{_enemy.Name}'s defensive stance reduced damage by {damageReduction}!");
                 }
             }
+            else if (action.Actor is Entities.NPCs.Companions.CompanionBase)
+            {
+                // Companion already handles their own attack in CompanionTurn
+                // This shouldn't be reached, but handle it anyway
+                return;
+            }
             else
             {
-                result = _damageCalculator.CalculateEnemyAttackDamage(_enemy, _player);
+                // Enemy attacking player or companion
+                if (action.Target == _player)
+                {
+                    result = _damageCalculator.CalculateEnemyAttackDamage(_enemy, _player);
+                }
+                else if (action.Target is Entities.NPCs.Companions.CompanionBase companion)
+                {
+                    // Calculate enemy damage to companion
+                    int baseDamage = _rngManager.Roll(_enemy.MinDamage, _enemy.MaxDamage);
+                    int companionDefense = companion.EquippedArmor != null ? companion.EquippedArmor.Defense : 0;
+                    int finalDamage = Math.Max(1, baseDamage - companionDefense);
 
-                // Apply defense reduction if player is defending
-                if (action.Target == _player && _defendingEntities.ContainsKey(_player) && _defendingEntities[_player])
+                    result = new DamageResult
+                    {
+                        RawDamage = baseDamage,
+                        DamageReduced = baseDamage - finalDamage,
+                        FinalDamage = finalDamage,
+                        Missed = false,
+                        IsCritical = false
+                    };
+                }
+                else
+                {
+                    result = _damageCalculator.CalculateEnemyAttackDamage(_enemy, _player);
+                }
+
+                // Check if target is defending (for evasion purposes)
+                bool isDefending = _defendingEntities.ContainsKey(action.Target) && _defendingEntities[action.Target];
+
+                // Apply defense reduction if target is defending
+                if (isDefending)
                 {
                     int damageReduction = result.FinalDamage / 2;
                     result.FinalDamage -= damageReduction;
-                    Console.WriteLine($"Defensive stance reduced damage by {damageReduction}!");
+                    Console.WriteLine($"{action.Target.Name}'s defensive stance reduced damage by {damageReduction}!");
+                }
+
+                // Check for Evasion passive ability (only for player, only when not defending)
+                if (action.Target == _player && !isDefending && _player.SelectedAbility is Abilities.EvasionAbility evasion)
+                {
+                    if (evasion.ShouldEvade(_rngManager, isDefending))
+                    {
+                        Console.WriteLine($"{_player.Name} evaded the attack! No damage taken!");
+                        result.FinalDamage = 0;
+                    }
                 }
             }
 
@@ -701,9 +857,12 @@ namespace GameLogic.Combat
                     }
                 }
 
-                // Apply damage
-                action.Target.TakeDamage(result.FinalDamage);
-                Console.WriteLine($"{action.Target.Name} took {result.FinalDamage} damage!");
+                // Apply damage (will be 0 if evaded)
+                if (result.FinalDamage > 0)
+                {
+                    action.Target.TakeDamage(result.FinalDamage);
+                    Console.WriteLine($"{action.Target.Name} took {result.FinalDamage} damage!");
+                }
             }
         }
 
@@ -864,9 +1023,20 @@ namespace GameLogic.Combat
         {
             Console.WriteLine("\n" + "-".PadRight(50, '-'));
             Console.WriteLine($"Player HP: {_player.Health}/{_player.MaxHealth}");
+
+            // Show companion HP if any are in combat
+            foreach (var entity in _allCombatants)
+            {
+                if (entity is Entities.NPCs.Companions.CompanionBase companion && entity != _player && entity != _enemy)
+                {
+                    string status = companion.IsAlive() ? $"{companion.Health}/{companion.MaxHealth}" : "DEFEATED";
+                    Console.WriteLine($"{companion.Name} HP: {status}");
+                }
+            }
+
             Console.WriteLine($"Enemy HP: {_enemy.Health}/{_enemy.MaxHealth}");
             Console.WriteLine("-".PadRight(50, '-'));
-            
+
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
         }

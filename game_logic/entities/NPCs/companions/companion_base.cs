@@ -74,9 +74,27 @@ namespace GameLogic.Entities.NPCs.Companions
         }
 
         /// <summary>
+        /// Get effective speed including Swift Tactics passive ability bonus
+        /// Overrides base GetEffectiveSpeed() to add companion speed buff
+        /// </summary>
+        public int GetEffectiveSpeed(Player.Player player = null)
+        {
+            int baseSpeed = Speed + SpeedModifier;
+
+            // Apply Swift Tactics passive ability bonus (if player has it)
+            if (player != null && player.SelectedAbility is Abilities.SwiftTacticsAbility swiftTactics)
+            {
+                double speedMultiplier = swiftTactics.GetSpeedMultiplier();
+                baseSpeed = (int)(baseSpeed * speedMultiplier);
+            }
+
+            return Math.Max(1, baseSpeed);  // Minimum speed of 1
+        }
+
+        /// <summary>
         /// Companion attacks an enemy (used during combat)
         /// </summary>
-        public virtual DamageResult AttackEnemy(Enemy target, DamageCalculator damageCalc, RNGManager rng)
+        public virtual DamageResult AttackEnemy(Enemy target, DamageCalculator damageCalc, RNGManager rng, Player.Player player = null)
         {
             // Get base damage from weapon
             int minDamage = EquippedWeapon != null ? EquippedWeapon.MinDamage : 1;
@@ -89,6 +107,14 @@ namespace GameLogic.Entities.NPCs.Companions
 
             // Check for hit
             int accuracy = EquippedWeapon != null ? EquippedWeapon.Accuracy : 60;
+
+            // Apply Precision Training passive ability bonus (if player has it)
+            if (player != null && player.SelectedAbility is Abilities.PrecisionTrainingAbility precisionTraining)
+            {
+                double accuracyBonus = precisionTraining.GetAccuracyBonus();
+                accuracy = (int)(accuracy + (accuracy * accuracyBonus));
+            }
+
             int hitRoll = rng.Roll(1, 100);
 
             DamageResult result = new DamageResult();
@@ -108,6 +134,20 @@ namespace GameLogic.Entities.NPCs.Companions
             {
                 result.IsCritical = true;
                 baseDamage = (int)(baseDamage * 1.5f);
+            }
+
+            // Apply Rallying Cry passive ability bonus (if player has it)
+            if (player != null && player.SelectedAbility is Abilities.RallyingCryAbility rallyingCry)
+            {
+                double damageMultiplier = rallyingCry.GetDamageMultiplier();
+                int originalDamage = baseDamage;
+                baseDamage = (int)(baseDamage * damageMultiplier);
+                int bonusDamage = baseDamage - originalDamage;
+
+                if (bonusDamage > 0)
+                {
+                    Console.WriteLine($"Rallying Cry increased damage by {bonusDamage}! (+{rallyingCry.GetPassiveBonusValue()}%)");
+                }
             }
 
             result.RawDamage = baseDamage;
@@ -145,66 +185,85 @@ namespace GameLogic.Entities.NPCs.Companions
 
         /// <summary>
         /// Decide what action to take during combat based on AI style
-        /// Returns true if ability was used, false if basic attack should be used
+        /// Returns action type: 0 = Attack, 1 = Ability, 2 = Defend
         /// </summary>
-        public virtual bool DecideCombatAction(Enemy target, RNGManager rng)
+        public virtual int DecideCombatAction(Enemy target, RNGManager rng)
         {
-            // Check if unique ability is available and should be used
-            if (UniqueAbility != null && !UniqueAbility.IsOnCooldown())
+            // Calculate health percentage for decision-making
+            float healthPercent = (float)Health / MaxHealth;
+
+            // AI decision based on style
+            switch (AIStyle)
             {
-                // AI decision based on style
-                switch (AIStyle)
-                {
-                    case CompanionAIStyle.Aggressive:
-                        // Use ability if enemy health is above 50%
-                        if (target.Health > target.MaxHealth / 2)
-                        {
-                            UseUniqueAbility(target, rng);
-                            return true;
-                        }
-                        break;
+                case CompanionAIStyle.Aggressive:
+                    // Rarely defends, prefers attacking and abilities
+                    if (UniqueAbility != null && !UniqueAbility.IsOnCooldown() && target.Health > target.MaxHealth / 2)
+                    {
+                        return 1; // Use ability
+                    }
+                    // Only defend if very low health (below 20%)
+                    if (healthPercent < 0.2f && rng.Roll(1, 100) <= 40)
+                    {
+                        return 2; // Defend
+                    }
+                    return 0; // Attack
 
-                    case CompanionAIStyle.Defensive:
-                        // Use ability if player health is low (would need player reference)
-                        // For now, use ability randomly 30% of the time
-                        if (rng.Roll(1, 100) <= 30)
-                        {
-                            UseUniqueAbility(target, rng);
-                            return true;
-                        }
-                        break;
+                case CompanionAIStyle.Defensive:
+                    // Defends more frequently when health is low
+                    if (healthPercent < 0.4f && rng.Roll(1, 100) <= 60)
+                    {
+                        return 2; // Defend
+                    }
+                    if (UniqueAbility != null && !UniqueAbility.IsOnCooldown() && rng.Roll(1, 100) <= 30)
+                    {
+                        return 1; // Use ability
+                    }
+                    return 0; // Attack
 
-                    case CompanionAIStyle.Balanced:
-                        // Use ability 50% of the time when available
-                        if (rng.Roll(1, 100) <= 50)
-                        {
-                            UseUniqueAbility(target, rng);
-                            return true;
-                        }
-                        break;
+                case CompanionAIStyle.Balanced:
+                    // Balanced approach to all actions
+                    if (healthPercent < 0.3f && rng.Roll(1, 100) <= 50)
+                    {
+                        return 2; // Defend
+                    }
+                    if (UniqueAbility != null && !UniqueAbility.IsOnCooldown() && rng.Roll(1, 100) <= 50)
+                    {
+                        return 1; // Use ability
+                    }
+                    return 0; // Attack
 
-                    case CompanionAIStyle.Supportive:
-                        // Always use support abilities when available
+                case CompanionAIStyle.Supportive:
+                    // Uses support abilities frequently, defends allies
+                    if (UniqueAbility != null && !UniqueAbility.IsOnCooldown())
+                    {
                         if (UniqueAbility.TargetType == AbilityTarget.Self || UniqueAbility.TargetType == AbilityTarget.Ally)
                         {
-                            UseUniqueAbility(this, rng);  // Target self for support abilities
-                            return true;
+                            return 1; // Use support ability
                         }
-                        break;
+                    }
+                    // Defend when moderately injured
+                    if (healthPercent < 0.5f && rng.Roll(1, 100) <= 40)
+                    {
+                        return 2; // Defend
+                    }
+                    return 0; // Attack
 
-                    case CompanionAIStyle.Strategic:
-                        // Use ability on first turn or when enemy health is above 75%
-                        if (target.Health > (target.MaxHealth * 3) / 4)
-                        {
-                            UseUniqueAbility(target, rng);
-                            return true;
-                        }
-                        break;
-                }
+                case CompanionAIStyle.Strategic:
+                    // Smart decision-making based on situation
+                    if (UniqueAbility != null && !UniqueAbility.IsOnCooldown() && target.Health > (target.MaxHealth * 3) / 4)
+                    {
+                        return 1; // Use ability early
+                    }
+                    // Defend when health is below 35%
+                    if (healthPercent < 0.35f && rng.Roll(1, 100) <= 70)
+                    {
+                        return 2; // Defend
+                    }
+                    return 0; // Attack
+
+                default:
+                    return 0; // Attack by default
             }
-
-            // Default to basic attack
-            return false;
         }
 
         /// <summary>

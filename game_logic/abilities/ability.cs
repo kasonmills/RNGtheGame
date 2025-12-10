@@ -4,7 +4,7 @@ using GameLogic.Systems;
 namespace GameLogic.Abilities
 {
     /// <summary>
-    /// Base class for all abilities (active skills that can be used in combat)
+    /// Base class for all abilities (both active combat skills and passive bonuses)
     /// Abilities are SCALABLE - they level up independently and get stronger
     /// </summary>
     public abstract class Ability
@@ -13,20 +13,23 @@ namespace GameLogic.Abilities
         public string Name { get; protected set; }
         public string Description { get; protected set; }
 
+        // Ability Type
+        public bool IsPassive { get; protected set; } = false;  // True for passive abilities, false for active
+
         // Leveling System (1-100)
         public int Level { get; set; }
         public int MaxLevel { get; protected set; } = 100;
         public int Experience { get; set; }
         public int ExperienceToNextLevel { get; protected set; } = 100; // Increases per level
 
-        // Cooldown System
+        // Cooldown System (only for active abilities)
         public int Cooldown { get; protected set; }  // Turns until can use again
         public int CurrentCooldown { get; set; }     // Current cooldown remaining
 
         // Combat Experience Tracking
         public int CombatUsageCount { get; private set; }  // How many times used in current combat
 
-        // Targeting
+        // Targeting (only relevant for active abilities)
         public AbilityTarget TargetType { get; protected set; }
 
         // Rarity (affects how powerful the ability can become)
@@ -43,10 +46,32 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
-        /// Execute the ability's effect
+        /// Execute the ability's effect (only for active abilities)
+        /// Passive abilities don't execute - they provide permanent bonuses
         /// Child classes implement this with their specific logic
         /// </summary>
-        public abstract void Execute(Entity user, Entity target, RNGManager rng);
+        public virtual void Execute(Entity user, Entity target, RNGManager rng)
+        {
+            if (IsPassive)
+            {
+                Console.WriteLine($"{Name} is a passive ability and cannot be activated.");
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Get the current passive bonus value (only for passive abilities)
+        /// Override this in passive ability implementations
+        /// </summary>
+        public virtual int GetPassiveBonusValue()
+        {
+            if (!IsPassive)
+            {
+                return 0;
+            }
+            // Override in child classes
+            return 0;
+        }
 
         /// <summary>
         /// Check if ability can be used right now

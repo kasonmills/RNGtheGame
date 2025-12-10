@@ -63,6 +63,16 @@ namespace GameLogic.Entities.Player
                     return new Abilities.PlayerAbilities.DefenseBoost();
                 case "Critical Strike":
                     return new Abilities.PlayerAbilities.CriticalStrike();
+                case "Leadership":
+                    return new Abilities.LeadershipAbility();
+                case "Evasion":
+                    return new Abilities.EvasionAbility();
+                case "Rallying Cry":
+                    return new Abilities.RallyingCryAbility();
+                case "Precision Training":
+                    return new Abilities.PrecisionTrainingAbility();
+                case "Swift Tactics":
+                    return new Abilities.SwiftTacticsAbility();
                 default:
                     Console.WriteLine($"Warning: Unknown ability '{abilityName}'. No ability loaded.");
                     return null;
@@ -77,7 +87,12 @@ namespace GameLogic.Entities.Player
                 new Abilities.PlayerAbilities.AttackBoost(),
                 new Abilities.PlayerAbilities.HealingAbility(),
                 new Abilities.PlayerAbilities.DefenseBoost(),
-                new Abilities.PlayerAbilities.CriticalStrike()
+                new Abilities.PlayerAbilities.CriticalStrike(),
+                new Abilities.LeadershipAbility(),          // Passive ability - party size
+                new Abilities.EvasionAbility(),             // Passive ability - dodge damage
+                new Abilities.RallyingCryAbility(),         // Passive ability - companion attack buff
+                new Abilities.PrecisionTrainingAbility(),   // Passive ability - ally accuracy buff
+                new Abilities.SwiftTacticsAbility()         // Passive ability - companion speed buff
             };
         }
 

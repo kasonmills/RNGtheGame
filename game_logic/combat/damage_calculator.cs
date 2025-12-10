@@ -185,6 +185,12 @@ namespace GameLogic.Combat
                     int accuracyBonus = player.SelectedAbility.Level / 10; // +1 accuracy per 10 levels
                     baseAccuracy += accuracyBonus;
                 }
+                // Precision Training ability provides scaling accuracy bonus
+                else if (player.SelectedAbility is PrecisionTrainingAbility precisionTraining)
+                {
+                    double accuracyBonus = precisionTraining.GetAccuracyBonus();
+                    baseAccuracy = (int)(baseAccuracy + (baseAccuracy * accuracyBonus));
+                }
             }
 
             return baseAccuracy;

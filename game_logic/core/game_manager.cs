@@ -26,6 +26,8 @@ namespace GameLogic.Core
         private Progression.BossManager _bossManager;
         private QuestManager _questManager;
         private QuestGiver _questGiver;
+        private GameSettings _gameSettings;
+        private StatisticsTracker _statistics;
 
         // === Game State Management ===
         private GameState _currentState;
@@ -47,6 +49,8 @@ namespace GameLogic.Core
             Console.WriteLine("Initializing game systems...");
 
             _rngManager = new RNGManager();
+            _gameSettings = new GameSettings(); // Initialize with default settings
+            _statistics = new StatisticsTracker(); // Initialize statistics tracker
             Data.SaveManager.Initialize(); // Initialize static SaveManager
             _mapManager = new MapManager();
             _combatManager = new CombatManager(_rngManager);
@@ -56,6 +60,40 @@ namespace GameLogic.Core
             _isRunning = false;
 
             Console.WriteLine("Systems initialized!\n");
+        }
+
+        /// <summary>
+        /// Get the maximum party size based on player's Leadership ability
+        /// Base size is 4 (player + 3 companions)
+        /// Leadership passive ability can increase this up to 8 at level 100
+        /// </summary>
+        private int GetMaxPartySize()
+        {
+            const int basePartySize = 4;
+
+            if (_player == null || _player.SelectedAbility == null)
+            {
+                return basePartySize;
+            }
+
+            // Check if player has Leadership passive ability
+            if (_player.SelectedAbility is Abilities.LeadershipAbility leadership)
+            {
+                int bonus = leadership.GetPassiveBonusValue();
+                return basePartySize + bonus;
+            }
+
+            return basePartySize;
+        }
+
+        /// <summary>
+        /// Check if party has room for another companion
+        /// </summary>
+        private bool CanAddCompanion()
+        {
+            // _activeCompanions doesn't include the player, so max is (GetMaxPartySize() - 1)
+            int maxCompanions = GetMaxPartySize() - 1;
+            return _activeCompanions.Count < maxCompanions;
         }
 
         /// <summary>
@@ -86,6 +124,61 @@ namespace GameLogic.Core
         public void ChangeState(GameState newState)
         {
             _currentState = newState;
+        }
+
+        /// <summary>
+        /// Let the player select difficulty (immutable after creation)
+        /// </summary>
+        private void SelectDifficulty()
+        {
+            Console.WriteLine("=== Select Difficulty ===");
+            Console.WriteLine("This choice is permanent for this save file and cannot be changed!\n");
+
+            Console.WriteLine("1. Easy");
+            Console.WriteLine("   - Enemies have 75% stats");
+            Console.WriteLine("   - Rewards are 80% of normal");
+            Console.WriteLine("   - Recommended for learning the game\n");
+
+            Console.WriteLine("2. Normal (Recommended)");
+            Console.WriteLine("   - Balanced gameplay");
+            Console.WriteLine("   - Standard enemies and rewards");
+            Console.WriteLine("   - The intended experience\n");
+
+            Console.WriteLine("3. Hard");
+            Console.WriteLine("   - Enemies have 150% stats");
+            Console.WriteLine("   - Rewards are 130% of normal");
+            Console.WriteLine("   - For experienced players\n");
+
+            Console.WriteLine("4. Very Hard");
+            Console.WriteLine("   - Enemies have 200% stats");
+            Console.WriteLine("   - Rewards are 150% of normal");
+            Console.WriteLine("   - Extreme challenge\n");
+
+            int choice = -1;
+            while (choice < 1 || choice > 4)
+            {
+                Console.Write("Select difficulty (1-4): ");
+                string input = Console.ReadLine();
+
+                if (int.TryParse(input, out choice) && choice >= 1 && choice <= 4)
+                {
+                    break;
+                }
+
+                Console.WriteLine("Invalid choice. Please try again.");
+            }
+
+            _gameSettings.Difficulty = choice switch
+            {
+                1 => DifficultyLevel.Easy,
+                2 => DifficultyLevel.Normal,
+                3 => DifficultyLevel.Hard,
+                4 => DifficultyLevel.VeryHard,
+                _ => DifficultyLevel.Normal
+            };
+
+            Console.WriteLine($"\nDifficulty set to: {_gameSettings.Difficulty}");
+            Console.WriteLine("Remember: This cannot be changed for this save file!\n");
         }
 
         /// <summary>
@@ -134,16 +227,19 @@ namespace GameLogic.Core
         {
             Console.Clear();
             Console.WriteLine("=== Welcome to RNG: The Game ===\n");
-            
+
+            // Select difficulty (once per save file, immutable)
+            SelectDifficulty();
+
             // Get player name
             Console.Write("Enter your character's name: ");
             string playerName = Console.ReadLine();
-            
+
             if (string.IsNullOrWhiteSpace(playerName))
             {
                 playerName = "Hero";
             }
-            
+
             // Create new player
             _player = new Player(playerName);
 
@@ -193,6 +289,19 @@ namespace GameLogic.Core
             if (saveData != null)
             {
                 _player = Player.LoadFromSave(saveData);
+
+                // Load game settings from save data
+                _gameSettings = Data.SaveManager.LoadSettingsFromSaveData(saveData);
+
+                // Load statistics from save data
+                _statistics = Data.SaveManager.LoadStatisticsFromSaveData(saveData);
+
+                // Apply RNG settings
+                _rngManager.SetStatisticsTracking(_gameSettings.RngStatisticsTracking);
+                if (!string.IsNullOrEmpty(_gameSettings.RngAlgorithm))
+                {
+                    _rngManager.SwitchAlgorithm(_gameSettings.RngAlgorithm);
+                }
 
                 // Load boss manager from save data
                 _bossManager = Data.SaveManager.LoadBossManager(saveData, _rngManager);
@@ -297,7 +406,8 @@ namespace GameLogic.Core
             Console.WriteLine("8. 📋 Quest Giver (Boss Quests)");
             Console.WriteLine("9. 📌 Job Board (Other Quests)");
             Console.WriteLine("10. 📖 Quest Log");
-            Console.WriteLine("11. Quit");
+            Console.WriteLine("11. 📊 Statistics");
+            Console.WriteLine("12. Quit");
             
             Console.Write("\nChoice: ");
             string choice = Console.ReadLine();
@@ -337,6 +447,9 @@ namespace GameLogic.Core
                     Console.ReadKey();
                     break;
                 case "11":
+                    Menus.StatisticsMenu.DisplayStatisticsMenu(_statistics);
+                    break;
+                case "12":
                     _isRunning = false;
                     break;
                 default:
@@ -572,7 +685,13 @@ namespace GameLogic.Core
         {
             Console.WriteLine("\nSaving game...");
 
-            bool success = Data.SaveManager.SaveGame(_player, "save1", _bossManager, _mapManager, _questManager);
+            // Update statistics before saving
+            _statistics.UpdatePlayTime(_player.PlayTime);
+            _statistics.UpdateCurrentGold(_player.Gold);
+            _statistics.UpdateCurrentLevel(_player.Level);
+            _statistics.RecordGameSave();
+
+            bool success = Data.SaveManager.SaveGame(_player, "save1", _bossManager, _mapManager, _questManager, _gameSettings, _statistics);
 
             if (success)
             {
@@ -627,9 +746,7 @@ namespace GameLogic.Core
                     PopState(); // Clear pause state
                     break;
                 case "4":
-                    Console.WriteLine("Settings not implemented yet.");
-                    Console.WriteLine("\nPress any key to continue...");
-                    Console.ReadKey();
+                    Menus.SettingsMenu.DisplaySettingsMenu(_gameSettings, _rngManager, isDuringSaveFile: true);
                     break;
                 case "5":
                     _stateStack.Clear(); // Clear state stack
