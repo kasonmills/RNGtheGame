@@ -116,12 +116,45 @@ namespace GameLogic.Items
 
         /// <summary>
         /// Calculate experience required for next level
+        /// Uses rarity-based exponential scaling: baseXP * (1.035^(Level-1))
+        /// Base XP by rarity:
+        /// - Common: 100 XP
+        /// - Uncommon: 200 XP
+        /// - Rare: 300 XP
+        /// - Epic: 400 XP
+        /// - Legendary: 500 XP
+        /// - Mythic: 600 XP
         /// </summary>
         private int CalculateExperienceRequired(int currentLevel)
         {
-            // Base formula: 100 * level
-            // Level 1->2: 200 XP, Level 2->3: 300 XP, etc.
-            return 100 * (currentLevel + 1);
+            // Get base XP requirement based on rarity
+            double baseXP = GetBaseXPByRarity();
+
+            // Apply exponential scaling: base * (1.035^(Level-1))
+            // This matches the player and ability leveling formula
+            for (int i = 1; i < currentLevel; i++)
+            {
+                baseXP *= 1.035;
+            }
+
+            return Convert.ToInt32(baseXP);
+        }
+
+        /// <summary>
+        /// Get base XP requirement based on weapon rarity
+        /// </summary>
+        private int GetBaseXPByRarity()
+        {
+            return Rarity switch
+            {
+                ItemRarity.Common => 100,
+                ItemRarity.Uncommon => 200,
+                ItemRarity.Rare => 300,
+                ItemRarity.Epic => 400,
+                ItemRarity.Legendary => 500,
+                ItemRarity.Mythic => 600,
+                _ => 100
+            };
         }
 
         /// <summary>

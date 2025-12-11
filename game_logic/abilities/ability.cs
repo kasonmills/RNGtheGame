@@ -122,11 +122,45 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
-        /// Calculate XP needed for next level (scales with level)
+        /// Calculate XP needed for next level (exponential scaling based on rarity)
+        /// Base XP requirement determined by ability rarity:
+        /// Common: 100, Uncommon: 200, Rare: 300, Epic: 400, Legendary: 500
+        /// Uses same exponential formula as player: base * (1.035^(Level-1))
         /// </summary>
         protected virtual int CalculateNextLevelXP()
         {
-            return 100 + (Level * 10); // Gets harder to level as you progress
+            // Get base XP requirement based on rarity
+            double baseXP = GetBaseXPByRarity();
+
+            // Apply exponential scaling: base * (1.035^(Level-1))
+            for (int i = 1; i < Level; i++)
+            {
+                baseXP *= 1.035;
+            }
+
+            return Convert.ToInt32(baseXP);
+        }
+
+        /// <summary>
+        /// Get base XP requirement based on ability rarity
+        /// </summary>
+        private int GetBaseXPByRarity()
+        {
+            switch (Rarity)
+            {
+                case AbilityRarity.Common:
+                    return 100;
+                case AbilityRarity.Uncommon:
+                    return 200;
+                case AbilityRarity.Rare:
+                    return 300;
+                case AbilityRarity.Epic:
+                    return 400;
+                case AbilityRarity.Legendary:
+                    return 500;
+                default:
+                    return 100; // Fallback to Common
+            }
         }
 
         /// <summary>

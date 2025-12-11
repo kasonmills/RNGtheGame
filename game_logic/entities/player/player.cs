@@ -73,6 +73,29 @@ namespace GameLogic.Entities.Player
                     return new Abilities.PrecisionTrainingAbility();
                 case "Swift Tactics":
                     return new Abilities.SwiftTacticsAbility();
+                case "Executioner":
+                    return new Abilities.ExecutionerAbility();
+                case "Iron Will":
+                    return new Abilities.IronWillAbility();
+                // Weapon Mastery Abilities
+                case "Sword Mastery":
+                    return new Abilities.WeaponMasteries.SwordMasteryAbility();
+                case "Axe Mastery":
+                    return new Abilities.WeaponMasteries.AxeMasteryAbility();
+                case "Mace Mastery":
+                    return new Abilities.WeaponMasteries.MaceMasteryAbility();
+                case "Dagger Mastery":
+                    return new Abilities.WeaponMasteries.DaggerMasteryAbility();
+                case "Spear Mastery":
+                    return new Abilities.WeaponMasteries.SpearMasteryAbility();
+                case "Staff Mastery":
+                    return new Abilities.WeaponMasteries.StaffMasteryAbility();
+                case "Bow Mastery":
+                    return new Abilities.WeaponMasteries.BowMasteryAbility();
+                case "Crossbow Mastery":
+                    return new Abilities.WeaponMasteries.CrossbowMasteryAbility();
+                case "Wand Mastery":
+                    return new Abilities.WeaponMasteries.WandMasteryAbility();
                 default:
                     Console.WriteLine($"Warning: Unknown ability '{abilityName}'. No ability loaded.");
                     return null;
@@ -92,7 +115,19 @@ namespace GameLogic.Entities.Player
                 new Abilities.EvasionAbility(),             // Passive ability - dodge damage
                 new Abilities.RallyingCryAbility(),         // Passive ability - companion attack buff
                 new Abilities.PrecisionTrainingAbility(),   // Passive ability - ally accuracy buff
-                new Abilities.SwiftTacticsAbility()         // Passive ability - companion speed buff
+                new Abilities.SwiftTacticsAbility(),        // Passive ability - companion speed buff
+                new Abilities.ExecutionerAbility(),         // Passive ability - crit mechanics (Legendary)
+                new Abilities.IronWillAbility(),            // Passive ability - status effect cleanse (Epic)
+                // Weapon Mastery Abilities
+                new Abilities.WeaponMasteries.SwordMasteryAbility(),    // Passive - sword bonuses
+                new Abilities.WeaponMasteries.AxeMasteryAbility(),      // Passive - axe bonuses
+                new Abilities.WeaponMasteries.MaceMasteryAbility(),     // Passive - mace bonuses
+                new Abilities.WeaponMasteries.DaggerMasteryAbility(),   // Passive - dagger bonuses
+                new Abilities.WeaponMasteries.SpearMasteryAbility(),    // Passive - spear bonuses
+                new Abilities.WeaponMasteries.StaffMasteryAbility(),    // Passive - staff bonuses
+                new Abilities.WeaponMasteries.BowMasteryAbility(),      // Passive - bow bonuses
+                new Abilities.WeaponMasteries.CrossbowMasteryAbility(), // Passive - crossbow bonuses
+                new Abilities.WeaponMasteries.WandMasteryAbility()      // Passive - wand bonuses
             };
         }
 

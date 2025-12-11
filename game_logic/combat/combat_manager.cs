@@ -359,6 +359,23 @@ namespace GameLogic.Combat
                 }
             }
 
+            // Check for Iron Will passive ability cleanse (after effects tick, before next round)
+            if (_player.IsAlive() && _player.SelectedAbility is Abilities.IronWillAbility ironWill)
+            {
+                // Check if player has any negative effects to cleanse
+                if (_player.ActiveEffects.Any(e =>
+                    e.Type == EffectType.Debuff ||
+                    e.Type == EffectType.DamageOverTime ||
+                    e.Type == EffectType.CrowdControl))
+                {
+                    bool cleansed = ironWill.TryCleanseEffects(_player, _rngManager);
+                    if (cleansed)
+                    {
+                        Console.WriteLine($"\n{_player.Name}'s Iron Will activated! All negative effects cleansed!");
+                    }
+                }
+            }
+
             // Reduce ability cooldowns for all entities at end of round
             if (_player.SelectedAbility != null && _player.SelectedAbility.CurrentCooldown > 0)
             {

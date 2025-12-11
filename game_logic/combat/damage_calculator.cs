@@ -5,6 +5,7 @@ using GameLogic.Systems;
 using GameLogic.Abilities;
 using GameLogic.Abilities.PlayerAbilities;
 using GameLogic.Abilities.EnemyAbilities;
+using GameLogic.Abilities.WeaponMasteries;
 using Enemy = GameLogic.Entities.Enemies.EnemyBase;
 
 namespace GameLogic.Combat
@@ -71,7 +72,15 @@ namespace GameLogic.Combat
             if (critRoll <= critChance)
             {
                 result.IsCritical = true;
-                baseDamage = (int)(baseDamage * 1.5f); // 50% bonus
+
+                // Get crit multiplier (default 1.5x, or modified by Executioner)
+                double critMultiplier = 1.5;
+                if (attacker.SelectedAbility is ExecutionerAbility executioner)
+                {
+                    critMultiplier = executioner.GetCritMultiplier();
+                }
+
+                baseDamage = (int)(baseDamage * critMultiplier);
             }
 
             // Step 6: Apply enemy RageEffect defense penalty if active
@@ -191,6 +200,15 @@ namespace GameLogic.Combat
                     double accuracyBonus = precisionTraining.GetAccuracyBonus();
                     baseAccuracy = (int)(baseAccuracy + (baseAccuracy * accuracyBonus));
                 }
+                // Weapon Mastery abilities provide accuracy bonus when wielding correct weapon
+                else if (IsWeaponMasteryAbility(player.SelectedAbility, out var weaponMastery))
+                {
+                    if (weaponMastery.IsWieldingCorrectWeapon(player))
+                    {
+                        double accuracyMultiplier = weaponMastery.GetAccuracyMultiplier();
+                        baseAccuracy = (int)(baseAccuracy + (baseAccuracy * accuracyMultiplier));
+                    }
+                }
             }
 
             return baseAccuracy;
@@ -201,9 +219,11 @@ namespace GameLogic.Combat
         /// </summary>
         private int GetPlayerCritChance(Player player)
         {
+            int critChance;
+
             if (player.EquippedWeapon != null)
             {
-                int critChance = player.EquippedWeapon.CritChance;
+                critChance = player.EquippedWeapon.CritChance;
 
                 // Apply CriticalStrike effect if active
                 if (player.HasEffect<CriticalStrikeEffect>())
@@ -211,22 +231,37 @@ namespace GameLogic.Combat
                     var critBoost = player.GetEffect<CriticalStrikeEffect>();
                     critChance += critBoost.GetCritChanceBonus();
                 }
-
-                return critChance;
             }
             else
             {
                 // Unarmed: Minimal crit chance (still benefit from CriticalStrike effect)
-                int critChance = 2;
+                critChance = 2;
 
                 if (player.HasEffect<CriticalStrikeEffect>())
                 {
                     var critBoost = player.GetEffect<CriticalStrikeEffect>();
                     critChance += critBoost.GetCritChanceBonus();
                 }
-
-                return critChance;
             }
+
+            // Apply Executioner passive ability modifier (can be negative or positive)
+            if (player.SelectedAbility is ExecutionerAbility executioner)
+            {
+                int critModifier = executioner.GetCritChanceModifier();
+                critChance += critModifier;
+            }
+
+            // Apply Weapon Mastery crit chance bonus
+            if (player.SelectedAbility != null && IsWeaponMasteryAbility(player.SelectedAbility, out var weaponMastery))
+            {
+                if (weaponMastery.IsWieldingCorrectWeapon(player))
+                {
+                    critChance += weaponMastery.GetCritChanceBonus();
+                }
+            }
+
+            // Ensure crit chance doesn't go below 0 or above 100
+            return Math.Max(0, Math.Min(100, critChance));
         }
 
         /// <summary>
@@ -253,6 +288,14 @@ namespace GameLogic.Combat
                 // Smaller passive bonus: 0.05% to 5% based on ability level
                 double passiveBonus = player.SelectedAbility.Level * 0.05; // 0.05% per level
                 damageMultiplier += passiveBonus / 100.0;
+            }
+            // Weapon Mastery: Provides damage bonus when wielding correct weapon
+            else if (IsWeaponMasteryAbility(player.SelectedAbility, out var weaponMastery))
+            {
+                if (weaponMastery.IsWieldingCorrectWeapon(player))
+                {
+                    damageMultiplier = weaponMastery.GetDamageMultiplier();
+                }
             }
             // DefenseBoost: No damage bonus (defensive ability)
             // HealingAbility: No damage bonus (support ability)
@@ -361,6 +404,27 @@ namespace GameLogic.Combat
             // Can't heal above max health
             int maxPossibleHealing = target.MaxHealth - target.Health;
             return Math.Min(actualHealing, maxPossibleHealing);
+        }
+
+        /// <summary>
+        /// Helper method to check if an ability is a weapon mastery ability
+        /// Returns true if it's a mastery ability, with the ability cast to the base interface
+        /// </summary>
+        private bool IsWeaponMasteryAbility(Ability ability, out dynamic weaponMastery)
+        {
+            weaponMastery = null;
+
+            if (ability is SwordMasteryAbility sword) { weaponMastery = sword; return true; }
+            if (ability is AxeMasteryAbility axe) { weaponMastery = axe; return true; }
+            if (ability is MaceMasteryAbility mace) { weaponMastery = mace; return true; }
+            if (ability is DaggerMasteryAbility dagger) { weaponMastery = dagger; return true; }
+            if (ability is SpearMasteryAbility spear) { weaponMastery = spear; return true; }
+            if (ability is StaffMasteryAbility staff) { weaponMastery = staff; return true; }
+            if (ability is BowMasteryAbility bow) { weaponMastery = bow; return true; }
+            if (ability is CrossbowMasteryAbility crossbow) { weaponMastery = crossbow; return true; }
+            if (ability is WandMasteryAbility wand) { weaponMastery = wand; return true; }
+
+            return false;
         }
     }
 
