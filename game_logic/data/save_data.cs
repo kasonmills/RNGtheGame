@@ -78,12 +78,13 @@ namespace GameLogic.Data
     {
         // Player Info
         public string PlayerName { get; set; }
+        public string PlayerClass { get; set; }  // Player's chosen class (Warrior, Rogue, etc.)
         public int Level { get; set; }
         public int Experience { get; set; }
         public int Health { get; set; }
         public int MaxHealth { get; set; }
         public int Gold { get; set; }
-        
+
         // Player Ability (permanent choice)
         public string SelectedAbilityName { get; set; }
         public int SelectedAbilityLevel { get; set; }

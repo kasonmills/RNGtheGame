@@ -12,6 +12,9 @@ namespace GameLogic.Entities.Player
         public int Gold { get; set; }
         public TimeSpan PlayTime { get; set; }
 
+        // Player Class (permanent choice made at character creation)
+        public PlayerClass Class { get; set; }
+
         // Selected Ability (permanent choice made at character creation)
         public Abilities.Ability SelectedAbility { get; set; }
 
@@ -23,18 +26,29 @@ namespace GameLogic.Entities.Player
         public Armor EquippedArmor { get; set; }
 
         // Constructor for new player
-        public Player(string name) : base()
+        public Player(string name, PlayerClass playerClass = PlayerClass.Warrior) : base()
         {
             Name = name;
+            Class = playerClass;
             Level = 1;
             Experience = 0;
-            MaxHealth = 20;
+
+            // Base stats (before class bonuses)
+            int baseHealth = 20;
+            int baseSpeed = 10;
+
+            // Apply class bonuses to base stats
+            MaxHealth = (int)(baseHealth * (1.0 + PlayerClassInfo.GetHealthBonus(playerClass)));
             Health = MaxHealth;
-            Speed = 10; // Base speed for player (can be modified by equipment/buffs)
+            Speed = (int)(baseSpeed * (1.0 + PlayerClassInfo.GetSpeedBonus(playerClass)));
+
             Gold = 0;
             PlayTime = TimeSpan.Zero;
             Inventory = new PlayerInventory();
             SelectedAbility = null; // Will be set during character creation
+
+            Console.WriteLine($"{Name} created as {PlayerClassInfo.GetClassName(playerClass)}!");
+            Console.WriteLine($"Base Health: {MaxHealth} | Base Speed: {Speed}");
         }
 
         // Set the player's permanent ability (called during character creation)
@@ -233,7 +247,103 @@ namespace GameLogic.Entities.Player
         public void EquipArmor(Armor armor)
         {
             EquippedArmor = armor;
+
+            // Show class compatibility warnings/bonuses
+            double speedPenalty = PlayerClassInfo.GetArmorSpeedPenalty(Class, armor.Type);
+            double defensePenalty = PlayerClassInfo.GetArmorDefensePenalty(Class, armor.Type);
+            double abilityPowerPenalty = PlayerClassInfo.GetArmorAbilityPowerPenalty(Class, armor.Type);
+            double accuracyPenalty = PlayerClassInfo.GetArmorAccuracyPenalty(Class, armor.Type);
+
             Console.WriteLine($"{Name} equipped {armor.Name}.");
+
+            // Display any penalties or bonuses
+            if (speedPenalty < 0)
+                Console.WriteLine($"  ⚠️  Speed penalty: {speedPenalty * 100:F0}% (armor too heavy for {PlayerClassInfo.GetClassName(Class)})");
+            if (defensePenalty < 0)
+                Console.WriteLine($"  ⚠️  Defense penalty: {defensePenalty * 100:F0}% (armor not optimal for {PlayerClassInfo.GetClassName(Class)})");
+            else if (defensePenalty > 0)
+                Console.WriteLine($"  ✅ Defense bonus: +{defensePenalty * 100:F0}% ({PlayerClassInfo.GetClassName(Class)} proficiency)");
+            if (abilityPowerPenalty < 0)
+                Console.WriteLine($"  ⚠️  Ability Power penalty: {abilityPowerPenalty * 100:F0}% (armor interferes with magic)");
+            else if (abilityPowerPenalty > 0)
+                Console.WriteLine($"  ✅ Ability Power bonus: +{abilityPowerPenalty * 100:F0}% (enhanced magical channeling)");
+            if (accuracyPenalty < 0)
+                Console.WriteLine($"  ⚠️  Accuracy penalty: {accuracyPenalty * 100:F0}% (armor interferes with precision)");
+        }
+
+        /// <summary>
+        /// Get effective defense including class bonuses/penalties
+        /// </summary>
+        public int GetEffectiveDefense()
+        {
+            if (EquippedArmor == null)
+                return 0;
+
+            int baseDefense = EquippedArmor.Defense;
+            double classDefenseBonus = PlayerClassInfo.GetDefenseBonus(Class);
+            double armorDefensePenalty = PlayerClassInfo.GetArmorDefensePenalty(Class, EquippedArmor.Type);
+
+            // Apply class base bonus and armor compatibility
+            double totalDefenseMultiplier = 1.0 + classDefenseBonus + armorDefensePenalty;
+            return (int)(baseDefense * totalDefenseMultiplier);
+        }
+
+        /// <summary>
+        /// Get effective speed including class bonuses and armor penalties
+        /// </summary>
+        public int GetEffectiveSpeed()
+        {
+            // Start with base speed (which already includes class speed bonus from constructor)
+            int effectiveSpeed = Speed;
+
+            // Apply armor speed penalty if armor is equipped
+            if (EquippedArmor != null)
+            {
+                double armorSpeedPenalty = PlayerClassInfo.GetArmorSpeedPenalty(Class, EquippedArmor.Type);
+                effectiveSpeed = (int)(effectiveSpeed * (1.0 + armorSpeedPenalty));
+            }
+
+            return Math.Max(1, effectiveSpeed); // Minimum speed of 1
+        }
+
+        /// <summary>
+        /// Get effective ability power based on class and armor
+        /// </summary>
+        public double GetEffectiveAbilityPower()
+        {
+            double baseAbilityPower = 1.0;
+            double classAbilityPowerBonus = PlayerClassInfo.GetAbilityPowerBonus(Class);
+
+            double totalMultiplier = 1.0 + classAbilityPowerBonus;
+
+            // Apply armor ability power penalty if armor is equipped
+            if (EquippedArmor != null)
+            {
+                double armorAbilityPowerPenalty = PlayerClassInfo.GetArmorAbilityPowerPenalty(Class, EquippedArmor.Type);
+                totalMultiplier += armorAbilityPowerPenalty;
+            }
+
+            return baseAbilityPower * totalMultiplier;
+        }
+
+        /// <summary>
+        /// Get effective accuracy based on class and armor
+        /// </summary>
+        public double GetEffectiveAccuracy()
+        {
+            double baseAccuracy = 1.0;
+            double classAccuracyBonus = PlayerClassInfo.GetAccuracyBonus(Class);
+
+            double totalMultiplier = 1.0 + classAccuracyBonus;
+
+            // Apply armor accuracy penalty if armor is equipped
+            if (EquippedArmor != null)
+            {
+                double armorAccuracyPenalty = PlayerClassInfo.GetArmorAccuracyPenalty(Class, EquippedArmor.Type);
+                totalMultiplier += armorAccuracyPenalty;
+            }
+
+            return baseAccuracy * totalMultiplier;
         }
 
         /// <summary>

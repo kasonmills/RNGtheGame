@@ -3429,107 +3429,1838 @@ namespace GameLogic.Items
         {
             return armorName.ToLower() switch
             {
-                // Chest Armor
-                "rusty chainmail" => new Armor(
-                    "Rusty Chainmail",
-                    "Old chainmail armor that barely holds together.",
-                    ArmorType.Chainmail,
-                    ArmorSlot.Chest,
+                // ===== COMMON ARMOR (72 total) =====
+
+                // CLOTH ARMOR - Common (12 pieces)
+                "tattered cloth set" => new Armor(
+                    "Tattered Cloth Set",
+                    "Worn cloth garments offering minimal protection. Ideal for starting Rogues and Mages.",
+                    ArmorType.Cloth,
+                    defense: 3,
+                    ItemRarity.Common,
+                    level,
+                    value: 5
+                ),
+
+                "simple cloth armor" => new Armor(
+                    "Simple Cloth Armor",
+                    "Basic cloth protection. Lightweight and comfortable.",
+                    ArmorType.Cloth,
+                    defense: 4,
+                    ItemRarity.Common,
+                    level,
+                    value: 8
+                ),
+
+                "patched cloth garb" => new Armor(
+                    "Patched Cloth Garb",
+                    "Heavily repaired cloth armor. Better than nothing.",
+                    ArmorType.Cloth,
+                    defense: 4,
+                    ItemRarity.Common,
+                    level,
+                    value: 7
+                ),
+
+                "worn traveler's clothes" => new Armor(
+                    "Worn Traveler's Clothes",
+                    "Road-worn cloth outfit providing basic coverage.",
+                    ArmorType.Cloth,
                     defense: 5,
+                    ItemRarity.Common,
+                    level,
+                    value: 10
+                ),
+
+                "rough linen set" => new Armor(
+                    "Rough Linen Set",
+                    "Coarse linen armor. Scratchy but protective.",
+                    ArmorType.Cloth,
+                    defense: 5,
+                    ItemRarity.Common,
+                    level,
+                    value: 12
+                ),
+
+                "peasant's garb" => new Armor(
+                    "Peasant's Garb",
+                    "Common folk clothing reinforced with extra layers.",
+                    ArmorType.Cloth,
+                    defense: 6,
+                    ItemRarity.Common,
+                    level,
+                    value: 15
+                ),
+
+                "cotton padding" => new Armor(
+                    "Cotton Padding",
+                    "Padded cotton armor offering decent protection.",
+                    ArmorType.Cloth,
+                    defense: 6,
+                    ItemRarity.Common,
+                    level,
+                    value: 18
+                ),
+
+                "merchant's attire" => new Armor(
+                    "Merchant's Attire",
+                    "Well-made traveling clothes for those who can afford better.",
+                    ArmorType.Cloth,
+                    defense: 7,
                     ItemRarity.Common,
                     level,
                     value: 20
                 ),
 
-                "iron chestplate" => new Armor(
-                    "Iron Chestplate",
-                    "Solid iron protection for the torso.",
-                    ArmorType.Plate,
-                    ArmorSlot.Chest,
+                "quilted cloth armor" => new Armor(
+                    "Quilted Cloth Armor",
+                    "Layered cloth providing surprising protection.",
+                    ArmorType.Cloth,
+                    defense: 7,
+                    ItemRarity.Common,
+                    level,
+                    value: 22
+                ),
+
+                "reinforced tunic" => new Armor(
+                    "Reinforced Tunic",
+                    "Sturdy tunic with hidden padding in vital areas.",
+                    ArmorType.Cloth,
+                    defense: 8,
+                    ItemRarity.Common,
+                    level,
+                    value: 25
+                ),
+
+                "thick cloth wraps" => new Armor(
+                    "Thick Cloth Wraps",
+                    "Multiple layers of cloth wrapped for protection.",
+                    ArmorType.Cloth,
+                    defense: 8,
+                    ItemRarity.Common,
+                    level,
+                    value: 28
+                ),
+
+                "sturdy linen armor" => new Armor(
+                    "Sturdy Linen Armor",
+                    "High-quality linen crafted into protective gear.",
+                    ArmorType.Cloth,
+                    defense: 8,
+                    ItemRarity.Common,
+                    level,
+                    value: 30
+                ),
+
+                // LEATHER ARMOR - Common (12 pieces)
+                "cracked leather set" => new Armor(
+                    "Cracked Leather Set",
+                    "Old leather armor showing signs of wear. Still functional for Rangers and Rogues.",
+                    ArmorType.Leather,
+                    defense: 8,
+                    ItemRarity.Common,
+                    level,
+                    value: 15
+                ),
+
+                "worn leather armor" => new Armor(
+                    "Worn Leather Armor",
+                    "Basic leather protection used by hunters and scouts.",
+                    ArmorType.Leather,
+                    defense: 9,
+                    ItemRarity.Common,
+                    level,
+                    value: 20
+                ),
+
+                "rough hide armor" => new Armor(
+                    "Rough Hide Armor",
+                    "Crudely tanned hide offering medium protection.",
+                    ArmorType.Leather,
+                    defense: 10,
+                    ItemRarity.Common,
+                    level,
+                    value: 25
+                ),
+
+                "simple leather set" => new Armor(
+                    "Simple Leather Set",
+                    "Standard leather armor for adventurers.",
+                    ArmorType.Leather,
+                    defense: 11,
+                    ItemRarity.Common,
+                    level,
+                    value: 30
+                ),
+
+                "hunting leathers" => new Armor(
+                    "Hunting Leathers",
+                    "Practical leather gear designed for wilderness survival.",
+                    ArmorType.Leather,
                     defense: 12,
+                    ItemRarity.Common,
+                    level,
+                    value: 35
+                ),
+
+                "scout's leather" => new Armor(
+                    "Scout's Leather",
+                    "Lightweight leather armor favored by scouts.",
+                    ArmorType.Leather,
+                    defense: 12,
+                    ItemRarity.Common,
+                    level,
+                    value: 40
+                ),
+
+                "toughened hide set" => new Armor(
+                    "Toughened Hide Set",
+                    "Specially treated hide for improved durability.",
+                    ArmorType.Leather,
+                    defense: 13,
+                    ItemRarity.Common,
+                    level,
+                    value: 45
+                ),
+
+                "traveler's leathers" => new Armor(
+                    "Traveler's Leathers",
+                    "Comfortable leather armor for long journeys.",
+                    ArmorType.Leather,
+                    defense: 14,
+                    ItemRarity.Common,
+                    level,
+                    value: 50
+                ),
+
+                "reinforced leather armor" => new Armor(
+                    "Reinforced Leather Armor",
+                    "Leather armor with metal studs in vital areas.",
+                    ArmorType.Leather,
+                    defense: 14,
+                    ItemRarity.Common,
+                    level,
+                    value: 55
+                ),
+
+                "thick hide armor" => new Armor(
+                    "Thick Hide Armor",
+                    "Heavy hide providing excellent protection for leather.",
+                    ArmorType.Leather,
+                    defense: 15,
+                    ItemRarity.Common,
+                    level,
+                    value: 60
+                ),
+
+                "boiled leather set" => new Armor(
+                    "Boiled Leather Set",
+                    "Hardened through boiling for extra toughness.",
+                    ArmorType.Leather,
+                    defense: 15,
+                    ItemRarity.Common,
+                    level,
+                    value: 65
+                ),
+
+                "studded leather armor" => new Armor(
+                    "Studded Leather Armor",
+                    "Quality leather reinforced with metal studs.",
+                    ArmorType.Leather,
+                    defense: 15,
+                    ItemRarity.Common,
+                    level,
+                    value: 70
+                ),
+
+                // CHAINMAIL ARMOR - Common (12 pieces)
+                "rusty chainmail set" => new Armor(
+                    "Rusty Chainmail Set",
+                    "Old chainmail armor that barely holds together. Heavy but protective for Warriors.",
+                    ArmorType.Chainmail,
+                    defense: 15,
+                    ItemRarity.Common,
+                    level,
+                    value: 40
+                ),
+
+                "patched chain armor" => new Armor(
+                    "Patched Chain Armor",
+                    "Repaired chainmail with mismatched rings.",
+                    ArmorType.Chainmail,
+                    defense: 16,
+                    ItemRarity.Common,
+                    level,
+                    value: 50
+                ),
+
+                "old chainmail" => new Armor(
+                    "Old Chainmail",
+                    "Worn but functional chain armor.",
+                    ArmorType.Chainmail,
+                    defense: 17,
+                    ItemRarity.Common,
+                    level,
+                    value: 60
+                ),
+
+                "iron chain set" => new Armor(
+                    "Iron Chain Set",
+                    "Basic iron chainmail providing solid protection.",
+                    ArmorType.Chainmail,
+                    defense: 18,
+                    ItemRarity.Common,
+                    level,
+                    value: 75
+                ),
+
+                "simple chainmail" => new Armor(
+                    "Simple Chainmail",
+                    "Standard chainmail armor for foot soldiers.",
+                    ArmorType.Chainmail,
+                    defense: 19,
+                    ItemRarity.Common,
+                    level,
+                    value: 90
+                ),
+
+                "militia chain armor" => new Armor(
+                    "Militia Chain Armor",
+                    "Mass-produced chainmail for town guards.",
+                    ArmorType.Chainmail,
+                    defense: 20,
+                    ItemRarity.Common,
+                    level,
+                    value: 100
+                ),
+
+                "basic mail set" => new Armor(
+                    "Basic Mail Set",
+                    "Functional chainmail without frills.",
+                    ArmorType.Chainmail,
+                    defense: 21,
+                    ItemRarity.Common,
+                    level,
+                    value: 110
+                ),
+
+                "soldier's chainmail" => new Armor(
+                    "Soldier's Chainmail",
+                    "Military-grade chainmail for regular infantry.",
+                    ArmorType.Chainmail,
+                    defense: 22,
+                    ItemRarity.Common,
+                    level,
+                    value: 125
+                ),
+
+                "reinforced chain set" => new Armor(
+                    "Reinforced Chain Set",
+                    "Chainmail with extra links in critical areas.",
+                    ArmorType.Chainmail,
+                    defense: 23,
+                    ItemRarity.Common,
+                    level,
+                    value: 140
+                ),
+
+                "heavy iron mail" => new Armor(
+                    "Heavy Iron Mail",
+                    "Dense chainmail offering superior protection.",
+                    ArmorType.Chainmail,
+                    defense: 24,
+                    ItemRarity.Common,
+                    level,
+                    value: 150
+                ),
+
+                "double-link chainmail" => new Armor(
+                    "Double-Link Chainmail",
+                    "Chainmail with doubled links for extra strength.",
+                    ArmorType.Chainmail,
+                    defense: 24,
+                    ItemRarity.Common,
+                    level,
+                    value: 160
+                ),
+
+                "layered chain armor" => new Armor(
+                    "Layered Chain Armor",
+                    "Multiple layers of chainmail providing excellent defense.",
+                    ArmorType.Chainmail,
+                    defense: 25,
+                    ItemRarity.Common,
+                    level,
+                    value: 175
+                ),
+
+                // PLATE ARMOR - Common (12 pieces)
+                "battered plate set" => new Armor(
+                    "Battered Plate Set",
+                    "Dented plate armor that's seen better days. Maximum protection for Warriors and Paladins.",
+                    ArmorType.Plate,
+                    defense: 25,
                     ItemRarity.Common,
                     level,
                     value: 80
                 ),
 
-                "steel chestplate" => new Armor(
-                    "Steel Chestplate",
-                    "Heavy steel armor providing excellent protection.",
+                "scrap plate armor" => new Armor(
+                    "Scrap Plate Armor",
+                    "Plate armor cobbled together from salvaged pieces.",
                     ArmorType.Plate,
-                    ArmorSlot.Chest,
-                    defense: 20,
-                    ItemRarity.Uncommon,
+                    defense: 26,
+                    ItemRarity.Common,
                     level,
-                    value: 200
+                    value: 95
                 ),
 
-                // Helmets
-                "leather cap" => new Armor(
-                    "Leather Cap",
-                    "A simple leather head covering.",
-                    ArmorType.Leather,
-                    ArmorSlot.Head,
+                "dented iron plate" => new Armor(
+                    "Dented Iron Plate",
+                    "Iron plate armor showing signs of combat.",
+                    ArmorType.Plate,
+                    defense: 27,
+                    ItemRarity.Common,
+                    level,
+                    value: 110
+                ),
+
+                "crude plate set" => new Armor(
+                    "Crude Plate Set",
+                    "Roughly forged plate armor. Heavy but protective.",
+                    ArmorType.Plate,
+                    defense: 28,
+                    ItemRarity.Common,
+                    level,
+                    value: 130
+                ),
+
+                "basic iron plate" => new Armor(
+                    "Basic Iron Plate",
+                    "Standard iron plate armor for heavy infantry.",
+                    ArmorType.Plate,
+                    defense: 29,
+                    ItemRarity.Common,
+                    level,
+                    value: 150
+                ),
+
+                "foot soldier's plate" => new Armor(
+                    "Foot Soldier's Plate",
+                    "Mass-produced plate armor for common troops.",
+                    ArmorType.Plate,
+                    defense: 30,
+                    ItemRarity.Common,
+                    level,
+                    value: 170
+                ),
+
+                "iron full plate" => new Armor(
+                    "Iron Full Plate",
+                    "Complete iron plate protection from head to toe.",
+                    ArmorType.Plate,
+                    defense: 31,
+                    ItemRarity.Common,
+                    level,
+                    value: 190
+                ),
+
+                "garrison plate armor" => new Armor(
+                    "Garrison Plate Armor",
+                    "Sturdy plate armor worn by fortress guards.",
+                    ArmorType.Plate,
+                    defense: 32,
+                    ItemRarity.Common,
+                    level,
+                    value: 210
+                ),
+
+                "reinforced iron plate" => new Armor(
+                    "Reinforced Iron Plate",
+                    "Iron plate with extra thickness in vital areas.",
+                    ArmorType.Plate,
+                    defense: 33,
+                    ItemRarity.Common,
+                    level,
+                    value: 230
+                ),
+
+                "heavy plate set" => new Armor(
+                    "Heavy Plate Set",
+                    "Thick plate armor maximizing protection.",
+                    ArmorType.Plate,
+                    defense: 34,
+                    ItemRarity.Common,
+                    level,
+                    value: 250
+                ),
+
+                "battle-worn plate" => new Armor(
+                    "Battle-Worn Plate",
+                    "Veteran's plate armor scarred by countless fights.",
+                    ArmorType.Plate,
+                    defense: 34,
+                    ItemRarity.Common,
+                    level,
+                    value: 270
+                ),
+
+                "tempered iron plate" => new Armor(
+                    "Tempered Iron Plate",
+                    "Heat-treated iron plate for improved durability.",
+                    ArmorType.Plate,
+                    defense: 35,
+                    ItemRarity.Common,
+                    level,
+                    value: 300
+                ),
+
+                // ROBE ARMOR - Common (12 pieces)
+                "tattered apprentice robe" => new Armor(
+                    "Tattered Apprentice Robe",
+                    "Worn robe offering minimal protection but maximum magic flow. Perfect for starting Mages.",
+                    ArmorType.Robe,
                     defense: 2,
                     ItemRarity.Common,
                     level,
                     value: 10
                 ),
 
-                "iron helmet" => new Armor(
-                    "Iron Helmet",
-                    "A sturdy iron helmet.",
-                    ArmorType.Plate,
-                    ArmorSlot.Head,
-                    defense: 6,
+                "simple novice robe" => new Armor(
+                    "Simple Novice Robe",
+                    "Basic magical robe for students of the arcane.",
+                    ArmorType.Robe,
+                    defense: 3,
                     ItemRarity.Common,
                     level,
-                    value: 40
+                    value: 15
                 ),
 
-                // Legs
-                "cloth pants" => new Armor(
-                    "Cloth Pants",
-                    "Basic cloth leg protection.",
-                    ArmorType.Cloth,
-                    ArmorSlot.Legs,
-                    defense: 1,
+                "initiate's robe" => new Armor(
+                    "Initiate's Robe",
+                    "Entry-level robe for beginning spellcasters.",
+                    ArmorType.Robe,
+                    defense: 3,
                     ItemRarity.Common,
                     level,
-                    value: 5
+                    value: 18
                 ),
 
-                "leather leggings" => new Armor(
-                    "Leather Leggings",
-                    "Flexible leather leg armor.",
-                    ArmorType.Leather,
-                    ArmorSlot.Legs,
+                "scholar's garb" => new Armor(
+                    "Scholar's Garb",
+                    "Academic robes offering modest protection.",
+                    ArmorType.Robe,
+                    defense: 4,
+                    ItemRarity.Common,
+                    level,
+                    value: 22
+                ),
+
+                "acolyte's robe" => new Armor(
+                    "Acolyte's Robe",
+                    "Religious robe blessed with minor protective wards.",
+                    ArmorType.Robe,
                     defense: 4,
                     ItemRarity.Common,
                     level,
                     value: 25
                 ),
 
-                // Robes (Mage armor)
-                "apprentice robe" => new Armor(
-                    "Apprentice Robe",
-                    "A simple robe for novice mages.",
+                "mage apprentice robe" => new Armor(
+                    "Mage Apprentice Robe",
+                    "Standard robes for those learning the magical arts.",
                     ArmorType.Robe,
-                    ArmorSlot.Chest,
-                    defense: 3,
+                    defense: 5,
                     ItemRarity.Common,
                     level,
                     value: 30
                 ),
 
-                "arcane robe" => new Armor(
-                    "Arcane Robe",
-                    "A robe woven with protective enchantments.",
+                "woven silk robe" => new Armor(
+                    "Woven Silk Robe",
+                    "Fine silk robe with basic enchantments.",
                     ArmorType.Robe,
-                    ArmorSlot.Chest,
-                    defense: 8,
-                    ItemRarity.Rare,
+                    defense: 5,
+                    ItemRarity.Common,
+                    level,
+                    value: 35
+                ),
+
+                "mystic's vestments" => new Armor(
+                    "Mystic's Vestments",
+                    "Mystical robes enhancing magical channeling.",
+                    ArmorType.Robe,
+                    defense: 6,
+                    ItemRarity.Common,
+                    level,
+                    value: 40
+                ),
+
+                "enchanted cloth robe" => new Armor(
+                    "Enchanted Cloth Robe",
+                    "Magically treated cloth providing better protection.",
+                    ArmorType.Robe,
+                    defense: 6,
+                    ItemRarity.Common,
+                    level,
+                    value: 45
+                ),
+
+                "adept's robe" => new Armor(
+                    "Adept's Robe",
+                    "Robe for practitioners advancing in magical skill.",
+                    ArmorType.Robe,
+                    defense: 6,
+                    ItemRarity.Common,
+                    level,
+                    value: 50
+                ),
+
+                "runed mage robe" => new Armor(
+                    "Runed Mage Robe",
+                    "Robe inscribed with protective runes.",
+                    ArmorType.Robe,
+                    defense: 6,
+                    ItemRarity.Common,
+                    level,
+                    value: 55
+                ),
+
+                "warded silk vestments" => new Armor(
+                    "Warded Silk Vestments",
+                    "Silk robes woven with defensive magic.",
+                    ArmorType.Robe,
+                    defense: 6,
+                    ItemRarity.Common,
+                    level,
+                    value: 60
+                ),
+
+                // SHIELD - Common (12 pieces)
+                "wooden buckler" => new Armor(
+                    "Wooden Buckler",
+                    "Small wooden shield offering basic protection. Warriors excel with shields.",
+                    ArmorType.Shield,
+                    defense: 10,
+                    ItemRarity.Common,
+                    level,
+                    value: 15
+                ),
+
+                "cracked round shield" => new Armor(
+                    "Cracked Round Shield",
+                    "Damaged round shield still capable of blocking.",
+                    ArmorType.Shield,
+                    defense: 11,
+                    ItemRarity.Common,
+                    level,
+                    value: 20
+                ),
+
+                "small wooden shield" => new Armor(
+                    "Small Wooden Shield",
+                    "Basic wooden shield reinforced with iron bands.",
+                    ArmorType.Shield,
+                    defense: 12,
+                    ItemRarity.Common,
+                    level,
+                    value: 25
+                ),
+
+                "leather-bound buckler" => new Armor(
+                    "Leather-Bound Buckler",
+                    "Wooden shield wrapped in leather for durability.",
+                    ArmorType.Shield,
+                    defense: 13,
+                    ItemRarity.Common,
+                    level,
+                    value: 30
+                ),
+
+                "iron-banded shield" => new Armor(
+                    "Iron-Banded Shield",
+                    "Wooden shield with iron reinforcement.",
+                    ArmorType.Shield,
+                    defense: 14,
+                    ItemRarity.Common,
+                    level,
+                    value: 40
+                ),
+
+                "round wooden shield" => new Armor(
+                    "Round Wooden Shield",
+                    "Classic round shield design.",
+                    ArmorType.Shield,
+                    defense: 15,
+                    ItemRarity.Common,
+                    level,
+                    value: 50
+                ),
+
+                "militia shield" => new Armor(
+                    "Militia Shield",
+                    "Standard issue shield for town guards.",
+                    ArmorType.Shield,
+                    defense: 16,
+                    ItemRarity.Common,
+                    level,
+                    value: 60
+                ),
+
+                "iron heater shield" => new Armor(
+                    "Iron Heater Shield",
+                    "Triangular shield offering good coverage.",
+                    ArmorType.Shield,
+                    defense: 17,
+                    ItemRarity.Common,
+                    level,
+                    value: 70
+                ),
+
+                "reinforced kite shield" => new Armor(
+                    "Reinforced Kite Shield",
+                    "Large shield protecting from neck to knees.",
+                    ArmorType.Shield,
+                    defense: 18,
+                    ItemRarity.Common,
+                    level,
+                    value: 85
+                ),
+
+                "soldier's shield" => new Armor(
+                    "Soldier's Shield",
+                    "Military-grade shield for infantry.",
+                    ArmorType.Shield,
+                    defense: 19,
+                    ItemRarity.Common,
+                    level,
+                    value: 100
+                ),
+
+                "heavy wooden shield" => new Armor(
+                    "Heavy Wooden Shield",
+                    "Thick wooden shield providing excellent defense.",
+                    ArmorType.Shield,
+                    defense: 19,
+                    ItemRarity.Common,
+                    level,
+                    value: 110
+                ),
+
+                "iron-rimmed shield" => new Armor(
+                    "Iron-Rimmed Shield",
+                    "Shield with reinforced iron edges for deflecting blows.",
+                    ArmorType.Shield,
+                    defense: 20,
+                    ItemRarity.Common,
+                    level,
+                    value: 125
+                ),
+
+                // ===== UNCOMMON ARMOR (42 total) =====
+
+                // CLOTH ARMOR - Uncommon (7 pieces)
+                "reinforced cloth set" => new Armor(
+                    "Reinforced Cloth Set",
+                    "Cloth armor with hidden reinforcement layers. Improved protection for Rogues and Mages.",
+                    ArmorType.Cloth,
+                    defense: 10,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 40
+                ),
+
+                "sturdy cotton armor" => new Armor(
+                    "Sturdy Cotton Armor",
+                    "High-quality cotton garments designed for combat.",
+                    ArmorType.Cloth,
+                    defense: 12,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 50
+                ),
+
+                "durable linen set" => new Armor(
+                    "Durable Linen Set",
+                    "Well-crafted linen armor built to last.",
+                    ArmorType.Cloth,
+                    defense: 14,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 60
+                ),
+
+                "padded silk armor" => new Armor(
+                    "Padded Silk Armor",
+                    "Luxurious silk with protective padding woven throughout.",
+                    ArmorType.Cloth,
+                    defense: 15,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 75
+                ),
+
+                "woven hemp set" => new Armor(
+                    "Woven Hemp Set",
+                    "Tough hemp fibers woven into surprisingly protective armor.",
+                    ArmorType.Cloth,
+                    defense: 16,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 85
+                ),
+
+                "layered cloth armor" => new Armor(
+                    "Layered Cloth Armor",
+                    "Multiple cloth layers providing excellent lightweight protection.",
+                    ArmorType.Cloth,
+                    defense: 17,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 95
+                ),
+
+                "reinforced silk garb" => new Armor(
+                    "Reinforced Silk Garb",
+                    "Premium silk reinforced with protective threading.",
+                    ArmorType.Cloth,
+                    defense: 18,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 110
+                ),
+
+                // LEATHER ARMOR - Uncommon (7 pieces)
+                "hardened leather set" => new Armor(
+                    "Hardened Leather Set",
+                    "Specially treated leather offering superior protection. Excellent for Rangers and Rogues.",
+                    ArmorType.Leather,
+                    defense: 18,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 90
+                ),
+
+                "quality hide armor" => new Armor(
+                    "Quality Hide Armor",
+                    "Well-tanned hide from hardy beasts.",
+                    ArmorType.Leather,
+                    defense: 20,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 110
+                ),
+
+                "reinforced boiled leather" => new Armor(
+                    "Reinforced Boiled Leather",
+                    "Boiled and reinforced for maximum durability.",
+                    ArmorType.Leather,
+                    defense: 22,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 130
+                ),
+
+                "studded ranger armor" => new Armor(
+                    "Studded Ranger Armor",
+                    "Ranger-crafted leather with strategic metal studding.",
+                    ArmorType.Leather,
+                    defense: 24,
+                    ItemRarity.Uncommon,
                     level,
                     value: 150
+                ),
+
+                "heavy leather set" => new Armor(
+                    "Heavy Leather Set",
+                    "Thick, durable leather providing excellent protection.",
+                    ArmorType.Leather,
+                    defense: 26,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 170
+                ),
+
+                "riveted leather armor" => new Armor(
+                    "Riveted Leather Armor",
+                    "Leather armor reinforced with metal rivets.",
+                    ArmorType.Leather,
+                    defense: 27,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 190
+                ),
+
+                "superior studded leather" => new Armor(
+                    "Superior Studded Leather",
+                    "Masterfully crafted studded leather offering peak medium armor protection.",
+                    ArmorType.Leather,
+                    defense: 28,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 210
+                ),
+
+                // CHAINMAIL ARMOR - Uncommon (7 pieces)
+                "steel chainmail set" => new Armor(
+                    "Steel Chainmail Set",
+                    "Quality steel chain armor for Warriors and Paladins. Heavy but protective.",
+                    ArmorType.Chainmail,
+                    defense: 28,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 210
+                ),
+
+                "reinforced mail armor" => new Armor(
+                    "Reinforced Mail Armor",
+                    "Chainmail with reinforced critical areas.",
+                    ArmorType.Chainmail,
+                    defense: 30,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 240
+                ),
+
+                "heavy steel chain" => new Armor(
+                    "Heavy Steel Chain",
+                    "Dense steel chainmail maximizing protection.",
+                    ArmorType.Chainmail,
+                    defense: 32,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 270
+                ),
+
+                "knight's chainmail" => new Armor(
+                    "Knight's Chainmail",
+                    "Chainmail worn by professional knights.",
+                    ArmorType.Chainmail,
+                    defense: 34,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 300
+                ),
+
+                "triple-link mail" => new Armor(
+                    "Triple-Link Mail",
+                    "Chainmail with tripled links for exceptional strength.",
+                    ArmorType.Chainmail,
+                    defense: 36,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 330
+                ),
+
+                "veteran's chain armor" => new Armor(
+                    "Veteran's Chain Armor",
+                    "Well-maintained chainmail from seasoned warriors.",
+                    ArmorType.Chainmail,
+                    defense: 38,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 360
+                ),
+
+                "masterwork chainmail" => new Armor(
+                    "Masterwork Chainmail",
+                    "Expertly crafted chainmail representing the pinnacle of mail armor.",
+                    ArmorType.Chainmail,
+                    defense: 40,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 400
+                ),
+
+                // PLATE ARMOR - Uncommon (7 pieces)
+                "steel plate set" => new Armor(
+                    "Steel Plate Set",
+                    "Quality steel plate armor. Maximum protection for Warriors and Paladins.",
+                    ArmorType.Plate,
+                    defense: 40,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 350
+                ),
+
+                "knight's plate armor" => new Armor(
+                    "Knight's Plate Armor",
+                    "Full plate armor worn by mounted knights.",
+                    ArmorType.Plate,
+                    defense: 43,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 400
+                ),
+
+                "reinforced steel plate" => new Armor(
+                    "Reinforced Steel Plate",
+                    "Steel plate with extra reinforcement in vital areas.",
+                    ArmorType.Plate,
+                    defense: 46,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 450
+                ),
+
+                "heavy steel plate" => new Armor(
+                    "Heavy Steel Plate",
+                    "Thick steel plate maximizing defensive capability.",
+                    ArmorType.Plate,
+                    defense: 49,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 500
+                ),
+
+                "fortress plate armor" => new Armor(
+                    "Fortress Plate Armor",
+                    "Plate armor designed to turn the wearer into a walking fortress.",
+                    ArmorType.Plate,
+                    defense: 52,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 550
+                ),
+
+                "polished steel plate" => new Armor(
+                    "Polished Steel Plate",
+                    "Gleaming steel plate that deflects blows with ease.",
+                    ArmorType.Plate,
+                    defense: 54,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 600
+                ),
+
+                "masterwork plate set" => new Armor(
+                    "Masterwork Plate Set",
+                    "Expertly crafted plate armor representing peak metalworking skill.",
+                    ArmorType.Plate,
+                    defense: 55,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 650
+                ),
+
+                // ROBE ARMOR - Uncommon (7 pieces)
+                "enchanted apprentice robe" => new Armor(
+                    "Enchanted Apprentice Robe",
+                    "Apprentice robe enhanced with protective enchantments. Good for advancing Mages.",
+                    ArmorType.Robe,
+                    defense: 8,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 70
+                ),
+
+                "adept's enchanted robe" => new Armor(
+                    "Adept's Enchanted Robe",
+                    "Magically enhanced robe for skilled practitioners.",
+                    ArmorType.Robe,
+                    defense: 10,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 90
+                ),
+
+                "scholar's warded garb" => new Armor(
+                    "Scholar's Warded Garb",
+                    "Academic robes inscribed with protective wards.",
+                    ArmorType.Robe,
+                    defense: 11,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 105
+                ),
+
+                "mage's silk vestments" => new Armor(
+                    "Mage's Silk Vestments",
+                    "Fine silk robes woven with magical threads.",
+                    ArmorType.Robe,
+                    defense: 12,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 120
+                ),
+
+                "runed cloth robe" => new Armor(
+                    "Runed Cloth Robe",
+                    "Robe covered in protective runes.",
+                    ArmorType.Robe,
+                    defense: 13,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 135
+                ),
+
+                "battlemage vestments" => new Armor(
+                    "Battlemage Vestments",
+                    "Combat-ready robes for mages who fight on the frontlines.",
+                    ArmorType.Robe,
+                    defense: 14,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 150
+                ),
+
+                "enchanted silk robe" => new Armor(
+                    "Enchanted Silk Robe",
+                    "Luxurious silk robe heavily enchanted for protection.",
+                    ArmorType.Robe,
+                    defense: 15,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 170
+                ),
+
+                // SHIELD - Uncommon (7 pieces)
+                "steel round shield" => new Armor(
+                    "Steel Round Shield",
+                    "Solid steel shield offering reliable protection. Warriors gain defensive bonuses.",
+                    ArmorType.Shield,
+                    defense: 22,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 150
+                ),
+
+                "reinforced kite shield" => new Armor(
+                    "Reinforced Kite Shield",
+                    "Large kite shield with reinforced construction.",
+                    ArmorType.Shield,
+                    defense: 24,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 180
+                ),
+
+                "steel heater shield" => new Armor(
+                    "Steel Heater Shield",
+                    "Triangular steel shield perfect for cavalry.",
+                    ArmorType.Shield,
+                    defense: 26,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 210
+                ),
+
+                "knight's shield" => new Armor(
+                    "Knight's Shield",
+                    "Heraldic shield carried by knights.",
+                    ArmorType.Shield,
+                    defense: 28,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 240
+                ),
+
+                "reinforced tower shield" => new Armor(
+                    "Reinforced Tower Shield",
+                    "Massive shield providing full-body coverage.",
+                    ArmorType.Shield,
+                    defense: 30,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 280
+                ),
+
+                "steel-banded shield" => new Armor(
+                    "Steel-Banded Shield",
+                    "Heavy shield with steel banding for extra durability.",
+                    ArmorType.Shield,
+                    defense: 32,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 320
+                ),
+
+                "guardian's bulwark" => new Armor(
+                    "Guardian's Bulwark",
+                    "Shield designed for professional guardians and defenders.",
+                    ArmorType.Shield,
+                    defense: 35,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 360
+                ),
+
+                // ===== RARE ARMOR (36 total) =====
+
+                // CLOTH ARMOR - Rare (6 pieces)
+                "shadowed cloth set" => new Armor(
+                    "Shadowed Cloth Set",
+                    "Dark cloth armor blending the wearer into shadows. Superior protection for Rogues and Mages.",
+                    ArmorType.Cloth,
+                    defense: 20,
+                    ItemRarity.Rare,
+                    level,
+                    value: 140
+                ),
+
+                "silent stalker garb" => new Armor(
+                    "Silent Stalker Garb",
+                    "Cloth armor woven with sound-dampening fibers.",
+                    ArmorType.Cloth,
+                    defense: 22,
+                    ItemRarity.Rare,
+                    level,
+                    value: 170
+                ),
+
+                "night weaver's attire" => new Armor(
+                    "Night Weaver's Attire",
+                    "Mystical cloth armor favored by those who work in darkness.",
+                    ArmorType.Cloth,
+                    defense: 24,
+                    ItemRarity.Rare,
+                    level,
+                    value: 200
+                ),
+
+                "crimson silk armor" => new Armor(
+                    "Crimson Silk Armor",
+                    "Blood-red silk reinforced with protective enchantments.",
+                    ArmorType.Cloth,
+                    defense: 26,
+                    ItemRarity.Rare,
+                    level,
+                    value: 240
+                ),
+
+                "windwalker's vestments" => new Armor(
+                    "Windwalker's Vestments",
+                    "Lightweight cloth that seems to move with the wind itself.",
+                    ArmorType.Cloth,
+                    defense: 28,
+                    ItemRarity.Rare,
+                    level,
+                    value: 280
+                ),
+
+                "master assassin's garb" => new Armor(
+                    "Master Assassin's Garb",
+                    "Elite cloth armor designed for deadly precision and stealth.",
+                    ArmorType.Cloth,
+                    defense: 30,
+                    ItemRarity.Rare,
+                    level,
+                    value: 330
+                ),
+
+                // LEATHER ARMOR - Rare (6 pieces)
+                "hunter's pride armor" => new Armor(
+                    "Hunter's Pride Armor",
+                    "Masterwork leather from legendary hunts. Exceptional for Rangers and Rogues.",
+                    ArmorType.Leather,
+                    defense: 30,
+                    ItemRarity.Rare,
+                    level,
+                    value: 260
+                ),
+
+                "ranger's masterwork set" => new Armor(
+                    "Ranger's Masterwork Set",
+                    "Expertly crafted leather armor perfected by master rangers.",
+                    ArmorType.Leather,
+                    defense: 33,
+                    ItemRarity.Rare,
+                    level,
+                    value: 310
+                ),
+
+                "tracker's elite leathers" => new Armor(
+                    "Tracker's Elite Leathers",
+                    "Premium leather gear for elite wilderness scouts.",
+                    ArmorType.Leather,
+                    defense: 36,
+                    ItemRarity.Rare,
+                    level,
+                    value: 360
+                ),
+
+                "shadowstep armor" => new Armor(
+                    "Shadowstep Armor",
+                    "Enchanted leather allowing silent, swift movement.",
+                    ArmorType.Leather,
+                    defense: 39,
+                    ItemRarity.Rare,
+                    level,
+                    value: 420
+                ),
+
+                "beast lord's hide" => new Armor(
+                    "Beast Lord's Hide",
+                    "Leather from apex predators, offering incredible protection.",
+                    ArmorType.Leather,
+                    defense: 42,
+                    ItemRarity.Rare,
+                    level,
+                    value: 480
+                ),
+
+                "windstrider leathers" => new Armor(
+                    "Windstrider Leathers",
+                    "Legendary leather armor granting unmatched mobility.",
+                    ArmorType.Leather,
+                    defense: 45,
+                    ItemRarity.Rare,
+                    level,
+                    value: 550
+                ),
+
+                // CHAINMAIL ARMOR - Rare (6 pieces)
+                "champion's chainmail" => new Armor(
+                    "Champion's Chainmail",
+                    "Chain armor worn by tournament champions. Excellent for Warriors and Paladins.",
+                    ArmorType.Chainmail,
+                    defense: 45,
+                    ItemRarity.Rare,
+                    level,
+                    value: 480
+                ),
+
+                "crusader's mail" => new Armor(
+                    "Crusader's Mail",
+                    "Holy chainmail blessed for righteous combat.",
+                    ArmorType.Chainmail,
+                    defense: 48,
+                    ItemRarity.Rare,
+                    level,
+                    value: 550
+                ),
+
+                "mithril chain set" => new Armor(
+                    "Mithril Chain Set",
+                    "Rare mithril chainmail combining strength and lightness.",
+                    ArmorType.Chainmail,
+                    defense: 52,
+                    ItemRarity.Rare,
+                    level,
+                    value: 630
+                ),
+
+                "commander's mail armor" => new Armor(
+                    "Commander's Mail Armor",
+                    "Chainmail designed for battlefield commanders.",
+                    ArmorType.Chainmail,
+                    defense: 56,
+                    ItemRarity.Rare,
+                    level,
+                    value: 720
+                ),
+
+                "warlord's chain set" => new Armor(
+                    "Warlord's Chain Set",
+                    "Fearsome chainmail worn by conquering warlords.",
+                    ArmorType.Chainmail,
+                    defense: 60,
+                    ItemRarity.Rare,
+                    level,
+                    value: 820
+                ),
+
+                "blessed mithril mail" => new Armor(
+                    "Blessed Mithril Mail",
+                    "Divine mithril chainmail offering supreme protection.",
+                    ArmorType.Chainmail,
+                    defense: 65,
+                    ItemRarity.Rare,
+                    level,
+                    value: 930
+                ),
+
+                // PLATE ARMOR - Rare (6 pieces)
+                "warlord's plate set" => new Armor(
+                    "Warlord's Plate Set",
+                    "Heavy plate armor commanding respect on the battlefield. Peak protection for Warriors and Paladins.",
+                    ArmorType.Plate,
+                    defense: 65,
+                    ItemRarity.Rare,
+                    level,
+                    value: 780
+                ),
+
+                "commander's full plate" => new Armor(
+                    "Commander's Full Plate",
+                    "Complete plate armor for military leaders.",
+                    ArmorType.Plate,
+                    defense: 70,
+                    ItemRarity.Rare,
+                    level,
+                    value: 900
+                ),
+
+                "mithril plate armor" => new Armor(
+                    "Mithril Plate Armor",
+                    "Legendary mithril plate lighter yet stronger than steel.",
+                    ArmorType.Plate,
+                    defense: 75,
+                    ItemRarity.Rare,
+                    level,
+                    value: 1030
+                ),
+
+                "general's war plate" => new Armor(
+                    "General's War Plate",
+                    "Battle-tested plate armor worn by great generals.",
+                    ArmorType.Plate,
+                    defense: 78,
+                    ItemRarity.Rare,
+                    level,
+                    value: 1170
+                ),
+
+                "champion's plate set" => new Armor(
+                    "Champion's Plate Set",
+                    "Plate armor forged for arena champions.",
+                    ArmorType.Plate,
+                    defense: 82,
+                    ItemRarity.Rare,
+                    level,
+                    value: 1320
+                ),
+
+                "crusader's holy plate" => new Armor(
+                    "Crusader's Holy Plate",
+                    "Sacred plate armor blessed with divine protection.",
+                    ArmorType.Plate,
+                    defense: 85,
+                    ItemRarity.Rare,
+                    level,
+                    value: 1480
+                ),
+
+                // ROBE ARMOR - Rare (6 pieces)
+                "archmage apprentice robe" => new Armor(
+                    "Archmage Apprentice Robe",
+                    "Robe granted to promising students of the archmage. Powerful for advancing Mages.",
+                    ArmorType.Robe,
+                    defense: 18,
+                    ItemRarity.Rare,
+                    level,
+                    value: 210
+                ),
+
+                "sorcerer's vestments" => new Armor(
+                    "Sorcerer's Vestments",
+                    "Dark robes channeling forbidden magical energies.",
+                    ArmorType.Robe,
+                    defense: 20,
+                    ItemRarity.Rare,
+                    level,
+                    value: 250
+                ),
+
+                "warlock's binding robe" => new Armor(
+                    "Warlock's Binding Robe",
+                    "Robe inscribed with protective binding runes.",
+                    ArmorType.Robe,
+                    defense: 22,
+                    ItemRarity.Rare,
+                    level,
+                    value: 300
+                ),
+
+                "enchanter's silk set" => new Armor(
+                    "Enchanter's Silk Set",
+                    "Masterfully enchanted silk offering superior magical protection.",
+                    ArmorType.Robe,
+                    defense: 24,
+                    ItemRarity.Rare,
+                    level,
+                    value: 350
+                ),
+
+                "mystic sage robes" => new Armor(
+                    "Mystic Sage Robes",
+                    "Ancient robes passed down through generations of sages.",
+                    ArmorType.Robe,
+                    defense: 26,
+                    ItemRarity.Rare,
+                    level,
+                    value: 410
+                ),
+
+                "stormweaver vestments" => new Armor(
+                    "Stormweaver Vestments",
+                    "Robes crackling with elemental storm energy.",
+                    ArmorType.Robe,
+                    defense: 28,
+                    ItemRarity.Rare,
+                    level,
+                    value: 480
+                ),
+
+                // SHIELD - Rare (6 pieces)
+                "defender's bastion" => new Armor(
+                    "Defender's Bastion",
+                    "Formidable shield designed for professional defenders. Warriors gain significant bonuses.",
+                    ArmorType.Shield,
+                    defense: 40,
+                    ItemRarity.Rare,
+                    level,
+                    value: 430
+                ),
+
+                "knight commander's shield" => new Armor(
+                    "Knight Commander's Shield",
+                    "Shield bearing the crest of knight commanders.",
+                    ArmorType.Shield,
+                    defense: 43,
+                    ItemRarity.Rare,
+                    level,
+                    value: 500
+                ),
+
+                "tower of adamant" => new Armor(
+                    "Tower of Adamant",
+                    "Massive adamantine shield providing unbreakable defense.",
+                    ArmorType.Shield,
+                    defense: 46,
+                    ItemRarity.Rare,
+                    level,
+                    value: 580
+                ),
+
+                "guardian's oath shield" => new Armor(
+                    "Guardian's Oath Shield",
+                    "Shield sworn to protect its bearer at all costs.",
+                    ArmorType.Shield,
+                    defense: 49,
+                    ItemRarity.Rare,
+                    level,
+                    value: 670
+                ),
+
+                "mithril war shield" => new Armor(
+                    "Mithril War Shield",
+                    "Lightweight mithril shield perfect for combat mobility.",
+                    ArmorType.Shield,
+                    defense: 52,
+                    ItemRarity.Rare,
+                    level,
+                    value: 770
+                ),
+
+                "bulwark of champions" => new Armor(
+                    "Bulwark of Champions",
+                    "Legendary shield carried by the greatest defenders.",
+                    ArmorType.Shield,
+                    defense: 55,
+                    ItemRarity.Rare,
+                    level,
+                    value: 880
+                ),
+
+                // ========================================
+                // EPIC ARMOR (30 total - 5 per type)
+                // ========================================
+
+                // Cloth - Epic (5)
+                "phantom cloth set" => new Armor(
+                    "Phantom Cloth Set",
+                    "Ethereal cloth armor that phases between dimensions. Elite protection for Rogues and Mages.",
+                    ArmorType.Cloth,
+                    defense: 35,
+                    ItemRarity.Epic,
+                    level,
+                    value: 420
+                ),
+
+                "wraith silk armor" => new Armor(
+                    "Wraith Silk Armor",
+                    "Armor woven from spectral silk, granting supernatural mobility.",
+                    ArmorType.Cloth,
+                    defense: 40,
+                    ItemRarity.Epic,
+                    level,
+                    value: 580
+                ),
+
+                "spectral weave set" => new Armor(
+                    "Spectral Weave Set",
+                    "Ghostly cloth armor that deflects attacks through the ethereal plane.",
+                    ArmorType.Cloth,
+                    defense: 43,
+                    ItemRarity.Epic,
+                    level,
+                    value: 720
+                ),
+
+                "ethereal shroud" => new Armor(
+                    "Ethereal Shroud",
+                    "Mystical robes that blur the line between material and spirit.",
+                    ArmorType.Cloth,
+                    defense: 47,
+                    ItemRarity.Epic,
+                    level,
+                    value: 890
+                ),
+
+                "voidweave vestments" => new Armor(
+                    "Voidweave Vestments",
+                    "Cloth armor infused with the essence of the void itself.",
+                    ArmorType.Cloth,
+                    defense: 50,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1050
+                ),
+
+                // Leather - Epic (5)
+                "dragonhide armor" => new Armor(
+                    "Dragonhide Armor",
+                    "Armor crafted from the hide of a fallen dragon. Exceptional protection.",
+                    ArmorType.Leather,
+                    defense: 50,
+                    ItemRarity.Epic,
+                    level,
+                    value: 720
+                ),
+
+                "basilisk scale set" => new Armor(
+                    "Basilisk Scale Set",
+                    "Leather armor reinforced with basilisk scales, highly resistant to magic.",
+                    ArmorType.Leather,
+                    defense: 56,
+                    ItemRarity.Epic,
+                    level,
+                    value: 980
+                ),
+
+                "serpent skin armor" => new Armor(
+                    "Serpent Skin Armor",
+                    "Sleek armor made from the skin of a massive serpent.",
+                    ArmorType.Leather,
+                    defense: 60,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1180
+                ),
+
+                "wyvern leather set" => new Armor(
+                    "Wyvern Leather Set",
+                    "Leather armor from a wyvern, offering superior flexibility and protection.",
+                    ArmorType.Leather,
+                    defense: 65,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1420
+                ),
+
+                "chimera hide armor" => new Armor(
+                    "Chimera Hide Armor",
+                    "Legendary leather armor crafted from chimera hide, resistant to all elements.",
+                    ArmorType.Leather,
+                    defense: 70,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1680
+                ),
+
+                // Chainmail - Epic (5)
+                "dragonscale mail" => new Armor(
+                    "Dragonscale Mail",
+                    "Chainmail forged with dragon scales woven into the links.",
+                    ArmorType.Chainmail,
+                    defense: 70,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1150
+                ),
+
+                "titan's chainmail" => new Armor(
+                    "Titan's Chainmail",
+                    "Massive chainmail once worn by ancient titans.",
+                    ArmorType.Chainmail,
+                    defense: 77,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1540
+                ),
+
+                "colossus mail" => new Armor(
+                    "Colossus Mail",
+                    "Heavy chainmail designed for warriors of immense strength.",
+                    ArmorType.Chainmail,
+                    defense: 83,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1890
+                ),
+
+                "behemoth chain set" => new Armor(
+                    "Behemoth Chain Set",
+                    "Chainmail forged from the bones of a behemoth, nearly impenetrable.",
+                    ArmorType.Chainmail,
+                    defense: 89,
+                    ItemRarity.Epic,
+                    level,
+                    value: 2280
+                ),
+
+                "adamantine chainmail" => new Armor(
+                    "Adamantine Chainmail",
+                    "Chainmail crafted from adamantine, the strongest metal known.",
+                    ArmorType.Chainmail,
+                    defense: 95,
+                    ItemRarity.Epic,
+                    level,
+                    value: 2720
+                ),
+
+                // Plate - Epic (5)
+                "dragonplate armor" => new Armor(
+                    "Dragonplate Armor",
+                    "Full plate armor forged from dragon bones and reinforced with scales.",
+                    ArmorType.Plate,
+                    defense: 95,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1880
+                ),
+
+                "dreadnought plate" => new Armor(
+                    "Dreadnought Plate",
+                    "Massive plate armor that makes the wearer an unstoppable force.",
+                    ArmorType.Plate,
+                    defense: 103,
+                    ItemRarity.Epic,
+                    level,
+                    value: 2480
+                ),
+
+                "juggernaut armor" => new Armor(
+                    "Juggernaut Armor",
+                    "Plate armor designed for warriors who dominate the battlefield.",
+                    ArmorType.Plate,
+                    defense: 110,
+                    ItemRarity.Epic,
+                    level,
+                    value: 3020
+                ),
+
+                "titan forged plate" => new Armor(
+                    "Titan Forged Plate",
+                    "Plate armor forged in the fires of titans, unmatched in durability.",
+                    ArmorType.Plate,
+                    defense: 117,
+                    ItemRarity.Epic,
+                    level,
+                    value: 3620
+                ),
+
+                "colossus battleplate" => new Armor(
+                    "Colossus Battleplate",
+                    "The ultimate heavy armor, turning the wearer into a living fortress.",
+                    ArmorType.Plate,
+                    defense: 125,
+                    ItemRarity.Epic,
+                    level,
+                    value: 4280
+                ),
+
+                // Robe - Epic (5)
+                "astral robes" => new Armor(
+                    "Astral Robes",
+                    "Robes woven from astral energy, channeling cosmic power.",
+                    ArmorType.Robe,
+                    defense: 30,
+                    ItemRarity.Epic,
+                    level,
+                    value: 620
+                ),
+
+                "cosmic vestments" => new Armor(
+                    "Cosmic Vestments",
+                    "Robes that shimmer with the light of distant stars.",
+                    ArmorType.Robe,
+                    defense: 35,
+                    ItemRarity.Epic,
+                    level,
+                    value: 860
+                ),
+
+                "elemental robes" => new Armor(
+                    "Elemental Robes",
+                    "Robes infused with the power of all four elements.",
+                    ArmorType.Robe,
+                    defense: 38,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1050
+                ),
+
+                "arcane mastery robes" => new Armor(
+                    "Arcane Mastery Robes",
+                    "Robes worn by masters of the arcane arts, amplifying magical power.",
+                    ArmorType.Robe,
+                    defense: 41,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1280
+                ),
+
+                "celestial vestments" => new Armor(
+                    "Celestial Vestments",
+                    "Holy robes blessed by celestial beings, radiating divine energy.",
+                    ArmorType.Robe,
+                    defense: 45,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1540
+                ),
+
+                // Shield - Epic (5)
+                "dragonscale aegis" => new Armor(
+                    "Dragonscale Aegis",
+                    "Shield covered in dragon scales, offering exceptional protection.",
+                    ArmorType.Shield,
+                    defense: 60,
+                    ItemRarity.Epic,
+                    level,
+                    value: 980
+                ),
+
+                "aegis of titans" => new Armor(
+                    "Aegis of Titans",
+                    "Legendary shield once carried by titan warriors.",
+                    ArmorType.Shield,
+                    defense: 66,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1320
+                ),
+
+                "bulwark of heroes" => new Armor(
+                    "Bulwark of Heroes",
+                    "Shield that has protected countless heroes in battle.",
+                    ArmorType.Shield,
+                    defense: 71,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1620
+                ),
+
+                "fortress shield" => new Armor(
+                    "Fortress Shield",
+                    "Massive shield that can withstand any assault.",
+                    ArmorType.Shield,
+                    defense: 75,
+                    ItemRarity.Epic,
+                    level,
+                    value: 1960
+                ),
+
+                "immortal guardian" => new Armor(
+                    "Immortal Guardian",
+                    "Shield said to make its bearer nearly invincible.",
+                    ArmorType.Shield,
+                    defense: 80,
+                    ItemRarity.Epic,
+                    level,
+                    value: 2340
                 ),
 
                 _ => throw new ArgumentException($"Armor '{armorName}' not found in database.")
@@ -3543,15 +5274,197 @@ namespace GameLogic.Items
         {
             return new List<(string, ArmorType, ArmorSlot, ItemRarity)>
             {
-                ("Rusty Chainmail", ArmorType.Chainmail, ArmorSlot.Chest, ItemRarity.Common),
-                ("Iron Chestplate", ArmorType.Plate, ArmorSlot.Chest, ItemRarity.Common),
-                ("Steel Chestplate", ArmorType.Plate, ArmorSlot.Chest, ItemRarity.Uncommon),
-                ("Leather Cap", ArmorType.Leather, ArmorSlot.Head, ItemRarity.Common),
-                ("Iron Helmet", ArmorType.Plate, ArmorSlot.Head, ItemRarity.Common),
-                ("Cloth Pants", ArmorType.Cloth, ArmorSlot.Legs, ItemRarity.Common),
-                ("Leather Leggings", ArmorType.Leather, ArmorSlot.Legs, ItemRarity.Common),
-                ("Apprentice Robe", ArmorType.Robe, ArmorSlot.Chest, ItemRarity.Common),
-                ("Arcane Robe", ArmorType.Robe, ArmorSlot.Chest, ItemRarity.Rare)
+                // COMMON ARMOR (72 total)
+
+                // Cloth - Common (12)
+                ("Tattered Cloth Set", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Simple Cloth Armor", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Patched Cloth Garb", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Worn Traveler's Clothes", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Rough Linen Set", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Peasant's Garb", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Cotton Padding", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Merchant's Attire", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Quilted Cloth Armor", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Reinforced Tunic", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Thick Cloth Wraps", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Sturdy Linen Armor", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Common),
+
+                // Leather - Common (12)
+                ("Cracked Leather Set", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Worn Leather Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Rough Hide Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Simple Leather Set", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Hunting Leathers", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Scout's Leather", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Toughened Hide Set", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Traveler's Leathers", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Reinforced Leather Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Thick Hide Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Boiled Leather Set", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Studded Leather Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Common),
+
+                // Chainmail - Common (12)
+                ("Rusty Chainmail Set", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Patched Chain Armor", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Old Chainmail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Iron Chain Set", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Simple Chainmail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Militia Chain Armor", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Basic Mail Set", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Soldier's Chainmail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Reinforced Chain Set", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Heavy Iron Mail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Double-Link Chainmail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Layered Chain Armor", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Common),
+
+                // Plate - Common (12)
+                ("Battered Plate Set", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Scrap Plate Armor", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Dented Iron Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Crude Plate Set", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Basic Iron Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Foot Soldier's Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Iron Full Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Garrison Plate Armor", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Reinforced Iron Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Heavy Plate Set", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Battle-Worn Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Tempered Iron Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Common),
+
+                // Robe - Common (12)
+                ("Tattered Apprentice Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Simple Novice Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Initiate's Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Scholar's Garb", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Acolyte's Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Mage Apprentice Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Woven Silk Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Mystic's Vestments", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Enchanted Cloth Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Adept's Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Runed Mage Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Warded Silk Vestments", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Common),
+
+                // Shield - Common (12)
+                ("Wooden Buckler", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Cracked Round Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Small Wooden Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Leather-Bound Buckler", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Iron-Banded Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Round Wooden Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Militia Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Iron Heater Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Reinforced Kite Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Soldier's Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Heavy Wooden Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+                ("Iron-Rimmed Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Common),
+
+                // UNCOMMON ARMOR (42 total)
+
+                // Cloth - Uncommon (7)
+                ("Reinforced Cloth Set", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Sturdy Cotton Armor", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Durable Linen Set", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Padded Silk Armor", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Woven Hemp Set", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Layered Cloth Armor", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Reinforced Silk Garb", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Uncommon),
+
+                // Leather - Uncommon (7)
+                ("Hardened Leather Set", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Quality Hide Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Reinforced Boiled Leather", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Studded Ranger Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Heavy Leather Set", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Riveted Leather Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Superior Studded Leather", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Uncommon),
+
+                // Chainmail - Uncommon (7)
+                ("Steel Chainmail Set", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Reinforced Mail Armor", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Heavy Steel Chain", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Knight's Chainmail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Triple-Link Mail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Veteran's Chain Armor", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Masterwork Chainmail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Uncommon),
+
+                // Plate - Uncommon (7)
+                ("Steel Plate Set", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Knight's Plate Armor", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Reinforced Steel Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Heavy Steel Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Fortress Plate Armor", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Polished Steel Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Masterwork Plate Set", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Uncommon),
+
+                // Robe - Uncommon (7)
+                ("Enchanted Apprentice Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Adept's Enchanted Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Scholar's Warded Garb", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Mage's Silk Vestments", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Runed Cloth Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Battlemage Vestments", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Enchanted Silk Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Uncommon),
+
+                // Shield - Uncommon (7)
+                ("Steel Round Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Reinforced Kite Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Steel Heater Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Knight's Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Reinforced Tower Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Steel-Banded Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Uncommon),
+                ("Guardian's Bulwark", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Uncommon),
+
+                // RARE ARMOR (36 total)
+
+                // Cloth - Rare (6)
+                ("Shadowed Cloth Set", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Silent Stalker Garb", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Night Weaver's Attire", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Crimson Silk Armor", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Windwalker's Vestments", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Master Assassin's Garb", ArmorType.Cloth, ArmorSlot.FullSet, ItemRarity.Rare),
+
+                // Leather - Rare (6)
+                ("Hunter's Pride Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Ranger's Masterwork Set", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Tracker's Elite Leathers", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Shadowstep Armor", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Beast Lord's Hide", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Windstrider Leathers", ArmorType.Leather, ArmorSlot.FullSet, ItemRarity.Rare),
+
+                // Chainmail - Rare (6)
+                ("Champion's Chainmail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Crusader's Mail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Mithril Chain Set", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Commander's Mail Armor", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Warlord's Chain Set", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Blessed Mithril Mail", ArmorType.Chainmail, ArmorSlot.FullSet, ItemRarity.Rare),
+
+                // Plate - Rare (6)
+                ("Warlord's Plate Set", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Commander's Full Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Mithril Plate Armor", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("General's War Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Champion's Plate Set", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Crusader's Holy Plate", ArmorType.Plate, ArmorSlot.FullSet, ItemRarity.Rare),
+
+                // Robe - Rare (6)
+                ("Archmage Apprentice Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Sorcerer's Vestments", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Warlock's Binding Robe", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Enchanter's Silk Set", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Mystic Sage Robes", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Stormweaver Vestments", ArmorType.Robe, ArmorSlot.FullSet, ItemRarity.Rare),
+
+                // Shield - Rare (6)
+                ("Defender's Bastion", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Knight Commander's Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Tower of Adamant", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Guardian's Oath Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Mithril War Shield", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Rare),
+                ("Bulwark of Champions", ArmorType.Shield, ArmorSlot.FullSet, ItemRarity.Rare)
             };
         }
 

@@ -174,6 +174,7 @@ namespace GameLogic.Data
             SaveData data = new SaveData
             {
                 PlayerName = player.Name,
+                PlayerClass = player.Class.ToString(),  // Save class as string
                 Level = player.Level,
                 Experience = player.Experience,
                 Health = player.Health,
@@ -353,6 +354,21 @@ namespace GameLogic.Data
         public static void ApplySaveDataToPlayer(SaveData saveData, Player player)
         {
             player.Name = saveData.PlayerName;
+
+            // Restore player class (parse string to enum)
+            if (!string.IsNullOrEmpty(saveData.PlayerClass))
+            {
+                if (Enum.TryParse<PlayerClass>(saveData.PlayerClass, out PlayerClass playerClass))
+                {
+                    player.Class = playerClass;
+                }
+                else
+                {
+                    Console.WriteLine($"Warning: Invalid player class '{saveData.PlayerClass}'. Defaulting to Warrior.");
+                    player.Class = PlayerClass.Warrior;
+                }
+            }
+
             player.Level = saveData.Level;
             player.Experience = saveData.Experience;
             player.Health = saveData.Health;

@@ -16,16 +16,11 @@ namespace GameLogic.Items
     }
 
     /// <summary>
-    /// Armor slot for different body parts
+    /// Armor slot - represents a complete armor set
     /// </summary>
     public enum ArmorSlot
     {
-        Head,
-        Chest,
-        Legs,
-        Feet,
-        Hands,
-        Shield
+        FullSet  // Represents complete armor ensemble (helmet, chestplate, greaves, gauntlets, boots)
     }
 
     /// <summary>
@@ -57,7 +52,6 @@ namespace GameLogic.Items
             string name,
             string description,
             ArmorType type,
-            ArmorSlot slot,
             int defense,
             ItemRarity rarity = ItemRarity.Common,
             int level = 1,
@@ -65,7 +59,7 @@ namespace GameLogic.Items
         ) : base(name, description, rarity, ItemCategory.Armor, value)
         {
             Type = type;
-            Slot = slot;
+            Slot = ArmorSlot.FullSet;  // All armor is now full sets
             Level = Math.Clamp(level, 1, MaxLevel);
 
             // Store base stats for scaling calculations
