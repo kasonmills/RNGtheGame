@@ -4,6 +4,7 @@ using GameLogic.Combat;
 using GameLogic.Entities.Enemies;
 using GameLogic.Items;
 using GameLogic.Systems;
+using Enemy = GameLogic.Entities.Enemies.EnemyBase;
 
 namespace GameLogic.Entities.NPCs.Companions
 {
@@ -53,7 +54,8 @@ namespace GameLogic.Entities.NPCs.Companions
         /// </summary>
         private int CalculateExperienceRequired(int level)
         {
-            return (int)(Data.GameDatabase.Config.BaseXPPerLevel * Math.Pow(Data.GameDatabase.Config.XPScalingFactor, level - 1));
+            // Base XP formula: 100 * level scaling factor
+            return (int)(100 * Math.Pow(1.15, level - 1));
         }
 
         /// <summary>

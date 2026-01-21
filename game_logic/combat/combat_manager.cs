@@ -1,7 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using GameLogic.Abilities;
+using GameLogic.Entities;
 using GameLogic.Entities.Player;
 using GameLogic.Entities.Enemies;
+using GameLogic.Entities.NPCs;
+using GameLogic.Entities.NPCs.Companions;
 using GameLogic.Systems;
 using Enemy = GameLogic.Entities.Enemies.EnemyBase;
 
@@ -50,7 +55,7 @@ namespace GameLogic.Combat
         /// <param name="companions">List of active companions (can be null or empty)</param>
         /// <param name="bossManager">Optional boss manager for boss encounters</param>
         /// <returns>True if player won, False if player lost</returns>
-        public bool StartCombat(Player player, Enemy enemy, List<Entities.NPCs.Companions.CompanionBase> companions = null, Progression.BossManager bossManager = null)
+        public bool StartCombat(Player player, Enemy enemy, List<Entity> companions = null, Progression.BossManager bossManager = null)
         {
             _player = player;
             _enemy = enemy;
@@ -72,7 +77,9 @@ namespace GameLogic.Combat
             {
                 foreach (var companion in companions)
                 {
-                    if (companion.InParty && companion.IsAlive())
+                    // Cast to NPCBase to access InParty property
+                    var npcCompanion = companion as NPCBase;
+                    if (npcCompanion != null && npcCompanion.InParty && companion.IsAlive())
                     {
                         _allCombatants.Add(companion);
                     }
@@ -452,7 +459,7 @@ namespace GameLogic.Combat
                             return CombatAction.Attack(_player, _enemy);
                         }
 
-                        return CombatAction.UseAbility(_player, _enemy, _player.SelectedAbility);
+                        return CombatAction.UseAbility(_player, _player.SelectedAbility, _enemy);
                     }
                     else
                     {
@@ -558,41 +565,51 @@ namespace GameLogic.Combat
         /// Handle a companion's turn
         /// Uses companion AI to decide action
         /// </summary>
-        private void CompanionTurn(Entities.NPCs.Companions.CompanionBase companion)
+        private void CompanionTurn(Entity companion)
         {
             Console.WriteLine($"{companion.Name}'s HP: {companion.Health}/{companion.MaxHealth}");
 
+            // Cast to CompanionBase to access companion-specific methods
+            var companionBase = companion as CompanionBase;
+            if (companionBase == null)
+            {
+                // Fallback: basic attack if not a proper companion
+                Console.WriteLine($"{companion.Name} attacks!");
+                companion.LastAction = Entities.CombatAction.Attack;
+                return;
+            }
+
             // Use companion AI to decide action: 0 = Attack, 1 = Ability, 2 = Defend
-            int actionDecision = companion.DecideCombatAction(_enemy, _rngManager);
+            int actionDecision = companionBase.DecideCombatAction(_enemy, _rngManager);
 
             switch (actionDecision)
             {
                 case 1: // Use Ability
-                    if (companion.UniqueAbility != null && !companion.UniqueAbility.IsOnCooldown())
+                    if (companionBase.UniqueAbility != null && !companionBase.UniqueAbility.IsOnCooldown())
                     {
-                        Console.WriteLine($"{companion.Name} uses {companion.UniqueAbility.Name}!");
-                        companion.UniqueAbility.Execute(companion, _enemy, _rngManager);
+                        Console.WriteLine($"{companionBase.Name} uses {companionBase.UniqueAbility.Name}!");
+                        companionBase.UniqueAbility.Execute(companionBase, _enemy, _rngManager);
                         companion.LastAction = Entities.CombatAction.UseAbility;
                     }
                     else
                     {
                         // Fallback to attack if ability not available
-                        Console.WriteLine($"{companion.Name} attacks!");
-                        companion.AttackEnemy(_enemy, _damageCalculator, _rngManager, _player);
+                        Console.WriteLine($"{companionBase.Name} attacks!");
+                        companionBase.AttackEnemy(_enemy, _damageCalculator, _rngManager, _player);
                         companion.LastAction = Entities.CombatAction.Attack;
                     }
                     break;
 
                 case 2: // Defend
-                    Console.WriteLine($"{companion.Name} takes a defensive stance!");
+                    Console.WriteLine($"{companionBase.Name} takes a defensive stance!");
                     _defendingEntities[companion] = true;
                     companion.LastAction = Entities.CombatAction.Defend;
                     break;
 
                 case 0: // Attack
                 default:
-                    Console.WriteLine($"{companion.Name} attacks!");
-                    companion.AttackEnemy(_enemy, _damageCalculator, _rngManager, _player);
+                    Console.WriteLine($"{companionBase.Name} attacks!");
+                    companionBase.AttackEnemy(_enemy, _damageCalculator, _rngManager, _player);
                     companion.LastAction = Entities.CombatAction.Attack;
                     break;
             }
@@ -620,7 +637,7 @@ namespace GameLogic.Combat
                     // Always attack, use ability when available
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 70)
                     {
-                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
                     }
                     return CombatAction.Attack(_enemy, target);
 
@@ -632,7 +649,7 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 40)
                     {
-                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
                     }
                     return CombatAction.Attack(_enemy, target);
 
@@ -640,7 +657,7 @@ namespace GameLogic.Combat
                     // Use abilities strategically
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 80)
                     {
-                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
                     }
                     if (healthPercent < 0.25f && _rngManager.Roll(1, 100) <= 50)
                     {
@@ -652,7 +669,7 @@ namespace GameLogic.Combat
                     // Always attack, rarely defend, use abilities aggressively
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 90)
                     {
-                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
                     }
                     return CombatAction.Attack(_enemy, target);
 
@@ -668,7 +685,7 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 50)
                     {
-                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
                     }
                     return CombatAction.Attack(_enemy, target);
 
@@ -681,7 +698,7 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 60)
                     {
-                        return CombatAction.UseAbility(_enemy, target, _enemy.SpecialAbility);
+                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
                     }
                     return CombatAction.Attack(_enemy, target);
             }

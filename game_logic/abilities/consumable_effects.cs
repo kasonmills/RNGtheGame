@@ -152,7 +152,7 @@ namespace GameLogic.Abilities
 
         public override void ApplyEffect(Entity target, RNGManager rng)
         {
-            int damage = rng.Roll(_minDamage, _maxDamage) * Stacks;
+            int damage = rng.Roll(_minDamage, _maxDamage) * StackCount;
             target.TakeDamage(damage);
             Console.WriteLine($"{target.Name} takes {damage} burn damage!");
         }
@@ -181,7 +181,7 @@ namespace GameLogic.Abilities
 
         public override void ApplyEffect(Entity target, RNGManager rng)
         {
-            int damage = Potency * Stacks;
+            int damage = Potency * StackCount;
             target.TakeDamage(damage);
             Console.WriteLine($"{target.Name} loses {damage} HP from bleeding!");
         }

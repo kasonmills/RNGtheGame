@@ -38,8 +38,8 @@ namespace GameLogic.Entities.NPCs.Companions
             UniqueAbility = new BackstabAbility(this);
 
             // Equip starting weapon (daggers for rogues)
-            EquippedWeapon = Data.GameDatabase.GetWeapon("Worn Dagger");
-            EquippedArmor = Data.GameDatabase.GetArmor("Worn Leather");
+            EquippedWeapon = Items.ItemDatabase.GetWeapon("worn dagger");
+            EquippedArmor = Items.ItemDatabase.GetArmor("worn leather");
         }
 
         /// <summary>

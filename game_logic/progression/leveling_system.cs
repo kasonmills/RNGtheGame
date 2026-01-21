@@ -113,8 +113,7 @@ namespace GameLogic.Progression
                 <= 10 => "Adept",
                 <= 15 => "Expert",
                 <= 19 => "Master",
-                >= 20 => "Legendary",
-                _ => "Unknown"
+                _ => "Legendary"
             };
         }
 

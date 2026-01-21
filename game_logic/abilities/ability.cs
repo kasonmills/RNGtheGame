@@ -88,6 +88,25 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
+        /// Check if ability is on cooldown
+        /// </summary>
+        public bool IsOnCooldown()
+        {
+            return CurrentCooldown > 0;
+        }
+
+        /// <summary>
+        /// Tick cooldown (reduce by 1)
+        /// </summary>
+        public void TickCooldown()
+        {
+            if (CurrentCooldown > 0)
+            {
+                CurrentCooldown--;
+            }
+        }
+
+        /// <summary>
         /// Level up the ability, increasing its power
         /// </summary>
         public void LevelUp()
@@ -300,7 +319,8 @@ namespace GameLogic.Abilities
         AllEnemies,     // Affects all enemies
         SingleAlly,     // Target one ally (for team abilities)
         AllAllies,      // Affects all allies
-        Area            // Affects area (enemies and allies)
+        Area,           // Affects area (enemies and allies)
+        Ally            // Alias for SingleAlly
     }
 
     /// <summary>

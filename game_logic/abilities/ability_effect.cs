@@ -40,6 +40,18 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
+        /// Constructor with name
+        /// </summary>
+        protected AbilityEffect(string name, int potency, int duration)
+        {
+            Name = name;
+            Duration = duration;
+            MaxDuration = duration;
+            Potency = potency;
+            StackCount = 1;
+        }
+
+        /// <summary>
         /// Apply the effect each round
         /// This is called during the entity's turn processing
         /// </summary>

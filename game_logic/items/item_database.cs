@@ -4525,8 +4525,8 @@ namespace GameLogic.Items
                     value: 150
                 ),
 
-                "reinforced kite shield" => new Armor(
-                    "Reinforced Kite Shield",
+                "heavy kite shield" => new Armor(
+                    "Heavy Kite Shield",
                     "Large kite shield with reinforced construction.",
                     ArmorType.Shield,
                     defense: 24,
@@ -5871,6 +5871,44 @@ namespace GameLogic.Items
             var consumables = GetAllConsumables();
             var chosen = consumables[rng.Next(consumables.Count)];
             return GetConsumable(chosen.Name, level, quantity: rng.Next(1, 5));
+        }
+
+        /// <summary>
+        /// Get a health potion appropriate for the given level
+        /// </summary>
+        public static Consumable GetHealthPotion(int level)
+        {
+            // Scale potion type based on level
+            if (level >= 20)
+            {
+                return GetConsumable("greater health potion", level);
+            }
+            else if (level >= 10)
+            {
+                return GetConsumable("health potion", level);
+            }
+            else
+            {
+                return GetConsumable("minor health potion", level);
+            }
+        }
+
+        /// <summary>
+        /// Get a weapon by name with min/max level range (picks the average)
+        /// </summary>
+        public static Weapon GetWeapon(string weaponName, int minLevel, int maxLevel)
+        {
+            int level = (minLevel + maxLevel) / 2;
+            return GetWeapon(weaponName, level);
+        }
+
+        /// <summary>
+        /// Get armor by name with min/max level range (picks the average)
+        /// </summary>
+        public static Armor GetArmor(string armorName, int minLevel, int maxLevel)
+        {
+            int level = (minLevel + maxLevel) / 2;
+            return GetArmor(armorName, level);
         }
 
         #endregion

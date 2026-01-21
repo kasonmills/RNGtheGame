@@ -75,7 +75,9 @@ namespace GameLogic.World
             Console.WriteLine("Press any key to start...");
             Console.ReadKey();
 
-            bool victory = combatManager.StartCombat(player, boss, companions, bossManager);
+            // Convert companions to Entity list for combat manager
+            var companionEntities = companions?.Cast<Entities.Entity>().ToList();
+            bool victory = combatManager.StartCombat(player, boss, companionEntities, bossManager);
 
             return victory;
         }
@@ -190,7 +192,9 @@ namespace GameLogic.World
             Console.WriteLine("Press any key to start...");
             Console.ReadKey();
 
-            bool victory = combatManager.StartCombat(player, finalBoss, companions, bossManager);
+            // Convert companions to Entity list for combat manager
+            var companionEntities = companions?.Cast<Entities.Entity>().ToList();
+            bool victory = combatManager.StartCombat(player, finalBoss, companionEntities, bossManager);
 
             if (victory)
             {

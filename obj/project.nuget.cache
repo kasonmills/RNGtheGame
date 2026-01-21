@@ -1,13 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "F8CJuf/JXdQ=",
+  "dgSpecHash": "Dnt9HxcdcmE=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Inspe\\Homework\\RNGtheGame\\game_files\\game_files.csproj",
-  "expectedPackageFiles": [
-    "C:\\Users\\Inspe\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.15\\microsoft.netcore.app.ref.8.0.15.nupkg.sha512",
-    "C:\\Users\\Inspe\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.15\\microsoft.windowsdesktop.app.ref.8.0.15.nupkg.sha512",
-    "C:\\Users\\Inspe\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.15\\microsoft.aspnetcore.app.ref.8.0.15.nupkg.sha512",
-    "C:\\Users\\Inspe\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.15\\microsoft.netcore.app.host.win-x64.8.0.15.nupkg.sha512"
-  ],
+  "projectFilePath": "C:\\Users\\18015\\source\\repos\\RNGtheGame\\RNGTheGame.csproj",
+  "expectedPackageFiles": [],
   "logs": []
 }

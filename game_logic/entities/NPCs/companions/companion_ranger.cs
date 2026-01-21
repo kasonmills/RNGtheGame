@@ -38,8 +38,8 @@ namespace GameLogic.Entities.NPCs.Companions
             UniqueAbility = new MultishotAbility(this);
 
             // Equip starting weapon (bow for rangers)
-            EquippedWeapon = Data.GameDatabase.GetWeapon("Old Bow");
-            EquippedArmor = Data.GameDatabase.GetArmor("Worn Leather");
+            EquippedWeapon = Items.ItemDatabase.GetWeapon("old bow");
+            EquippedArmor = Items.ItemDatabase.GetArmor("worn leather");
         }
 
         /// <summary>

@@ -134,7 +134,7 @@ namespace GameLogic.Entities.NPCs
         /// <summary>
         /// Level up a companion
         /// </summary>
-        public void LevelUp()
+        public virtual void LevelUp()
         {
             if (!IsCompanion)
             {

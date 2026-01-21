@@ -194,6 +194,22 @@ namespace GameLogic.Entities.Player
         }
 
         /// <summary>
+        /// Get all items in inventory
+        /// </summary>
+        public List<Item> GetAllItems()
+        {
+            return Items.ToList();
+        }
+
+        /// <summary>
+        /// Check if inventory is at capacity
+        /// </summary>
+        public bool IsFull()
+        {
+            return Items.Count >= MaxCapacity;
+        }
+
+        /// <summary>
         /// Get total count including stacks
         /// </summary>
         public int GetTotalItemCount()

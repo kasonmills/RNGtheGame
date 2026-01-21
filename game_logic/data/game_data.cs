@@ -3,6 +3,7 @@ using GameLogic.Items;
 using GameLogic.Entities.Enemies;
 using GameLogic.Entities.NPCs.Companions;
 using GameLogic.Abilities.PlayerAbilities;
+using Enemy = GameLogic.Entities.Enemies.EnemyBase;
 
 namespace GameLogic.Data
 {

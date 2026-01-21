@@ -306,13 +306,13 @@ namespace GameLogic.Menus
                         settings.SoundEffectsEnabled = !settings.SoundEffectsEnabled;
                         break;
                     case "2":
-                        AdjustVolume("Sound Effects", ref settings.SoundEffectsVolume);
+                        settings.SoundEffectsVolume = AdjustVolume("Sound Effects", settings.SoundEffectsVolume);
                         break;
                     case "3":
                         settings.MusicEnabled = !settings.MusicEnabled;
                         break;
                     case "4":
-                        AdjustVolume("Music", ref settings.MusicVolume);
+                        settings.MusicVolume = AdjustVolume("Music", settings.MusicVolume);
                         break;
                     case "5":
                         exit = true;
@@ -443,24 +443,25 @@ namespace GameLogic.Menus
             Console.ReadKey();
         }
 
-        private static void AdjustVolume(string settingName, ref int volume)
+        private static int AdjustVolume(string settingName, int currentVolume)
         {
             Console.Clear();
             Console.WriteLine($"Adjust {settingName} Volume:");
-            Console.WriteLine($"Current: {volume}%");
+            Console.WriteLine($"Current: {currentVolume}%");
             Console.Write("\nEnter volume (0-100): ");
 
             if (int.TryParse(Console.ReadLine(), out int newVolume) && newVolume >= 0 && newVolume <= 100)
             {
-                volume = newVolume;
                 Console.WriteLine($"{settingName} volume set to {newVolume}%.");
+                Console.ReadKey();
+                return newVolume;
             }
             else
             {
                 Console.WriteLine("Invalid volume. Must be between 0 and 100.");
+                Console.ReadKey();
+                return currentVolume;
             }
-
-            Console.ReadKey();
         }
 
         private static void SwitchRngAlgorithm(GameSettings settings, RNGManager rngManager)

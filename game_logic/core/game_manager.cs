@@ -19,7 +19,7 @@ namespace GameLogic.Core
     {
         // === Core Systems ===
         private Player _player;
-        private List<Entities.NPCs.Companions.CompanionBase> _activeCompanions; // Companions in the party
+        private List<Entities.Entity> _activeCompanions; // Companions in the party
         private MapManager _mapManager;
         private CombatManager _combatManager;
         private RNGManager _rngManager;
@@ -54,7 +54,7 @@ namespace GameLogic.Core
             Data.SaveManager.Initialize(); // Initialize static SaveManager
             _mapManager = new MapManager();
             _combatManager = new CombatManager(_rngManager);
-            _activeCompanions = new List<Entities.NPCs.Companions.CompanionBase>();
+            _activeCompanions = new List<Entities.Entity>();
 
             _currentState = GameState.MainMenu;
             _isRunning = false;

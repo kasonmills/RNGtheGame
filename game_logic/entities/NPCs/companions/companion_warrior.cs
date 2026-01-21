@@ -38,8 +38,8 @@ namespace GameLogic.Entities.NPCs.Companions
             UniqueAbility = new ShieldBashAbility(this);
 
             // Equip starting weapon
-            EquippedWeapon = Data.GameDatabase.GetWeapon("Rusty Sword");
-            EquippedArmor = Data.GameDatabase.GetArmor("Rusty Chainmail");
+            EquippedWeapon = Items.ItemDatabase.GetWeapon("rusty sword");
+            EquippedArmor = Items.ItemDatabase.GetArmor("rusty chainmail");
         }
 
         /// <summary>

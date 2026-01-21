@@ -38,8 +38,8 @@ namespace GameLogic.Entities.NPCs.Companions
             UniqueAbility = new ArcaneBlastAbility(this);
 
             // Equip starting weapon
-            EquippedWeapon = Data.GameDatabase.GetWeapon("Cracked Staff");
-            EquippedArmor = Data.GameDatabase.GetArmor("Tattered Cloth");
+            EquippedWeapon = Items.ItemDatabase.GetWeapon("cracked staff");
+            EquippedArmor = Items.ItemDatabase.GetArmor("tattered cloth");
         }
 
         /// <summary>

@@ -38,8 +38,8 @@ namespace GameLogic.Entities.NPCs.Companions
             UniqueAbility = new DivineLightAbility(this);
 
             // Equip starting weapon
-            EquippedWeapon = Data.GameDatabase.GetWeapon("Cracked Staff");
-            EquippedArmor = Data.GameDatabase.GetArmor("Linen Robes");
+            EquippedWeapon = Items.ItemDatabase.GetWeapon("cracked staff");
+            EquippedArmor = Items.ItemDatabase.GetArmor("linen robes");
         }
 
         /// <summary>

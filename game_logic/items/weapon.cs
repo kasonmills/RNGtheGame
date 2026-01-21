@@ -25,7 +25,8 @@ namespace GameLogic.Items
     {
         IncreaseMinDamage,  // Increases minimum damage by 1-2 (narrows damage range, more consistent)
         ShiftDamageRange,   // Shifts entire range up by 1 (both min and max increase)
-        IncreaseMaxDamage   // Increases maximum damage by 1-3 (widens damage range, higher ceiling)
+        IncreaseMaxDamage,  // Increases maximum damage by 1-3 (widens damage range, higher ceiling)
+        Balanced            // Balanced upgrade (used as default)
     }
 
     /// <summary>
@@ -219,6 +220,14 @@ namespace GameLogic.Items
         }
 
         /// <summary>
+        /// Complete the upgrade with default balanced path
+        /// </summary>
+        public bool CompleteUpgrade()
+        {
+            return CompleteUpgrade(WeaponUpgradePath.Balanced, new Systems.RNGManager());
+        }
+
+        /// <summary>
         /// Complete the upgrade at the blacksmith with chosen path (requires gold payment)
         /// This should be called by the blacksmith NPC/shop after taking payment
         /// </summary>
@@ -293,6 +302,14 @@ namespace GameLogic.Items
                     Console.WriteLine($"  Max Damage: {oldMax} → {MaxDamage} (+{maxIncrease})");
                     Console.WriteLine($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
                     Console.WriteLine($"  ✓ Higher damage potential!");
+                    break;
+
+                case WeaponUpgradePath.Balanced:
+                    // Balanced upgrade - small increase to both
+                    MinDamage += 1;
+                    MaxDamage += 1;
+                    Console.WriteLine($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
+                    Console.WriteLine($"  ✓ Balanced improvement!");
                     break;
             }
 

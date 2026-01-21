@@ -1,0 +1,5 @@
+C:\Users\18015\source\repos\RNGtheGame\obj\Debug\net8.0\RNGTheGame.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\18015\source\repos\RNGtheGame\obj\Debug\net8.0\RNGTheGame.AssemblyInfoInputs.cache
+C:\Users\18015\source\repos\RNGtheGame\obj\Debug\net8.0\RNGTheGame.AssemblyInfo.cs
+C:\Users\18015\source\repos\RNGtheGame\obj\Debug\net8.0\RNGTheGame.csproj.CoreCompileInputs.cache
+C:\Users\18015\source\repos\RNGtheGame\obj\Debug\net8.0\RNGTheGame.sourcelink.json

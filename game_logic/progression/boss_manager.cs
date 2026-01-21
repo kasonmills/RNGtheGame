@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GameLogic.Entities.Enemies;
+using GameLogic.Entities.Player;
 using GameLogic.Items;
 
 namespace GameLogic.Progression
@@ -174,7 +175,7 @@ namespace GameLogic.Progression
         /// <summary>
         /// Count unique champion keys in player inventory
         /// </summary>
-        public int CountChampionKeys(Player.PlayerInventory inventory)
+        public int CountChampionKeys(PlayerInventory inventory)
         {
             int keyCount = 0;
 
@@ -228,7 +229,7 @@ namespace GameLogic.Progression
         /// <summary>
         /// Check if player can fight the final boss
         /// </summary>
-        public bool CanFightFinalBoss(Player.PlayerInventory inventory)
+        public bool CanFightFinalBoss(PlayerInventory inventory)
         {
             int keyCount = CountChampionKeys(inventory);
             return keyCount >= KEYS_REQUIRED;
@@ -250,7 +251,7 @@ namespace GameLogic.Progression
         /// <summary>
         /// Display final gate status
         /// </summary>
-        public string GetFinalGateStatus(Player.PlayerInventory inventory)
+        public string GetFinalGateStatus(PlayerInventory inventory)
         {
             int keyCount = CountChampionKeys(inventory);
             string status = "═══ FINAL GATE STATUS ═══\n";

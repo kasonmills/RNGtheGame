@@ -232,7 +232,13 @@ namespace GameLogic.Data
             var serialized = new SerializedItem
             {
                 Name = item.Name,
-                Level = item.Level,
+                Level = item switch
+                {
+                    Weapon w => w.Level,
+                    Armor a => a.Level,
+                    Consumable c => c.Level,
+                    _ => 1  // Default level for items that don't have levels
+                },
                 Quantity = item.Quantity
             };
 
@@ -421,7 +427,7 @@ namespace GameLogic.Data
         /// </summary>
         public static bool AutoSave(Player player, World.MapManager mapManager = null)
         {
-            return SaveGame(player, AutoSaveFileName, mapManager);
+            return SaveGame(player, AutoSaveFileName, bossManager: null, mapManager: mapManager);
         }
 
         /// <summary>
@@ -429,7 +435,7 @@ namespace GameLogic.Data
         /// </summary>
         public static bool QuickSave(Player player, World.MapManager mapManager = null)
         {
-            return SaveGame(player, QuickSaveFileName, mapManager);
+            return SaveGame(player, QuickSaveFileName, bossManager: null, mapManager: mapManager);
         }
 
         /// <summary>
@@ -607,6 +613,203 @@ namespace GameLogic.Data
 
             Console.WriteLine($"Boss Progress: {data.BossesDefeated}/{Progression.BossManager.TOTAL_BOSSES} defeated");
             return bossManager;
+        }
+
+        /// <summary>
+        /// Load settings from save data into a GameSettings object
+        /// </summary>
+        public static GameSettings LoadSettingsFromSaveData(SaveData saveData)
+        {
+            if (saveData == null)
+                return new GameSettings();
+
+            var settings = new GameSettings
+            {
+                Difficulty = saveData.Difficulty,
+                ShowTurnOrderAtStartOfRound = saveData.ShowTurnOrderAtStartOfRound,
+                ShowDetailedCombatLog = saveData.ShowDetailedCombatLog,
+                ShowDamageCalculations = saveData.ShowDamageCalculations,
+                ShowEnemyStatBlock = saveData.ShowEnemyStatBlock,
+                AutoSaveEnabled = saveData.AutoSaveEnabled,
+                AutoSaveIntervalMinutes = saveData.AutoSaveIntervalMinutes,
+                ConfirmFleeAction = saveData.ConfirmFleeAction,
+                ConfirmConsumeItem = saveData.ConfirmConsumeItem,
+                RngAlgorithm = saveData.RngAlgorithm,
+                RngStatisticsTracking = saveData.RngStatisticsTracking,
+                ColoredText = saveData.ColoredText,
+                UseEmojis = saveData.UseEmojis,
+                TextSpeed = saveData.TextSpeed,
+                SoundEffectsEnabled = saveData.SoundEffectsEnabled,
+                SoundEffectsVolume = saveData.SoundEffectsVolume,
+                MusicEnabled = saveData.MusicEnabled,
+                MusicVolume = saveData.MusicVolume
+            };
+
+            return settings;
+        }
+
+        /// <summary>
+        /// Save statistics to save data
+        /// </summary>
+        public static void SaveStatisticsToSaveData(SaveData saveData, StatisticsTracker stats)
+        {
+            if (saveData == null || stats == null)
+                return;
+
+            // Combat statistics
+            saveData.TotalBattlesFought = stats.TotalBattlesFought;
+            saveData.BattlesWon = stats.BattlesWon;
+            saveData.BattlesLost = stats.BattlesLost;
+            saveData.BattlesFled = stats.BattlesFled;
+            saveData.TotalDamageDealt = stats.TotalDamageDealt;
+            saveData.TotalDamageTaken = stats.TotalDamageTaken;
+            saveData.HighestDamageDealt = stats.HighestDamageDealt;
+            saveData.CriticalHitsLanded = stats.CriticalHitsLanded;
+            saveData.TotalPlayerDeaths = stats.TotalPlayerDeaths;
+            saveData.EnemiesKilled = stats.EnemiesKilled;
+            saveData.KillsByEnemyType = new System.Collections.Generic.Dictionary<string, int>(stats.KillsByEnemyType);
+            saveData.BossesDefeatedCount = stats.BossesDefeated;
+            saveData.BossAttemptsCount = stats.BossAttempts;
+            saveData.BossDefeatsDict = new System.Collections.Generic.Dictionary<string, int>(stats.BossDefeats);
+
+            // Economic statistics
+            saveData.TotalGoldEarned = stats.TotalGoldEarned;
+            saveData.TotalGoldSpent = stats.TotalGoldSpent;
+            saveData.ItemsBought = stats.ItemsBought;
+            saveData.ItemsSold = stats.ItemsSold;
+            saveData.TotalValueBought = stats.TotalValueBought;
+            saveData.TotalValueSold = stats.TotalValueSold;
+            saveData.MostExpensivePurchase = stats.MostExpensivePurchase;
+            saveData.MostExpensivePurchaseName = stats.MostExpensivePurchaseName;
+
+            // Equipment statistics
+            saveData.WeaponUpgradesPerformed = stats.WeaponUpgradesPerformed;
+            saveData.ArmorUpgradesPerformed = stats.ArmorUpgradesPerformed;
+            saveData.HighestWeaponLevel = stats.HighestWeaponLevel;
+            saveData.HighestArmorLevel = stats.HighestArmorLevel;
+            saveData.WeaponsUsedDict = new System.Collections.Generic.Dictionary<string, int>(stats.WeaponsUsed);
+            saveData.TotalEquipmentChanges = stats.TotalEquipmentChanges;
+
+            // Item usage statistics
+            saveData.ConsumablesUsed = stats.ConsumablesUsed;
+            saveData.ConsumablesByTypeDict = new System.Collections.Generic.Dictionary<string, int>(stats.ConsumablesByType);
+            saveData.HealingPotionsUsed = stats.HealingPotionsUsed;
+            saveData.RevivalPotionsUsed = stats.RevivalPotionsUsed;
+            saveData.AbilitiesActivated = stats.AbilitiesActivated;
+
+            // Exploration statistics
+            saveData.ShopsVisited = stats.ShopsVisited;
+            saveData.NPCsInteracted = stats.NPCsInteracted;
+            saveData.QuestsCompletedCount = stats.QuestsCompleted;
+            saveData.QuestsAcceptedCount = stats.QuestsAccepted;
+            saveData.QuestsClaimedCount = stats.QuestsClaimed;
+
+            // Progression statistics
+            saveData.HighestLevelReached = stats.HighestLevelReached;
+            saveData.TotalExperienceEarned = stats.TotalExperienceEarned;
+            saveData.LevelsGained = stats.LevelsGained;
+
+            // Miscellaneous
+            saveData.GameStartDate = stats.GameStartDate;
+            saveData.GameSessions = stats.GameSessions;
+            saveData.GamesSaved = stats.GamesSaved;
+            saveData.GamesLoaded = stats.GamesLoaded;
+            saveData.GameVersion = stats.GameVersion;
+
+            // Achievements
+            saveData.CurrentWinStreak = stats.CurrentWinStreak;
+            saveData.LongestWinStreak = stats.LongestWinStreak;
+            saveData.FlawlessVictories = stats.FlawlessVictories;
+            saveData.CloseCallVictories = stats.CloseCallVictories;
+            saveData.PerfectCritRuns = stats.PerfectCritRuns;
+        }
+
+        /// <summary>
+        /// Load statistics from save data
+        /// </summary>
+        public static StatisticsTracker LoadStatisticsFromSaveData(SaveData saveData)
+        {
+            if (saveData == null)
+                return new StatisticsTracker();
+
+            var stats = new StatisticsTracker();
+
+            // Combat statistics
+            stats.TotalBattlesFought = saveData.TotalBattlesFought;
+            stats.BattlesWon = saveData.BattlesWon;
+            stats.BattlesLost = saveData.BattlesLost;
+            stats.BattlesFled = saveData.BattlesFled;
+            stats.TotalDamageDealt = saveData.TotalDamageDealt;
+            stats.TotalDamageTaken = saveData.TotalDamageTaken;
+            stats.HighestDamageDealt = saveData.HighestDamageDealt;
+            stats.CriticalHitsLanded = saveData.CriticalHitsLanded;
+            stats.TotalPlayerDeaths = saveData.TotalPlayerDeaths;
+            stats.EnemiesKilled = saveData.EnemiesKilled;
+            if (saveData.KillsByEnemyType != null)
+                stats.KillsByEnemyType = new System.Collections.Generic.Dictionary<string, int>(saveData.KillsByEnemyType);
+            stats.BossesDefeated = saveData.BossesDefeatedCount;
+            stats.BossAttempts = saveData.BossAttemptsCount;
+            if (saveData.BossDefeatsDict != null)
+                stats.BossDefeats = new System.Collections.Generic.Dictionary<string, int>(saveData.BossDefeatsDict);
+
+            // Economic statistics
+            stats.TotalGoldEarned = saveData.TotalGoldEarned;
+            stats.TotalGoldSpent = saveData.TotalGoldSpent;
+            stats.ItemsBought = saveData.ItemsBought;
+            stats.ItemsSold = saveData.ItemsSold;
+            stats.TotalValueBought = saveData.TotalValueBought;
+            stats.TotalValueSold = saveData.TotalValueSold;
+            stats.MostExpensivePurchase = saveData.MostExpensivePurchase;
+            stats.MostExpensivePurchaseName = saveData.MostExpensivePurchaseName ?? "None";
+
+            // Equipment statistics
+            stats.WeaponUpgradesPerformed = saveData.WeaponUpgradesPerformed;
+            stats.ArmorUpgradesPerformed = saveData.ArmorUpgradesPerformed;
+            stats.HighestWeaponLevel = saveData.HighestWeaponLevel;
+            stats.HighestArmorLevel = saveData.HighestArmorLevel;
+            if (saveData.WeaponsUsedDict != null)
+                stats.WeaponsUsed = new System.Collections.Generic.Dictionary<string, int>(saveData.WeaponsUsedDict);
+            stats.TotalEquipmentChanges = saveData.TotalEquipmentChanges;
+
+            // Item usage statistics
+            stats.ConsumablesUsed = saveData.ConsumablesUsed;
+            if (saveData.ConsumablesByTypeDict != null)
+                stats.ConsumablesByType = new System.Collections.Generic.Dictionary<string, int>(saveData.ConsumablesByTypeDict);
+            stats.HealingPotionsUsed = saveData.HealingPotionsUsed;
+            stats.RevivalPotionsUsed = saveData.RevivalPotionsUsed;
+            stats.AbilitiesActivated = saveData.AbilitiesActivated;
+
+            // Exploration statistics
+            stats.ShopsVisited = saveData.ShopsVisited;
+            stats.NPCsInteracted = saveData.NPCsInteracted;
+            stats.QuestsCompleted = saveData.QuestsCompletedCount;
+            stats.QuestsAccepted = saveData.QuestsAcceptedCount;
+            stats.QuestsClaimed = saveData.QuestsClaimedCount;
+
+            // Progression statistics
+            stats.HighestLevelReached = saveData.HighestLevelReached;
+            stats.TotalExperienceEarned = saveData.TotalExperienceEarned;
+            stats.LevelsGained = saveData.LevelsGained;
+            stats.CurrentLevel = saveData.Level;
+
+            // Miscellaneous
+            if (saveData.GameStartDate != DateTime.MinValue)
+                stats.GameStartDate = saveData.GameStartDate;
+            stats.TotalPlayTime = saveData.PlayTime;
+            stats.GameSessions = saveData.GameSessions;
+            stats.GamesSaved = saveData.GamesSaved;
+            stats.GamesLoaded = saveData.GamesLoaded;
+            stats.GameVersion = saveData.GameVersion ?? "1.0.0";
+            stats.CurrentGold = saveData.Gold;
+
+            // Achievements
+            stats.CurrentWinStreak = saveData.CurrentWinStreak;
+            stats.LongestWinStreak = saveData.LongestWinStreak;
+            stats.FlawlessVictories = saveData.FlawlessVictories;
+            stats.CloseCallVictories = saveData.CloseCallVictories;
+            stats.PerfectCritRuns = saveData.PerfectCritRuns;
+
+            return stats;
         }
     }
 

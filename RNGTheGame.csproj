@@ -7,4 +7,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="tests\**" />
+    <Compile Remove="godot_integration\**" />
+    <Compile Remove="game_logic\data\game_data.cs" />
+  </ItemGroup>
+
 </Project>
