@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RNGTheGame")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f3fcb9c756e74d16ed7160ad72170c66fcac2e4a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4ec211e6eecf704e53feef931e95d6c7d2bd7271")]
 [assembly: System.Reflection.AssemblyProductAttribute("RNGTheGame")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RNGTheGame")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
