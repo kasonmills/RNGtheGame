@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>GameLogic</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Excluded pending pre-existing compile errors carried over from before this project was split out -->
+    <Compile Remove="data\game_data.cs" />
+  </ItemGroup>
+
+</Project>

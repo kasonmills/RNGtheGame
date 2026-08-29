@@ -1,0 +1,18 @@
+# .NET build output
+bin/
+obj/
+
+# Godot
+.godot/
+.import/
+
+# Godot Mono
+.mono/
+data_*/
+mono_crash.*.json
+
+# User-specific / OS
+.vs/
+*.user
+.DS_Store
+Thumbs.db
