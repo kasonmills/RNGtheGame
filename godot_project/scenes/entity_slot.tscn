@@ -1,0 +1,44 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/EntitySlot.cs" id="1_script"]
+
+[node name="EntitySlot" type="Control" unique_id=1785037325]
+custom_minimum_size = Vector2(110, 150)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_script")
+
+[node name="Layout" type="VBoxContainer" parent="." unique_id=969542923]
+layout_mode = 0
+theme_override_constants/separation = 4
+
+[node name="MiniHPBar" type="ProgressBar" parent="Layout" unique_id=1964685174]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 8)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="Hitbox" type="Button" parent="Layout" unique_id=410719497]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 128)
+layout_mode = 2
+text = "Entity"
+clip_text = true
+
+[node name="DetailPopup" type="PanelContainer" parent="." unique_id=1258386653]
+unique_name_in_owner = true
+visible = false
+z_index = 10
+layout_mode = 0
+anchor_right = 1.0
+offset_top = -60.0
+offset_bottom = -8.0
+mouse_filter = 2
+
+[node name="DetailLabel" type="Label" parent="DetailPopup" unique_id=2093594266]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Entity
+HP: 0/0"
+horizontal_alignment = 1

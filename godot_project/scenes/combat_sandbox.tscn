@@ -1,0 +1,69 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/CombatSceneController.cs" id="1_script"]
+
+[node name="CombatSandbox" type="Control" unique_id=1693888640]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_script")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=203631115]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Layout" type="VBoxContainer" parent="Margin" unique_id=1909019910]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="Margin/Layout" unique_id=1440972454]
+layout_mode = 2
+text = "Combat Sandbox"
+
+[node name="EnemyLabel" type="Label" parent="Margin/Layout" unique_id=1464936672]
+layout_mode = 2
+text = "Enemies"
+
+[node name="EnemyRow" type="HFlowContainer" parent="Margin/Layout" unique_id=1715317138]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+theme_override_constants/h_separation = 16
+
+[node name="PartyLabel" type="Label" parent="Margin/Layout" unique_id=1354584148]
+layout_mode = 2
+text = "Your Party"
+
+[node name="PartyRow" type="HFlowContainer" parent="Margin/Layout" unique_id=1666882334]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+theme_override_constants/h_separation = 16
+
+[node name="CombatLog" type="RichTextLabel" parent="Margin/Layout" unique_id=2076138876]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
+
+[node name="ButtonsRow" type="HBoxContainer" parent="Margin/Layout" unique_id=1387559662]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AttackButton" type="Button" parent="Margin/Layout/ButtonsRow" unique_id=1115527636]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Attack Selected Target"
+
+[node name="ResetButton" type="Button" parent="Margin/Layout/ButtonsRow" unique_id=19910206]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Reset"
