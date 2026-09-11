@@ -38,7 +38,7 @@ namespace GameLogic.Systems
         /// <summary>
         /// Difficulty level - set once at save file creation and cannot be changed
         /// </summary>
-        public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Normal;
+        public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Hard;
 
         /// <summary>
         /// Create default settings
@@ -85,10 +85,10 @@ namespace GameLogic.Systems
         {
             return Difficulty switch
             {
-                DifficultyLevel.Easy => 0.75f,
-                DifficultyLevel.Normal => 1.0f,
-                DifficultyLevel.Hard => 1.5f,
-                DifficultyLevel.VeryHard => 2.0f,
+                DifficultyLevel.Normal => 0.75f,
+                DifficultyLevel.Hard => 1.0f,
+                DifficultyLevel.Difficult => 1.5f,
+                DifficultyLevel.Unfair => 2.0f,
                 _ => 1.0f
             };
         }
@@ -100,10 +100,10 @@ namespace GameLogic.Systems
         {
             return Difficulty switch
             {
-                DifficultyLevel.Easy => 0.8f,
-                DifficultyLevel.Normal => 1.0f,
-                DifficultyLevel.Hard => 1.3f,
-                DifficultyLevel.VeryHard => 1.5f,
+                DifficultyLevel.Normal => 0.8f,
+                DifficultyLevel.Hard => 1.0f,
+                DifficultyLevel.Difficult => 1.3f,
+                DifficultyLevel.Unfair => 1.5f,
                 _ => 1.0f
             };
         }
@@ -147,9 +147,9 @@ namespace GameLogic.Systems
     /// </summary>
     public enum DifficultyLevel
     {
-        Easy,       // 75% enemy stats, 80% rewards
-        Normal,     // 100% enemy stats, 100% rewards
-        Hard,       // 150% enemy stats, 130% rewards
-        VeryHard    // 200% enemy stats, 150% rewards
+        Normal,     // 75% enemy stats, 80% rewards
+        Hard,       // 100% enemy stats, 100% rewards
+        Difficult,  // 150% enemy stats, 130% rewards
+        Unfair      // 200% enemy stats, 150% rewards
     }
 }

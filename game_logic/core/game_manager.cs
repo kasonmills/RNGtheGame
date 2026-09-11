@@ -23,7 +23,7 @@ namespace GameLogic.Core
         private MapManager _mapManager;
         private CombatManager _combatManager;
         private RNGManager _rngManager;
-        private Progression.BossManager _bossManager;
+        private Entities.Enemies.Bosses.BossManager _bossManager;
         private QuestManager _questManager;
         private QuestGiver _questGiver;
         private GameSettings _gameSettings;
@@ -46,7 +46,7 @@ namespace GameLogic.Core
         /// </summary>
         private void InitializeSystems()
         {
-            Console.WriteLine("Initializing game systems...");
+            // Console.WriteLine("Initializing game systems..."); // console-test debug noise, not needed in Godot
 
             _rngManager = new RNGManager();
             _gameSettings = new GameSettings(); // Initialize with default settings
@@ -57,9 +57,9 @@ namespace GameLogic.Core
             _activeCompanions = new List<Entities.Entity>();
 
             _currentState = GameState.MainMenu;
-            _isRunning = false;
+            _isRunning = true;
 
-            Console.WriteLine("Systems initialized!\n");
+            // Console.WriteLine("Systems initialized!\n"); // console-test debug noise, not needed in Godot
         }
 
         /// <summary>
@@ -131,25 +131,26 @@ namespace GameLogic.Core
         /// </summary>
         private void SelectDifficulty()
         {
+            // TODO-GODOT: difficulty options + descriptions below -> difficulty-select screen (radio buttons + info panel)
             Console.WriteLine("=== Select Difficulty ===");
             Console.WriteLine("This choice is permanent for this save file and cannot be changed!\n");
 
-            Console.WriteLine("1. Easy");
+            Console.WriteLine("1. Normal");
             Console.WriteLine("   - Enemies have 75% stats");
             Console.WriteLine("   - Rewards are 80% of normal");
             Console.WriteLine("   - Recommended for learning the game\n");
 
-            Console.WriteLine("2. Normal (Recommended)");
+            Console.WriteLine("2. Hard (Recommended)");
             Console.WriteLine("   - Balanced gameplay");
             Console.WriteLine("   - Standard enemies and rewards");
             Console.WriteLine("   - The intended experience\n");
 
-            Console.WriteLine("3. Hard");
+            Console.WriteLine("3. Difficult");
             Console.WriteLine("   - Enemies have 150% stats");
             Console.WriteLine("   - Rewards are 130% of normal");
             Console.WriteLine("   - For experienced players\n");
 
-            Console.WriteLine("4. Very Hard");
+            Console.WriteLine("4. Unfair");
             Console.WriteLine("   - Enemies have 200% stats");
             Console.WriteLine("   - Rewards are 150% of normal");
             Console.WriteLine("   - Extreme challenge\n");
@@ -170,11 +171,11 @@ namespace GameLogic.Core
 
             _gameSettings.Difficulty = choice switch
             {
-                1 => DifficultyLevel.Easy,
-                2 => DifficultyLevel.Normal,
-                3 => DifficultyLevel.Hard,
-                4 => DifficultyLevel.VeryHard,
-                _ => DifficultyLevel.Normal
+                1 => DifficultyLevel.Normal,
+                2 => DifficultyLevel.Hard,
+                3 => DifficultyLevel.Difficult,
+                4 => DifficultyLevel.Unfair,
+                _ => DifficultyLevel.Hard
             };
 
             Console.WriteLine($"\nDifficulty set to: {_gameSettings.Difficulty}");
@@ -186,6 +187,7 @@ namespace GameLogic.Core
         /// </summary>
         private void ChooseStartingAbility()
         {
+            // TODO-GODOT: ability list + descriptions below -> ability-select screen (cards/list + info panel)
             Console.WriteLine("\n=== Choose Your Ability ===");
             Console.WriteLine("This choice is permanent and will stay with you throughout the game!");
             Console.WriteLine();
@@ -226,6 +228,7 @@ namespace GameLogic.Core
         public void StartNewGame()
         {
             Console.Clear();
+            // TODO-GODOT: landing/title screen text -> main menu scene
             Console.WriteLine("=== Welcome to RNG: The Game ===\n");
 
             // Select difficulty (once per save file, immutable)
@@ -248,11 +251,11 @@ namespace GameLogic.Core
             // Let player choose starting ability
             ChooseStartingAbility();
 
-            Console.WriteLine("\n🎲 Initializing Champion Bosses...");
+            // Console.WriteLine("\n🎲 Initializing Champion Bosses..."); // console-test debug noise, not needed in Godot
 
             // Create new boss manager and register all 15 bosses
-            _bossManager = new Progression.BossManager();
-            var championBosses = Progression.BossDefinitions.GetAllChampionBosses();
+            _bossManager = new Entities.Enemies.Bosses.BossManager();
+            var championBosses = Entities.Enemies.Bosses.BossDefinitions.GetAllChampionBosses();
             _bossManager.RegisterBosses(championBosses.ToArray());
 
             // Randomly select the final boss
@@ -262,7 +265,7 @@ namespace GameLogic.Core
             Console.WriteLine("Defeat 10 of the 15 Champions to unlock the Final Gate.\n");
 
             // Initialize quest system
-            Console.WriteLine("🎲 Initializing Quest System...");
+            // Console.WriteLine("🎲 Initializing Quest System..."); // console-test debug noise, not needed in Godot
             _questManager = new QuestManager();
             InitializeQuests();
             _questGiver = new QuestGiver("Veteran Ranger", _questManager, _bossManager);
@@ -282,7 +285,7 @@ namespace GameLogic.Core
         /// </summary>
         public void LoadGame()
         {
-            Console.WriteLine("Loading saved game...");
+            // Console.WriteLine("Loading saved game..."); // console-test debug noise, not needed in Godot
 
             SaveData saveData = Data.SaveManager.LoadGame("save1"); // Default save slot
 
@@ -343,6 +346,7 @@ namespace GameLogic.Core
             }
             else
             {
+                // TODO-GODOT: load-failure feedback -> error dialog/toast
                 Console.WriteLine("\nNo save file found or load failed.");
                 Console.WriteLine("Returning to main menu...\n");
                 ChangeState(GameState.MainMenu);
@@ -389,6 +393,7 @@ namespace GameLogic.Core
         /// </summary>
         private void GameLoop()
         {
+            // TODO-GODOT: status block below -> HUD (location/health/gold/level); menu options below -> UI buttons
             Console.WriteLine("\n=== Current Status ===");
             Console.WriteLine($"Location: {_mapManager.GetCurrentLocationName()}");
             Console.WriteLine($"Health: {_player.Health}/{_player.MaxHealth}");
@@ -466,6 +471,7 @@ namespace GameLogic.Core
         private void Explore()
         {
             // === TEXT-BASED VERSION (comment out when moving to Godot) ===
+            // TODO-GODOT: flavor text -> exploration textbox/popup
             Console.WriteLine("\nYou venture deeper into the unknown...\n");
             
             // Simple encounter roll for console testing
@@ -523,6 +529,7 @@ namespace GameLogic.Core
             // Spawn an appropriate enemy
             var enemy = SpawnEnemy();
 
+            // TODO-GODOT: enemy intro/description -> combat scene intro textbox
             Console.WriteLine($"A {enemy.Name} appears!\n");
             Console.WriteLine(enemy.GetDescription());
 
@@ -548,6 +555,7 @@ namespace GameLogic.Core
         /// </summary>
         public void TriggerLootEvent()
         {
+            // TODO-GODOT: loot event flavor text + item found messages -> loot popup
             Console.WriteLine("You found a treasure chest!");
 
             int goldFound = _rngManager.Roll(10, 50);
@@ -601,6 +609,7 @@ namespace GameLogic.Core
         /// </summary>
         private void ShowInventory()
         {
+            // TODO-GODOT: inventory listing -> inventory panel UI
             _player.Inventory.DisplayInventory();
 
             Console.WriteLine($"Equipped Weapon: {(_player.EquippedWeapon?.Name ?? "None")}");
@@ -615,6 +624,7 @@ namespace GameLogic.Core
         /// </summary>
         private void ShowStats()
         {
+            // TODO-GODOT: character stats block -> stats panel UI
             Console.WriteLine("\n=== Character Stats ===");
             Console.WriteLine($"Name: {_player.Name}");
             Console.WriteLine($"Level: {_player.Level}");
@@ -683,7 +693,7 @@ namespace GameLogic.Core
         /// </summary>
         private void SaveGame()
         {
-            Console.WriteLine("\nSaving game...");
+            // Console.WriteLine("\nSaving game..."); // console-test debug noise, not needed in Godot
 
             // Update statistics before saving
             _statistics.UpdatePlayTime(_player.PlayTime);
@@ -707,12 +717,38 @@ namespace GameLogic.Core
         } 
 
         /// <summary>
-        /// Show main menu (for future use)
+        /// Show main menu / landing screen - entry point of the game
         /// </summary>
         private void ShowMainMenu()
         {
-            // Placeholder - you'd expand this later
-            _currentState = GameState.Playing;
+            Console.Clear();
+            // TODO-GODOT: title/landing screen -> main menu scene (New Game / Load Game / Quit buttons)
+            Console.WriteLine("=====================================");
+            Console.WriteLine("           RNG: THE GAME");
+            Console.WriteLine("=====================================");
+            Console.WriteLine("A turn-based RPG where chance is everything.\n");
+            Console.WriteLine("1. New Game");
+            Console.WriteLine("2. Load Game");
+            Console.WriteLine("3. Quit");
+            Console.Write("\nChoice: ");
+
+            string choice = Console.ReadLine();
+
+            switch (choice)
+            {
+                case "1":
+                    StartNewGame();
+                    break;
+                case "2":
+                    LoadGame();
+                    break;
+                case "3":
+                    _isRunning = false;
+                    break;
+                default:
+                    Console.WriteLine("Invalid choice. Try again.");
+                    break;
+            }
         }
 
         /// <summary>
@@ -721,6 +757,7 @@ namespace GameLogic.Core
         private void ShowPauseMenu()
         {
             Console.Clear();
+            // TODO-GODOT: pause menu options -> pause menu scene/buttons
             Console.WriteLine("\n=== PAUSED ===");
             Console.WriteLine("1. Resume");
             Console.WriteLine("2. Save Game");
@@ -768,6 +805,7 @@ namespace GameLogic.Core
         {
             Console.Clear();
 
+            // TODO-GODOT: progression summary, final gate status, and menu options below -> Champion Challenges screen
             // Display boss progression summary
             Console.WriteLine(_bossManager.GetProgressionSummary());
             Console.WriteLine();
@@ -882,6 +920,7 @@ namespace GameLogic.Core
         private void ViewBossList()
         {
             Console.Clear();
+            // TODO-GODOT: boss list + per-boss detail -> boss codex/selection screen
             Console.WriteLine("═══ ALL CHAMPION BOSSES ═══\n");
 
             var allBosses = _bossManager.AllBosses.Values.OrderBy(b => b.Level).ToList();
@@ -952,6 +991,7 @@ namespace GameLogic.Core
         /// </summary>
         private void HandleGameOver()
         {
+            // TODO-GODOT: game over summary + options -> game over screen
             Console.WriteLine("\n=== GAME OVER ===");
             Console.WriteLine($"You reached level {_player.Level}");
             Console.WriteLine($"You collected {_player.Gold} gold");
@@ -1135,7 +1175,7 @@ namespace GameLogic.Core
             challenge4.Discover();
             _questManager.RegisterQuest(challenge4);
 
-            Console.WriteLine($"✓ {_questManager.AllQuests.Count} quests initialized with randomized requirements and rewards");
+            // Console.WriteLine($"✓ {_questManager.AllQuests.Count} quests initialized with randomized requirements and rewards"); // console-test debug noise, not needed in Godot
         }
 
         /// <summary>

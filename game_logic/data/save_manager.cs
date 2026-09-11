@@ -49,7 +49,7 @@ namespace GameLogic.Data
         /// <param name="gameSettings">Game settings to save</param>
         /// <param name="statistics">Statistics tracker to save</param>
         /// <returns>True if save was successful</returns>
-        public static bool SaveGame(Player player, string saveSlotName, Progression.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null)
+        public static bool SaveGame(Player player, string saveSlotName, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null)
         {
             try
             {
@@ -556,12 +556,12 @@ namespace GameLogic.Data
         /// <param name="data">SaveData containing boss progression</param>
         /// <param name="rng">RNG manager for random final boss selection</param>
         /// <returns>Reconstructed BossManager</returns>
-        public static Progression.BossManager LoadBossManager(SaveData data, Systems.RNGManager rng)
+        public static Entities.Enemies.Bosses.BossManager LoadBossManager(SaveData data, Systems.RNGManager rng)
         {
-            var bossManager = new Progression.BossManager();
+            var bossManager = new Entities.Enemies.Bosses.BossManager();
 
             // Register all 15 champion bosses
-            var allBosses = Progression.BossDefinitions.GetAllChampionBosses();
+            var allBosses = Entities.Enemies.Bosses.BossDefinitions.GetAllChampionBosses();
             bossManager.RegisterBosses(allBosses.ToArray());
 
             // Restore final boss selection
@@ -611,7 +611,7 @@ namespace GameLogic.Data
                 }
             }
 
-            Console.WriteLine($"Boss Progress: {data.BossesDefeated}/{Progression.BossManager.TOTAL_BOSSES} defeated");
+            Console.WriteLine($"Boss Progress: {data.BossesDefeated}/{Entities.Enemies.Bosses.BossManager.TOTAL_BOSSES} defeated");
             return bossManager;
         }
 
@@ -880,7 +880,7 @@ namespace GameLogic.Data
         /// <summary>
         /// Reconstruct quests from serialized data (rebuilds quests with original RNG values)
         /// </summary>
-        public static void ReconstructQuests(QuestManager questManager, System.Collections.Generic.List<SerializedQuest> serializedQuests, Progression.BossManager bossManager)
+        public static void ReconstructQuests(QuestManager questManager, System.Collections.Generic.List<SerializedQuest> serializedQuests, Entities.Enemies.Bosses.BossManager bossManager)
         {
             if (serializedQuests == null || questManager == null)
                 return;

@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GameLogic.Entities.Player;
-using GameLogic.Entities.Enemies;
+using GameLogic.Entities.Enemies.Bosses;
 using GameLogic.Combat;
-using GameLogic.Progression;
 using GameLogic.Systems;
 
 namespace GameLogic.World

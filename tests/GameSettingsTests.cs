@@ -36,7 +36,7 @@ namespace GameLogic.Tests
             Assert.Equal(70, settings.SoundEffectsVolume);
             Assert.True(settings.MusicEnabled);
             Assert.Equal(50, settings.MusicVolume);
-            Assert.Equal(DifficultyLevel.Normal, settings.Difficulty);
+            Assert.Equal(DifficultyLevel.Hard, settings.Difficulty);
         }
 
         #endregion
@@ -291,17 +291,17 @@ namespace GameLogic.Tests
             var settings = new GameSettings();
 
             // Act
-            settings.Difficulty = DifficultyLevel.Hard;
+            settings.Difficulty = DifficultyLevel.Difficult;
 
             // Assert
-            Assert.Equal(DifficultyLevel.Hard, settings.Difficulty);
+            Assert.Equal(DifficultyLevel.Difficult, settings.Difficulty);
         }
 
         [Theory]
-        [InlineData(DifficultyLevel.Easy, 0.75f)]
-        [InlineData(DifficultyLevel.Normal, 1.0f)]
-        [InlineData(DifficultyLevel.Hard, 1.5f)]
-        [InlineData(DifficultyLevel.VeryHard, 2.0f)]
+        [InlineData(DifficultyLevel.Normal, 0.75f)]
+        [InlineData(DifficultyLevel.Hard, 1.0f)]
+        [InlineData(DifficultyLevel.Difficult, 1.5f)]
+        [InlineData(DifficultyLevel.Unfair, 2.0f)]
         public void GetDifficultyMultiplier_ReturnsCorrectValue(DifficultyLevel difficulty, float expected)
         {
             // Arrange
@@ -315,10 +315,10 @@ namespace GameLogic.Tests
         }
 
         [Theory]
-        [InlineData(DifficultyLevel.Easy, 0.8f)]
-        [InlineData(DifficultyLevel.Normal, 1.0f)]
-        [InlineData(DifficultyLevel.Hard, 1.3f)]
-        [InlineData(DifficultyLevel.VeryHard, 1.5f)]
+        [InlineData(DifficultyLevel.Normal, 0.8f)]
+        [InlineData(DifficultyLevel.Hard, 1.0f)]
+        [InlineData(DifficultyLevel.Difficult, 1.3f)]
+        [InlineData(DifficultyLevel.Unfair, 1.5f)]
         public void GetRewardMultiplier_ReturnsCorrectValue(DifficultyLevel difficulty, float expected)
         {
             // Arrange
@@ -494,7 +494,7 @@ namespace GameLogic.Tests
                 SoundEffectsVolume = 100,
                 MusicEnabled = false,
                 MusicVolume = 25,
-                Difficulty = DifficultyLevel.VeryHard
+                Difficulty = DifficultyLevel.Unfair
             };
 
             // Act
@@ -530,22 +530,22 @@ namespace GameLogic.Tests
         {
             // Arrange - Simulate enemy with 100 HP on different difficulties
             int baseEnemyHP = 100;
-            var easySettings = new GameSettings { Difficulty = DifficultyLevel.Easy };
             var normalSettings = new GameSettings { Difficulty = DifficultyLevel.Normal };
             var hardSettings = new GameSettings { Difficulty = DifficultyLevel.Hard };
-            var veryHardSettings = new GameSettings { Difficulty = DifficultyLevel.VeryHard };
+            var difficultSettings = new GameSettings { Difficulty = DifficultyLevel.Difficult };
+            var unfairSettings = new GameSettings { Difficulty = DifficultyLevel.Unfair };
 
             // Act
-            int easyHP = (int)(baseEnemyHP * easySettings.GetDifficultyMultiplier());
             int normalHP = (int)(baseEnemyHP * normalSettings.GetDifficultyMultiplier());
             int hardHP = (int)(baseEnemyHP * hardSettings.GetDifficultyMultiplier());
-            int veryHardHP = (int)(baseEnemyHP * veryHardSettings.GetDifficultyMultiplier());
+            int difficultHP = (int)(baseEnemyHP * difficultSettings.GetDifficultyMultiplier());
+            int unfairHP = (int)(baseEnemyHP * unfairSettings.GetDifficultyMultiplier());
 
             // Assert
-            Assert.Equal(75, easyHP);      // 75% of 100
-            Assert.Equal(100, normalHP);   // 100% of 100
-            Assert.Equal(150, hardHP);     // 150% of 100
-            Assert.Equal(200, veryHardHP); // 200% of 100
+            Assert.Equal(75, normalHP);    // 75% of 100
+            Assert.Equal(100, hardHP);     // 100% of 100
+            Assert.Equal(150, difficultHP); // 150% of 100
+            Assert.Equal(200, unfairHP);   // 200% of 100
         }
 
         [Fact]
@@ -553,22 +553,22 @@ namespace GameLogic.Tests
         {
             // Arrange - Simulate quest reward of 100 gold on different difficulties
             int baseReward = 100;
-            var easySettings = new GameSettings { Difficulty = DifficultyLevel.Easy };
             var normalSettings = new GameSettings { Difficulty = DifficultyLevel.Normal };
             var hardSettings = new GameSettings { Difficulty = DifficultyLevel.Hard };
-            var veryHardSettings = new GameSettings { Difficulty = DifficultyLevel.VeryHard };
+            var difficultSettings = new GameSettings { Difficulty = DifficultyLevel.Difficult };
+            var unfairSettings = new GameSettings { Difficulty = DifficultyLevel.Unfair };
 
             // Act
-            int easyReward = (int)(baseReward * easySettings.GetRewardMultiplier());
             int normalReward = (int)(baseReward * normalSettings.GetRewardMultiplier());
             int hardReward = (int)(baseReward * hardSettings.GetRewardMultiplier());
-            int veryHardReward = (int)(baseReward * veryHardSettings.GetRewardMultiplier());
+            int difficultReward = (int)(baseReward * difficultSettings.GetRewardMultiplier());
+            int unfairReward = (int)(baseReward * unfairSettings.GetRewardMultiplier());
 
             // Assert
-            Assert.Equal(80, easyReward);      // 80% of 100
-            Assert.Equal(100, normalReward);   // 100% of 100
-            Assert.Equal(130, hardReward);     // 130% of 100
-            Assert.Equal(150, veryHardReward); // 150% of 100
+            Assert.Equal(80, normalReward);    // 80% of 100
+            Assert.Equal(100, hardReward);     // 100% of 100
+            Assert.Equal(130, difficultReward); // 130% of 100
+            Assert.Equal(150, unfairReward);   // 150% of 100
         }
 
         #endregion

@@ -5,6 +5,7 @@ using GameLogic.Abilities;
 using GameLogic.Entities;
 using GameLogic.Entities.Player;
 using GameLogic.Entities.Enemies;
+using GameLogic.Entities.Enemies.Bosses;
 using GameLogic.Entities.NPCs;
 using GameLogic.Entities.NPCs.Companions;
 using GameLogic.Systems;
@@ -22,7 +23,7 @@ namespace GameLogic.Combat
         private RNGManager _rngManager;
         private TurnManager _turnManager;
         private DamageCalculator _damageCalculator;
-        private Progression.BossManager _bossManager;
+        private BossManager _bossManager;
 
         private Player _player;
         private Enemy _enemy;
@@ -55,7 +56,7 @@ namespace GameLogic.Combat
         /// <param name="companions">List of active companions (can be null or empty)</param>
         /// <param name="bossManager">Optional boss manager for boss encounters</param>
         /// <returns>True if player won, False if player lost</returns>
-        public bool StartCombat(Player player, Enemy enemy, List<Entity> companions = null, Progression.BossManager bossManager = null)
+        public bool StartCombat(Player player, Enemy enemy, List<Entity> companions = null, BossManager bossManager = null)
         {
             _player = player;
             _enemy = enemy;

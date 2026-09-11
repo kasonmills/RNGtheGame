@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using GameLogic.Entities.Enemies;
 using GameLogic.Entities.Player;
 using GameLogic.Items;
 
-namespace GameLogic.Progression
+namespace GameLogic.Entities.Enemies.Bosses
 {
     /// <summary>
     /// Manages boss progression, tracking, and the champion key system

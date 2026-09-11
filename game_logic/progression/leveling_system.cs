@@ -281,19 +281,22 @@ namespace GameLogic.Progression
 
         #endregion
 
-        #region Difficulty Scaling
+        #region XP Difficulty Scaling
 
         /// <summary>
-        /// Calculate difficulty multiplier for different game modes
+        /// Calculate the XP multiplier for a given difficulty.
+        /// Distinct from GameLogic.Systems.DifficultyLevel (which scales enemy stats/rewards) -
+        /// harder difficulty gives modestly more XP to compensate for tougher fights,
+        /// rather than scaling 1:1 with enemy toughness.
         /// </summary>
-        public static float GetDifficultyMultiplier(DifficultyLevel difficulty)
+        public static float GetDifficultyMultiplier(XpDifficultyLevel difficulty)
         {
             return difficulty switch
             {
-                DifficultyLevel.Easy => 0.75f,
-                DifficultyLevel.Normal => 1.0f,
-                DifficultyLevel.Hard => 1.5f,
-                DifficultyLevel.Nightmare => 2.0f,
+                XpDifficultyLevel.Normal => 0.8f,
+                XpDifficultyLevel.Hard => 1.0f,
+                XpDifficultyLevel.Difficult => 1.25f,
+                XpDifficultyLevel.Unfair => 1.5f,
                 _ => 1.0f
             };
         }
@@ -329,13 +332,16 @@ namespace GameLogic.Progression
     }
 
     /// <summary>
-    /// Difficulty levels for the game
+    /// Difficulty tiers for XP scaling specifically - kept distinct from
+    /// GameLogic.Systems.DifficultyLevel (enemy stats/reward scaling) because
+    /// XP is meant to scale differently: harder difficulty gives somewhat more XP
+    /// to compensate for tougher fights, not a 1:1 multiplier with enemy toughness.
     /// </summary>
-    public enum DifficultyLevel
+    public enum XpDifficultyLevel
     {
-        Easy,
         Normal,
         Hard,
-        Nightmare
+        Difficult,
+        Unfair
     }
 }

@@ -678,43 +678,43 @@ namespace GameLogic.Tests
         #region Difficulty Scaling Tests
 
         [Fact]
-        public void GetDifficultyMultiplier_Easy_Returns0Point75()
+        public void GetDifficultyMultiplier_Normal_Returns0Point8()
         {
             // Act
-            float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Easy);
+            float multiplier = LevelingSystem.GetDifficultyMultiplier(XpDifficultyLevel.Normal);
 
             // Assert
-            Assert.Equal(0.75f, multiplier);
+            Assert.Equal(0.8f, multiplier);
         }
 
         [Fact]
-        public void GetDifficultyMultiplier_Normal_ReturnsOne()
+        public void GetDifficultyMultiplier_Hard_ReturnsOne()
         {
             // Act
-            float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Normal);
+            float multiplier = LevelingSystem.GetDifficultyMultiplier(XpDifficultyLevel.Hard);
 
             // Assert
             Assert.Equal(1.0f, multiplier);
         }
 
         [Fact]
-        public void GetDifficultyMultiplier_Hard_Returns1Point5()
+        public void GetDifficultyMultiplier_Difficult_Returns1Point25()
         {
             // Act
-            float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Hard);
+            float multiplier = LevelingSystem.GetDifficultyMultiplier(XpDifficultyLevel.Difficult);
 
             // Assert
-            Assert.Equal(1.5f, multiplier);
+            Assert.Equal(1.25f, multiplier);
         }
 
         [Fact]
-        public void GetDifficultyMultiplier_Nightmare_Returns2()
+        public void GetDifficultyMultiplier_Unfair_Returns1Point5()
         {
             // Act
-            float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Nightmare);
+            float multiplier = LevelingSystem.GetDifficultyMultiplier(XpDifficultyLevel.Unfair);
 
             // Assert
-            Assert.Equal(2.0f, multiplier);
+            Assert.Equal(1.5f, multiplier);
         }
 
         #endregion

@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
+using GameLogic.Entities.Enemies;
 using GameLogic.Items;
 using GameLogic.Abilities;
 using GameLogic.Systems;
 
-namespace GameLogic.Entities.Enemies
+namespace GameLogic.Entities.Enemies.Bosses
 {
     /// <summary>
     /// Boss enemy class - powerful unique enemies that drop champion keys

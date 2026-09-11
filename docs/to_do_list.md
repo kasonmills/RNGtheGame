@@ -88,7 +88,7 @@
 ## MEDIUM PRIORITY - Systems & Features
 
 ### 🟡 5. Boss Key Progression System
-- **Files**: `game_logic/entities/enemies/boss_enemy.cs`, `game_logic/progression/boss_manager.cs`, `game_logic/progression/boss_definitions.cs`, `game_logic/world/boss_encounter.cs`
+- **Files**: `game_logic/entities/enemies/bosses/boss_enemy.cs`, `game_logic/entities/enemies/bosses/boss_manager.cs`, `game_logic/entities/enemies/bosses/boss_definitions.cs`, `game_logic/world/boss_encounter.cs`
 - **Status**: ✅ FULLY COMPLETED (Phases 1 & 2)
 - **Description**: Complete boss progression system using champion keys to unlock final gate
 - **Phase 1 Complete** (✅ Framework):
@@ -166,7 +166,7 @@
   - ✅ RNG settings (algorithm selection, statistics tracking)
   - ✅ Accessibility settings (colored text, emojis, text speed)
   - ✅ Audio settings (placeholder for GUI version)
-  - ✅ Difficulty selection (Easy/Normal/Hard/Very Hard - immutable after save creation)
+  - ✅ Difficulty selection (Normal/Hard/Difficult/Unfair - immutable after save creation)
   - ✅ Full save/load support
   - ✅ Reset to defaults option
   - ✅ Accessible from pause menu
@@ -202,6 +202,27 @@
   - ❌ Companions in combat alongside player
   - ❌ Companion XP/level up from combat
 - **Impact**: Companions can't be used in actual gameplay
+
+---
+
+## CODE CLEANUP / REFACTORING
+_Tracking spots found while going through the codebase to build a better understanding of it and remove what isn't necessary._
+
+### 🟢 Investigate progression/quest_system.cs and progression/loot_table.cs
+- **Files**: `game_logic/progression/quest_system.cs`, `game_logic/progression/loot_table.cs`
+- **Status**: ❌ Not Started
+- **Description**: Both files only contain a couple of enums (`QuestType`/`QuestStatus` in quest_system.cs, `LootSourceType` in loot_table.cs) in the `GameLogic.Progression` namespace. Check whether these duplicate/overlap with enums already defined in `game_logic/quests/` (which has its own `quest.cs`, `quest_manager.cs`, etc.) and whether they should be merged or removed.
+- **Context**: Bosses were just moved out of `progression/` into `game_logic/entities/enemies/bosses/` (namespace `GameLogic.Entities.Enemies.Bosses`) since `BossManager`/`BossDefinitions` were content/entity-related, not progression logic. `quest_system.cs` and `loot_table.cs` look like they might be similar leftover misplacement.
+
+### 🔴 Difficulty selection has zero mechanical effect on gameplay
+- **Files**: `game_logic/systems/game_settings.cs`, `game_logic/systems/difficulty_scaler.cs`, `game_logic/progression/leveling_system.cs`, `game_logic/menus/settings_menu.cs`
+- **Status**: ❌ Not Started
+- **Description**: Found while renaming the difficulty tiers (2026-09-10). There are actually THREE separate, disconnected "difficulty" concepts in the codebase:
+  1. `GameLogic.Systems.DifficultyLevel` (game_settings.cs) - the one actually chosen at new-game creation (`GameManager.SelectDifficulty`), now named Normal/Hard/Difficult/Unfair. `GameSettings.GetDifficultyMultiplier()`/`GetRewardMultiplier()` exist but are **only ever read by the settings menu display** - never applied to actual enemy stats or rewards anywhere in combat/loot code.
+  2. `GameLogic.Progression.XpDifficultyLevel` (leveling_system.cs) - **renamed 2026-09-10** from the confusing same-named `DifficultyLevel` to disambiguate from #1. Intentionally distinct from the main difficulty enum - it's meant to scale XP gain specifically (harder difficulty = modestly more XP, not a 1:1 stat multiplier), now using values Normal=0.8x/Hard=1.0x/Difficult=1.25x/Unfair=1.5x (adopted from `DifficultyScaler.ScaleEnemyXP`'s curve). `LevelingSystem.GetDifficultyMultiplier()` is still only ever called from unit tests, not live game code - **still needs to be wired into the actual XP-award path** (likely `combat_manager.cs`, wherever `enemy.XPValue` is granted to the player) using `_gameSettings.Difficulty` mapped to the corresponding `XpDifficultyLevel` tier.
+  3. `GameLogic.Systems.GameDifficulty` (difficulty_scaler.cs) - yet another distinct enum (Easy/Normal/Hard/Nightmare) feeding the whole `DifficultyScaler` class (health/damage/XP/gold scaling, elite/boss scaling, loot quality) - a fully-built system that is **never instantiated anywhere outside its own test file**. `GameManager` has no `DifficultyScaler` field at all.
+  - **Impact**: Picking Normal/Hard/Difficult/Unfair at character creation currently does nothing to actual enemy difficulty - it's cosmetic only. `DifficultyScaler` looks like the intended real implementation but was never wired in.
+  - **Next step**: Decide whether to wire `DifficultyScaler` into `GameManager`/`CombatManager` (and delete the redundant `Progression.DifficultyLevel` + `GameSettings` multiplier methods), or remove `DifficultyScaler` if the flat `GameSettings` multipliers are meant to be the real mechanism (in which case those need to actually be applied in combat/loot code).
 
 ---
 
@@ -458,7 +479,7 @@
   - RNG settings (algorithm selection, statistics tracking)
   - Accessibility settings (colored text, emojis, text speed)
   - Audio settings (placeholder for GUI)
-  - Difficulty settings (Easy/Normal/Hard/Very Hard)
+  - Difficulty settings (Normal/Hard/Difficult/Unfair)
 - ✅ **Difficulty System**:
   - 4 difficulty levels affecting enemy stats (75%-200%) and rewards (80%-150%)
   - Immutable after save file creation (prevents exploitation)

@@ -13,7 +13,6 @@ class Program
         try
         {
             GameManager game = new GameManager();
-            game.StartNewGame();
             game.Run();
         }
         catch (Exception ex)

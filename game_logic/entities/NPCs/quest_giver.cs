@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GameLogic.Quests;
-using GameLogic.Progression;
+using GameLogic.Entities.Enemies.Bosses;
 using Quest = GameLogic.Quests.Quest;
 
 namespace GameLogic.Entities.NPCs

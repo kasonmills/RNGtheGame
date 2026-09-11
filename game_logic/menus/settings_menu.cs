@@ -340,10 +340,10 @@ namespace GameLogic.Menus
             Console.WriteLine($"Reward Multiplier: {settings.GetRewardMultiplier():P0}");
 
             Console.WriteLine("\nDifficulty Levels:");
-            Console.WriteLine("• Easy: 75% enemy stats, 80% rewards");
-            Console.WriteLine("• Normal: 100% enemy stats, 100% rewards");
-            Console.WriteLine("• Hard: 150% enemy stats, 130% rewards");
-            Console.WriteLine("• Very Hard: 200% enemy stats, 200% rewards");
+            Console.WriteLine("• Normal: 75% enemy stats, 80% rewards");
+            Console.WriteLine("• Hard: 100% enemy stats, 100% rewards");
+            Console.WriteLine("• Difficult: 150% enemy stats, 130% rewards");
+            Console.WriteLine("• Unfair: 200% enemy stats, 150% rewards");
 
             Console.WriteLine("\nNote: Difficulty is set at save file creation and cannot be changed.");
             Console.WriteLine("\nPress any key to return...");

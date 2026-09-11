@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using GameLogic.Entities.Enemies;
 
-namespace GameLogic.Progression
+namespace GameLogic.Entities.Enemies.Bosses
 {
     /// <summary>
     /// Defines all 15 champion bosses in the game

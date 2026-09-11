@@ -211,7 +211,7 @@ namespace GameLogic.Data
             GameVersion = "1.0.0";
 
             // Default settings (will be overridden by actual settings)
-            Difficulty = DifficultyLevel.Normal;
+            Difficulty = DifficultyLevel.Hard;
             ShowTurnOrderAtStartOfRound = true;
             ShowDetailedCombatLog = true;
             ShowDamageCalculations = false;

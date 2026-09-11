@@ -1,5 +1,5 @@
 using System;
-using GameLogic.Progression;
+using GameLogic.Entities.Enemies.Bosses;
 
 namespace GameLogic.Quests
 {
