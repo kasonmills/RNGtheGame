@@ -447,5 +447,50 @@ namespace GameLogic.Progression
 
             return table;
         }
+
+        /// <summary>
+        /// Pick the right enemy loot table for a given enemy classification
+        /// </summary>
+        public static LootTable CreateForEnemyType(Entities.Enemies.EnemyType type)
+        {
+            return type switch
+            {
+                Entities.Enemies.EnemyType.Elite => CreateEliteEnemyLoot(),
+                Entities.Enemies.EnemyType.Miniboss => CreateEliteEnemyLoot(),
+                Entities.Enemies.EnemyType.Boss => CreateBossLoot(),
+                _ => CreateBasicEnemyLoot()
+            };
+        }
+
+        /// <summary>
+        /// Shop inventory loot table - no gold or "nothing" entries since every roll
+        /// must produce a sellable item. Rarity odds scale up with shop tier (1-5).
+        /// </summary>
+        public static LootTable CreateShopInventory(int shopTier)
+        {
+            shopTier = Math.Clamp(shopTier, 1, 5);
+            float t = (shopTier - 1) / 4f; // 0.0 at tier 1, 1.0 at tier 5
+
+            var table = new LootTable($"Shop Tier {shopTier}", LootSourceType.Shop)
+            {
+                MinGold = 0,
+                MaxGold = 0,
+                NothingDropChance = 0.0f,
+                CommonChance = Lerp(0.70f, 0.20f, t),
+                UncommonChance = Lerp(0.25f, 0.35f, t),
+                RareChance = Lerp(0.05f, 0.30f, t),
+                EpicChance = Lerp(0.0f, 0.12f, t),
+                LegendaryChance = Lerp(0.0f, 0.03f, t),
+                MythicChance = 0.0f
+            };
+
+            table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 35));
+            table.AddEntry(new LootEntry(ItemCategory.Armor, weight: 35));
+            table.AddEntry(new LootEntry(ItemCategory.Consumable, weight: 30, minQuantity: 1, maxQuantity: 5));
+
+            return table;
+        }
+
+        private static float Lerp(float a, float b, float t) => a + (b - a) * t;
     }
 }

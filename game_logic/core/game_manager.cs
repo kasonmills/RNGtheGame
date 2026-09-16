@@ -34,6 +34,9 @@ namespace GameLogic.Core
         private Stack<GameState> _stateStack; // Remember previous states
         private bool _isRunning;
 
+        // === Overworld Encounters ===
+        private List<World.OverworldEnemySpawn> _activeOverworldEnemies;
+
         // === Constructor ===
         public GameManager()
         {
@@ -55,6 +58,7 @@ namespace GameLogic.Core
             _mapManager = new MapManager();
             _combatManager = new CombatManager(_rngManager);
             _activeCompanions = new List<Entities.Entity>();
+            _activeOverworldEnemies = new List<World.OverworldEnemySpawn>();
 
             _currentState = GameState.MainMenu;
             _isRunning = true;
@@ -231,9 +235,6 @@ namespace GameLogic.Core
             // TODO-GODOT: landing/title screen text -> main menu scene
             Console.WriteLine("=== Welcome to RNG: The Game ===\n");
 
-            // Select difficulty (once per save file, immutable)
-            SelectDifficulty();
-
             // Get player name
             Console.Write("Enter your character's name: ");
             string playerName = Console.ReadLine();
@@ -247,6 +248,9 @@ namespace GameLogic.Core
             _player = new Player(playerName);
 
             Console.WriteLine($"\nWelcome, {_player.Name}!");
+
+            // Select difficulty (once per save file, immutable)
+            SelectDifficulty();
 
             // Let player choose starting ability
             ChooseStartingAbility();
@@ -327,17 +331,9 @@ namespace GameLogic.Core
                 }
                 _questGiver = new QuestGiver("Veteran Ranger", _questManager, _bossManager);
 
-                // Load/regenerate map based on saved seed
-                if (saveData.MapSeed != 0)
-                {
-                    _mapManager.GenerateMapFromSeed(saveData.MapSeed);
-                    _mapManager.SetCurrentNode(saveData.CurrentMapNodeId);
-                }
-                else
-                {
-                    // Fallback: generate new map if no seed saved
-                    _mapManager.GenerateNewMap();
-                }
+                // Map layout is fixed, so just regenerate it and restore the player's position
+                _mapManager.GenerateNewMap();
+                _mapManager.SetCurrentNode(saveData.CurrentMapNodeId);
 
                 ChangeState(GameState.Playing);
                 _isRunning = true;
@@ -370,11 +366,6 @@ namespace GameLogic.Core
                         GameLoop();
                         break;
                     
-                    case GameState.Combat:
-                        // Combat is handled by CombatManager
-                        // When combat ends, we return to Playing state
-                        break;
-                    
                     case GameState.Paused:
                         ShowPauseMenu();
                         break;
@@ -385,82 +376,88 @@ namespace GameLogic.Core
                 }
             }
             
-            Console.WriteLine("\nThanks for playing!");
+            // Console.WriteLine("\nThanks for playing!"); // TODO-GODOT: not needed once this loop moves to Godot
         }
 
         /// <summary>
         /// Main gameplay loop - exploration and navigation
+        /// TODO-GODOT: this text-menu dispatch is a stub until Godot scene/input wiring exists.
+        /// The action methods below (Explore, ShowInventory, ShowStats, Rest, SaveGame, ShowChampionMenu,
+        /// quest giver/job board/quest log/statistics menus) are still valid and will be called by
+        /// player movement/interaction signals (walking onto an encounter tile, pressing an interact
+        /// key near an NPC, opening a UI panel, etc.) instead of a numbered console choice.
         /// </summary>
         private void GameLoop()
         {
-            // TODO-GODOT: status block below -> HUD (location/health/gold/level); menu options below -> UI buttons
-            Console.WriteLine("\n=== Current Status ===");
-            Console.WriteLine($"Location: {_mapManager.GetCurrentLocationName()}");
-            Console.WriteLine($"Health: {_player.Health}/{_player.MaxHealth}");
-            Console.WriteLine($"Gold: {_player.Gold}");
-            Console.WriteLine($"Level: {_player.Level}");
-            
-            Console.WriteLine("\n=== What do you want to do? ===");
-            Console.WriteLine("1. Explore (encounter enemies/find loot)");
-            Console.WriteLine("2. View Inventory");
-            Console.WriteLine("3. View Stats");
-            Console.WriteLine("4. Rest (restore health)");
-            Console.WriteLine("5. Save Game");
-            Console.WriteLine("6. Pause Menu");
-            Console.WriteLine("7. ⚔️  Champion Challenges (Boss Fights)");
-            Console.WriteLine("8. 📋 Quest Giver (Boss Quests)");
-            Console.WriteLine("9. 📌 Job Board (Other Quests)");
-            Console.WriteLine("10. 📖 Quest Log");
-            Console.WriteLine("11. 📊 Statistics");
-            Console.WriteLine("12. Quit");
-            
-            Console.Write("\nChoice: ");
-            string choice = Console.ReadLine();
-            
-            switch (choice)
-            {
-                case "1":
-                    Explore();
-                    break;
-                case "2":
-                    ShowInventory();
-                    break;
-                case "3":
-                    ShowStats();
-                    break;
-                case "4":
-                    Rest();
-                    break;
-                case "5":
-                    SaveGame();
-                    break;
-                case "6":
-                    PushState(GameState.Paused); // Save current state and go to pause
-                    break;
-                case "7":
-                    ShowChampionMenu();
-                    break;
-                case "8":
-                    _questGiver.Interact();
-                    break;
-                case "9":
-                    Menus.JobBoard.DisplayJobBoard(_questManager);
-                    break;
-                case "10":
-                    _questManager.DisplayQuestLog();
-                    Console.WriteLine("\nPress any key to continue...");
-                    Console.ReadKey();
-                    break;
-                case "11":
-                    Menus.StatisticsMenu.DisplayStatisticsMenu(_statistics);
-                    break;
-                case "12":
-                    _isRunning = false;
-                    break;
-                default:
-                    Console.WriteLine("Invalid choice. Try again.");
-                    break;
-            }
+            // === TEXT-BASED VERSION (kept for reference, not called until Godot wiring replaces it) ===
+            // Console.WriteLine("\n=== Current Status ===");
+            // Console.WriteLine($"Location: {_mapManager.GetCurrentLocationName()}");
+            // Console.WriteLine($"Health: {_player.Health}/{_player.MaxHealth}");
+            // Console.WriteLine($"Gold: {_player.Gold}");
+            // Console.WriteLine($"Level: {_player.Level}");
+            //
+            // Console.WriteLine("\n=== What do you want to do? ===");
+            // Console.WriteLine("1. Explore (encounter enemies/find loot)");
+            // Console.WriteLine("2. View Inventory");
+            // Console.WriteLine("3. View Stats");
+            // Console.WriteLine("4. Rest (restore health)");
+            // Console.WriteLine("5. Save Game");
+            // Console.WriteLine("6. Pause Menu");
+            // Console.WriteLine("7. ⚔️  Champion Challenges (Boss Fights)");
+            // Console.WriteLine("8. 📋 Quest Giver (Boss Quests)");
+            // Console.WriteLine("9. 📌 Job Board (Other Quests)");
+            // Console.WriteLine("10. 📖 Quest Log");
+            // Console.WriteLine("11. 📊 Statistics");
+            // Console.WriteLine("12. Quit");
+            //
+            // Console.Write("\nChoice: ");
+            // string choice = Console.ReadLine();
+            //
+            // switch (choice)
+            // {
+            //     case "1":
+            //         Explore();
+            //         break;
+            //     case "2":
+            //         OpenInventory();
+            //         break;
+            //     case "3":
+            //         OpenStats();
+            //         break;
+            //     case "4":
+            //         Rest();
+            //         break;
+            //     case "5":
+            //         SaveGame();
+            //         break;
+            //     case "6":
+            //         PushState(GameState.Paused); // Save current state and go to pause
+            //         break;
+            //     case "7":
+            //         ShowChampionMenu();
+            //         break;
+            //     case "8":
+            //         _questGiver.Interact();
+            //         break;
+            //     case "9":
+            //         Menus.JobBoard.DisplayJobBoard(_questManager);
+            //         break;
+            //     case "10":
+            //         _questManager.DisplayQuestLog();
+            //         Console.WriteLine("\nPress any key to continue...");
+            //         Console.ReadKey();
+            //         break;
+            //     case "11":
+            //         Menus.StatisticsMenu.DisplayStatisticsMenu(_statistics);
+            //         break;
+            //     case "12":
+            //         _isRunning = false;
+            //         break;
+            //     default:
+            //         Console.WriteLine("Invalid choice. Try again.");
+            //         break;
+            // }
+            // === END TEXT-BASED VERSION ===
         }
 
         /// <summary>
@@ -521,26 +518,86 @@ namespace GameLogic.Core
         }
 
         /// <summary>
+        /// Get the min/max number of overworld enemies that can spawn in a given location type.
+        /// Safe/non-combat locations (Town, RestSite, TreasureRoom, BossRoom) never spawn wandering enemies.
+        /// </summary>
+        private (int min, int max) GetEncounterSpawnRange(World.LocationType type)
+        {
+            return type switch
+            {
+                World.LocationType.Forest => (2, 5),
+                World.LocationType.Cave => (2, 5),
+                World.LocationType.Mountain => (1, 4),
+                World.LocationType.Ruins => (1, 3),
+                World.LocationType.Crossroads => (1, 3),
+                _ => (0, 0)
+            };
+        }
+
+        /// <summary>
+        /// Spawn a random number of overworld enemies in the player's current route/area.
+        /// TODO-GODOT: call this whenever the player arrives at a new route/area.
+        /// </summary>
+        public void SpawnOverworldEncounters()
+        {
+            _activeOverworldEnemies.Clear();
+
+            var currentNode = _mapManager.GetCurrentNode();
+            if (currentNode == null) return;
+
+            var (min, max) = GetEncounterSpawnRange(currentNode.Type);
+            if (max <= 0) return;
+
+            int count = _rngManager.Roll(min, max);
+            for (int i = 0; i < count; i++)
+            {
+                var enemy = SpawnEnemy();
+                _activeOverworldEnemies.Add(new World.OverworldEnemySpawn(enemy, _rngManager));
+            }
+        }
+
+        /// <summary>
+        /// Get the enemies currently spawned in the player's route/area.
+        /// TODO-GODOT: used by the route scene to place/move a visible enemy per spawn.
+        /// </summary>
+        public List<World.OverworldEnemySpawn> GetActiveOverworldEnemies()
+        {
+            return _activeOverworldEnemies;
+        }
+
+        /// <summary>
+        /// Resolve an overworld enemy's hitbox colliding with the player's hitbox into a real combat encounter.
+        /// TODO-GODOT: call this from the player's Area2D collision signal when it overlaps an overworld enemy's hitbox.
+        /// </summary>
+        public void OnOverworldEnemyHitboxCollision(World.OverworldEnemySpawn spawn)
+        {
+            if (spawn == null || !_activeOverworldEnemies.Contains(spawn)) return;
+
+            _activeOverworldEnemies.Remove(spawn);
+            TriggerCombatEncounter(spawn.Enemy);
+        }
+
+        /// <summary>
         /// Trigger a combat encounter - called by Explore() or MapManager
         /// This method works for both text-based AND Godot versions
         /// </summary>
-        public void TriggerCombatEncounter()
+        public void TriggerCombatEncounter(Entities.Enemies.EnemyBase enemy = null)
         {
-            // Spawn an appropriate enemy
-            var enemy = SpawnEnemy();
+            // Use the given enemy (e.g. from an overworld spawn) or spawn a fresh one
+            enemy ??= SpawnEnemy();
 
             // TODO-GODOT: enemy intro/description -> combat scene intro textbox
             Console.WriteLine($"A {enemy.Name} appears!\n");
             Console.WriteLine(enemy.GetDescription());
 
-            PushState(GameState.Combat); // Save Playing state, go to Combat
+            ChangeState(GameState.Combat); // Combat always enters from Playing and returns to Playing/GameOver
 
             // CombatManager handles the actual combat (including XP and loot rewards)
             bool playerWon = _combatManager.StartCombat(_player, enemy, _activeCompanions);
 
             if (playerWon)
             {
-                PopState(); // Return to Playing state
+                ChangeState(GameState.Playing); // Return to Playing
             }
             else
             {
@@ -558,46 +615,28 @@ namespace GameLogic.Core
             // TODO-GODOT: loot event flavor text + item found messages -> loot popup
             Console.WriteLine("You found a treasure chest!");
 
-            int goldFound = _rngManager.Roll(10, 50);
-            _player.Gold += goldFound;
+            // Chest loot rolls through RNGManager (via the adapter) so it respects the
+            // player's chosen RNG algorithm and counts toward RNG statistics, same as
+            // every other roll in the game.
+            var rngAdapter = new Systems.RNGManagerRandomAdapter(_rngManager);
+            var lootGenerator = new Progression.LootGenerator(rngAdapter);
+            var lootTable = Progression.LootTableTemplates.CreateChestLoot();
+            var loot = lootGenerator.GenerateLoot(lootTable, _player.Level);
 
-            Console.WriteLine($"You gained {goldFound} gold!");
+            _player.Gold += loot.Gold;
+            Console.WriteLine($"You gained {loot.Gold} gold!");
 
-            // Roll for item drop
-            int itemRoll = _rngManager.Roll(1, 100);
-
-            if (itemRoll <= 60) // 60% chance for an item
+            if (loot.Items.Count > 0)
             {
-                // Determine item type
-                int typeRoll = _rngManager.Roll(1, 100);
-
-                if (typeRoll <= 50) // 50% consumable
+                foreach (var item in loot.Items)
                 {
-                    var potion = Items.ItemDatabase.GetHealthPotion(_player.Level);
-                    if (potion != null)
-                    {
-                        _player.AddToInventory(potion);
-                        Console.WriteLine($"Found: {potion.GetDisplayName()}");
-                    }
+                    _player.AddToInventory(item);
+                    Console.WriteLine($"Found: {item.GetDisplayName()}");
                 }
-                else if (typeRoll <= 75) // 25% weapon
-                {
-                    var weapon = Items.ItemDatabase.GetWeapon("Sword", _player.Level, _player.Level);
-                    if (weapon != null)
-                    {
-                        _player.AddToInventory(weapon);
-                        Console.WriteLine($"Found: {weapon.GetDisplayName()}");
-                    }
-                }
-                else // 25% armor
-                {
-                    var armor = Items.ItemDatabase.GetArmor("Leather Armor", _player.Level, _player.Level);
-                    if (armor != null)
-                    {
-                        _player.AddToInventory(armor);
-                        Console.WriteLine($"Found: {armor.GetDisplayName()}");
-                    }
-                }
+            }
+            else
+            {
+                Console.WriteLine("The chest held only gold.");
             }
 
             Console.WriteLine("\nPress any key to continue...");
@@ -605,25 +644,39 @@ namespace GameLogic.Core
         }
 
         /// <summary>
-        /// Display player inventory
+        /// Open the inventory panel - pauses the player (like Paused) since they can't
+        /// move their character while browsing it.
+        /// TODO-GODOT: call this when the player opens the inventory panel/hotkey.
         /// </summary>
-        private void ShowInventory()
+        public void OpenInventory()
         {
+            PushState(GameState.Inventory);
+
             // TODO-GODOT: inventory listing -> inventory panel UI
             _player.Inventory.DisplayInventory();
 
             Console.WriteLine($"Equipped Weapon: {(_player.EquippedWeapon?.Name ?? "None")}");
             Console.WriteLine($"Equipped Armor: {(_player.EquippedArmor?.Name ?? "None")}");
-            
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
         }
 
         /// <summary>
-        /// Display detailed player stats
+        /// Close the inventory panel and return to whatever state it interrupted.
+        /// TODO-GODOT: call this when the player closes the inventory panel/hotkey.
         /// </summary>
-        private void ShowStats()
+        public void CloseInventory()
         {
+            PopState();
+        }
+
+        /// <summary>
+        /// Open the character stats panel - pauses the player (like Paused) since they can't
+        /// move their character while browsing it.
+        /// TODO-GODOT: call this when the player opens the stats panel/hotkey.
+        /// </summary>
+        public void OpenStats()
+        {
+            PushState(GameState.Stats);
+
             // TODO-GODOT: character stats block -> stats panel UI
             Console.WriteLine("\n=== Character Stats ===");
             Console.WriteLine($"Name: {_player.Name}");
@@ -667,9 +720,15 @@ namespace GameLogic.Core
             {
                 Console.WriteLine("Armor: None");
             }
+        }
 
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
+        /// <summary>
+        /// Close the character stats panel and return to whatever state it interrupted.
+        /// TODO-GODOT: call this when the player closes the stats panel/hotkey.
+        /// </summary>
+        public void CloseStats()
+        {
+            PopState();
         }
 
         /// <summary>

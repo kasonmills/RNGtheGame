@@ -51,10 +51,10 @@ namespace GameLogic.Entities.NPCs
         /// <summary>
         /// Constructor for shopkeeper NPCs
         /// </summary>
-        public ShopKeeper(string name, int shopTier = 1, string greeting = null, Random rng = null, int initialPlayerLevel = 1)
+        public ShopKeeper(string name, Systems.RNGManager rngManager, int shopTier = 1, string greeting = null, int initialPlayerLevel = 1)
             : base(name, NPCType.Merchant, greeting)
         {
-            _rng = rng ?? new Random();
+            _rng = new Systems.RNGManagerRandomAdapter(rngManager);
 
             ShopTier = Math.Clamp(shopTier, 1, 5);
 
@@ -713,37 +713,17 @@ namespace GameLogic.Entities.NPCs
             // Number of items based on tier
             int itemCount = 5 + (ShopTier * 2);  // Tier 1: 7 items, Tier 5: 15 items
 
-            for (int i = 0; i < itemCount; i++)
+            // Generate stock from the unified shop loot table (no gold/nothing entries,
+            // rarity odds already scaled by ShopTier)
+            var shopTable = Progression.LootTableTemplates.CreateShopInventory(ShopTier);
+            shopTable.MinDrops = itemCount;
+            shopTable.MaxDrops = itemCount;
+
+            var lootGenerator = new Progression.LootGenerator(rng);
+            var loot = lootGenerator.GenerateLoot(shopTable, playerLevel);
+
+            foreach (var item in loot.Items)
             {
-                // Determine category
-                int categoryRoll = rng.Next(0, 100);
-                ItemCategory category;
-
-                if (categoryRoll < 30)
-                    category = ItemCategory.Weapon;
-                else if (categoryRoll < 60)
-                    category = ItemCategory.Armor;
-                else
-                    category = ItemCategory.Consumable;
-
-                // Generate item at appropriate level
-                int itemLevel = Math.Max(1, playerLevel + rng.Next(-2, 3));
-                Item item = ItemDatabase.GetRandomItem(category, rng, itemLevel);
-
-                // Higher tier shops have better rarity
-                if (ShopTier >= 3 && rng.Next(0, 100) < 20)
-                {
-                    item.Rarity = ItemRarity.Uncommon;
-                }
-                if (ShopTier >= 4 && rng.Next(0, 100) < 10)
-                {
-                    item.Rarity = ItemRarity.Rare;
-                }
-                if (ShopTier >= 5 && rng.Next(0, 100) < 5)
-                {
-                    item.Rarity = ItemRarity.Epic;
-                }
-
                 // Layer 3: Apply per-item price variation (±3% tiny random modifier)
                 double itemModifier = 0.97 + (rng.NextDouble() * 0.06);
                 _itemPriceModifiers[item] = itemModifier;

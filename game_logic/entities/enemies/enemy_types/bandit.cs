@@ -38,6 +38,9 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
             // Defense: Light armor for mobility
             Defense = 1 + level;
 
+            // Aggression: tactical and opportunistic, medium
+            AggressionLevel = 55;
+
             // Speed: Very fast - light armor and agile
             Speed = 14 + (level / 2); // Bandits are among the fastest enemies
 

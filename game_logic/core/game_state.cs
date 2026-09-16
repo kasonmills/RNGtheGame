@@ -14,6 +14,7 @@ namespace GameLogic.Core
         GameOver,     // Player died
         Shopping,      // In a shop (buy/sell items)
         Inventory,   // Managing inventory
+        Stats,       // Viewing character stats
         Dialogue,    // In conversation with NPC
         Cutscene,     // Watching a cutscene
         Settings,      // Adjusting game settings

@@ -1,48 +1,46 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using GameLogic.Systems;
 
 namespace GameLogic.World
 {
     /// <summary>
-    /// Manages the game map - node-based world with procedural generation
+    /// Manages the game map - a fixed, hand-authored node graph
     /// </summary>
     public class MapManager
     {
         private Dictionary<int, MapNode> _nodes;
         private int _currentNodeId;
+
+        // Kept only so existing save files (which persist a MapSeed) keep loading
+        // without a save-format change; the layout below is fixed, not randomized.
+        private const int FixedMapId = 1;
         private int _mapSeed;
-        private RNGManager _rng;
 
         public MapManager()
         {
             _nodes = new Dictionary<int, MapNode>();
             _currentNodeId = 0;
-            _rng = new RNGManager();
         }
 
         /// <summary>
-        /// Generate a new map for a new game
+        /// Generate the map for a new game
         /// </summary>
         public void GenerateNewMap()
         {
-            _mapSeed = _rng.Roll(1, 1000000);
-            GenerateMapFromSeed(_mapSeed);
+            GenerateMapFromSeed(FixedMapId);
         }
 
         /// <summary>
-        /// Generate a map from a specific seed (for save/load)
+        /// Generate the map (for save/load compatibility - the layout is fixed regardless of seed)
         /// </summary>
         public void GenerateMapFromSeed(int seed)
         {
-            Console.WriteLine($"Generating map from seed: {seed}");
-            _mapSeed = seed;
-            _rng = new RNGManager(seed);
+            _mapSeed = FixedMapId;
             _nodes.Clear();
 
-            // Generate the map structure
-            GenerateLinearMap();
+            // Build the map structure
+            GenerateFixedMap();
 
             // Set starting position
             _currentNodeId = 0;
@@ -52,27 +50,27 @@ namespace GameLogic.World
             // Discover adjacent nodes
             DiscoverAdjacentNodes();
 
-            Console.WriteLine($"Map generated! Starting at: {GetCurrentLocationName()}");
+            Console.WriteLine($"Map loaded! Starting at: {GetCurrentLocationName()}");
         }
 
         /// <summary>
-        /// Generate a linear map with branches (like Slay the Spire)
+        /// Build the fixed story map (linear path with branches, like Slay the Spire)
         /// </summary>
-        private void GenerateLinearMap()
+        private void GenerateFixedMap()
         {
             int nodeIdCounter = 0;
 
             // Layer 1: Starting Town
-            var startTown = new MapNode(nodeIdCounter++, "Haven Village", LocationType.Town, dangerLevel: 0);
+            var startTown = new MapNode(nodeIdCounter++, "Haven Village", LocationType.Town, positionX: 0, positionY: 0);
             startTown.AvailableEvents.Add("Shop");
             startTown.AvailableEvents.Add("Rest");
             _nodes.Add(startTown.Id, startTown);
 
             // Layer 2: Early game paths (3 nodes)
-            List<MapNode> layer2 = new List<MapNode>();
-            layer2.Add(new MapNode(nodeIdCounter++, "Whispering Woods", LocationType.Forest, dangerLevel: 1));
-            layer2.Add(new MapNode(nodeIdCounter++, "Old Crossroads", LocationType.Crossroads, dangerLevel: 1));
-            layer2.Add(new MapNode(nodeIdCounter++, "Abandoned Camp", LocationType.RestSite, dangerLevel: 1));
+            var whisperingWoods = new MapNode(nodeIdCounter++, "Whispering Woods", LocationType.Forest, positionX: 1, positionY: -1);
+            var oldCrossroads = new MapNode(nodeIdCounter++, "Old Crossroads", LocationType.Crossroads, positionX: 1, positionY: 0);
+            var abandonedCamp = new MapNode(nodeIdCounter++, "Abandoned Camp", LocationType.RestSite, positionX: 1, positionY: 1);
+            var layer2 = new List<MapNode> { whisperingWoods, oldCrossroads, abandonedCamp };
 
             foreach (var node in layer2)
             {
@@ -82,12 +80,12 @@ namespace GameLogic.World
                 node.ConnectTo(startTown);
             }
 
-            // Layer 3: Mid-game areas (4 nodes)
-            List<MapNode> layer3 = new List<MapNode>();
-            layer3.Add(new MapNode(nodeIdCounter++, "Dark Cave", LocationType.Cave, dangerLevel: 3));
-            layer3.Add(new MapNode(nodeIdCounter++, "Ancient Ruins", LocationType.Ruins, dangerLevel: 3));
-            layer3.Add(new MapNode(nodeIdCounter++, "Treasure Vault", LocationType.TreasureRoom, dangerLevel: 2));
-            layer3.Add(new MapNode(nodeIdCounter++, "Mountain Pass", LocationType.Mountain, dangerLevel: 4));
+            // Layer 3: Mid-game areas (4 nodes), each with fixed connections back to layer 2
+            var darkCave = new MapNode(nodeIdCounter++, "Dark Cave", LocationType.Cave, positionX: 2, positionY: -1.5f);
+            var ancientRuins = new MapNode(nodeIdCounter++, "Ancient Ruins", LocationType.Ruins, positionX: 2, positionY: -0.5f);
+            var treasureVault = new MapNode(nodeIdCounter++, "Treasure Vault", LocationType.TreasureRoom, positionX: 2, positionY: 0.5f);
+            var mountainPass = new MapNode(nodeIdCounter++, "Mountain Pass", LocationType.Mountain, positionX: 2, positionY: 1.5f);
+            var layer3 = new List<MapNode> { darkCave, ancientRuins, treasureVault, mountainPass };
 
             foreach (var node in layer3)
             {
@@ -98,22 +96,23 @@ namespace GameLogic.World
                 else
                 {
                     node.AvailableEvents.Add("Combat");
-                    if (_rng.Roll(1, 100) <= 30) node.AvailableEvents.Add("Loot");
                 }
 
                 _nodes.Add(node.Id, node);
-
-                // Connect to 1-2 random nodes from previous layer
-                int connections = _rng.Roll(1, 2);
-                for (int i = 0; i < connections; i++)
-                {
-                    var prevNode = layer2[_rng.Roll(0, layer2.Count - 1)];
-                    node.ConnectTo(prevNode);
-                }
             }
 
+            // Ancient Ruins gets a bonus Loot event to fit its lore (fixed, not randomized)
+            ancientRuins.AvailableEvents.Add("Loot");
+
+            darkCave.ConnectTo(whisperingWoods);
+            ancientRuins.ConnectTo(whisperingWoods);
+            ancientRuins.ConnectTo(oldCrossroads);
+            treasureVault.ConnectTo(oldCrossroads);
+            mountainPass.ConnectTo(oldCrossroads);
+            mountainPass.ConnectTo(abandonedCamp);
+
             // Layer 4: Rest area before boss
-            var restArea = new MapNode(nodeIdCounter++, "Shrine of Heroes", LocationType.RestSite, dangerLevel: 0);
+            var restArea = new MapNode(nodeIdCounter++, "Shrine of Heroes", LocationType.RestSite, positionX: 3, positionY: 0);
             restArea.AvailableEvents.Add("Rest");
             restArea.AvailableEvents.Add("Shop");
             _nodes.Add(restArea.Id, restArea);
@@ -124,7 +123,7 @@ namespace GameLogic.World
             }
 
             // Layer 5: Boss
-            var bossRoom = new MapNode(nodeIdCounter++, "The Tyrant's Lair", LocationType.BossRoom, dangerLevel: 10);
+            var bossRoom = new MapNode(nodeIdCounter++, "The Tyrant's Lair", LocationType.BossRoom, positionX: 4, positionY: 0);
             bossRoom.AvailableEvents.Add("BossCombat");
             _nodes.Add(bossRoom.Id, bossRoom);
             bossRoom.ConnectTo(restArea);
@@ -144,6 +143,22 @@ namespace GameLogic.World
         public MapNode GetCurrentNode()
         {
             return _nodes.ContainsKey(_currentNodeId) ? _nodes[_currentNodeId] : null;
+        }
+
+        /// <summary>
+        /// Get a node by id (e.g. for placing/looking up nodes on the Godot map scene)
+        /// </summary>
+        public MapNode GetNodeById(int nodeId)
+        {
+            return _nodes.ContainsKey(nodeId) ? _nodes[nodeId] : null;
+        }
+
+        /// <summary>
+        /// Get every node in the map (e.g. for laying out the Godot map scene)
+        /// </summary>
+        public IReadOnlyCollection<MapNode> GetAllNodes()
+        {
+            return _nodes.Values;
         }
 
         /// <summary>
@@ -167,24 +182,37 @@ namespace GameLogic.World
         }
 
         /// <summary>
+        /// Check whether the player can currently move to the given node
+        /// (e.g. gate physical movement input on the Godot map scene)
+        /// </summary>
+        public bool CanTravelTo(int nodeId)
+        {
+            var currentNode = GetCurrentNode();
+            if (currentNode == null) return false;
+            if (!currentNode.ConnectedNodeIds.Contains(nodeId)) return false;
+            if (!_nodes.ContainsKey(nodeId)) return false;
+            if (_nodes[nodeId].IsLocked) return false;
+
+            return true;
+        }
+
+        /// <summary>
         /// Travel to a specific node
         /// </summary>
         public bool TravelTo(int nodeId)
         {
-            var currentNode = GetCurrentNode();
-            if (currentNode == null) return false;
-
-            // Check if destination is connected
-            if (!currentNode.ConnectedNodeIds.Contains(nodeId))
+            if (!CanTravelTo(nodeId))
             {
-                Console.WriteLine("That location is not reachable from here!");
-                return false;
-            }
+                // TODO-GODOT: feedback below -> blocked-movement/locked UI cue instead of console text
+                if (GetCurrentNode() != null && !GetCurrentNode().ConnectedNodeIds.Contains(nodeId))
+                {
+                    Console.WriteLine("That location is not reachable from here!");
+                }
+                else if (_nodes.ContainsKey(nodeId) && _nodes[nodeId].IsLocked)
+                {
+                    Console.WriteLine("That location is locked!");
+                }
 
-            // Check if locked
-            if (_nodes[nodeId].IsLocked)
-            {
-                Console.WriteLine("That location is locked!");
                 return false;
             }
 
@@ -196,6 +224,7 @@ namespace GameLogic.World
             // Discover adjacent nodes
             DiscoverAdjacentNodes();
 
+            // TODO-GODOT: text below -> player sprite moves to newNode's position; newNode.EnterNode() becomes arrival popup/HUD text
             Console.WriteLine($"\nTraveled to: {newNode.Name}");
             newNode.EnterNode();
 
@@ -251,6 +280,7 @@ namespace GameLogic.World
         /// </summary>
         public void DisplayMap()
         {
+            // TODO-GODOT: text map below -> visual map scene using each node's PositionX/PositionY
             Console.WriteLine("\n=== MAP ===");
             Console.WriteLine($"Current Location: {GetCurrentLocationName()}\n");
 

@@ -95,6 +95,32 @@ namespace GameLogic.Systems
     */
 
     /// <summary>
+    /// Adapts RNGManager to the System.Random surface so existing Random-based code
+    /// (e.g. LootGenerator) can be driven by the game's central RNG instead of a
+    /// disconnected new Random() - keeps algorithm switching and statistics tracking
+    /// consistent across every roll in the game.
+    /// </summary>
+    public class RNGManagerRandomAdapter : Random
+    {
+        private readonly RNGManager _rngManager;
+
+        public RNGManagerRandomAdapter(RNGManager rngManager)
+        {
+            _rngManager = rngManager;
+        }
+
+        public override int Next() => _rngManager.Next(int.MaxValue);
+
+        public override int Next(int maxValue) => _rngManager.Next(maxValue);
+
+        public override int Next(int minValue, int maxValue) => _rngManager.Next(minValue, maxValue);
+
+        public override double NextDouble() => _rngManager.NextDouble();
+
+        public override void NextBytes(byte[] buffer) => _rngManager.NextBytes(buffer);
+    }
+
+    /// <summary>
     /// Central RNG manager for the entire game
     /// Provides unified interface for all random number generation
     /// Can swap RNG algorithms without changing game code

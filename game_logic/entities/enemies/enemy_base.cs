@@ -19,6 +19,7 @@ namespace GameLogic.Entities.Enemies
         public int Accuracy { get; set; }      // Hit chance (1-100)
         public int CritChance { get; set; }    // Critical hit chance (1-100)
         public int Defense { get; set; }       // Damage reduction
+        public int AggressionLevel { get; set; } // 0-100, how likely this enemy is to notice/charge the player in the overworld
 
         // Rewards
         public int GoldValue { get; set; }     // Base gold dropped

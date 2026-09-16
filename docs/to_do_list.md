@@ -87,9 +87,16 @@
 
 ## MEDIUM PRIORITY - Systems & Features
 
-### 🟡 5. Boss Key Progression System
+### 🔴 5. Boss Key Progression System - SCOPE REDUCTION IN PROGRESS (2026-09-11)
 - **Files**: `game_logic/entities/enemies/bosses/boss_enemy.cs`, `game_logic/entities/enemies/bosses/boss_manager.cs`, `game_logic/entities/enemies/bosses/boss_definitions.cs`, `game_logic/world/boss_encounter.cs`
-- **Status**: ✅ FULLY COMPLETED (Phases 1 & 2)
+- **Status**: 🚧 Framework complete, roster emptied pending redesign
+- **Scope change**: Reduced from 15 bosses to 8, tied to a fixed story map with specific spawn locations (procedural map generation is being replaced - see item below). The original 15-boss roster was archived to `docs/boss_ideas_archive.md` for inspiration; `BossDefinitions.GetAllChampionBosses()` now returns an empty list.
+- **Still needed** (not done yet, deliberately deferred):
+  - Design and add the new 8-boss roster to `BossDefinitions`
+  - Update `BossManager.TOTAL_BOSSES` (currently still 15) and `KEYS_REQUIRED` (currently still 10) to match the new 8-boss scale
+  - Fix stale UI text in `GameManager.StartNewGame()` ("Defeat 10 of the 15 Champions...") and `BossDefinitions.GetBossListSummary()` ("Defeat any 10...") once the new numbers are decided
+  - Tie boss encounters to the new fixed map's spawn locations instead of the Champion Challenges menu's free-select list (depends on the map work below)
+- **Previously completed work below still applies to the framework** (key drops, strength scaling, save/load) - only the content (which bosses, how many) is being redone:
 - **Description**: Complete boss progression system using champion keys to unlock final gate
 - **Phase 1 Complete** (✅ Framework):
   - ✅ BossEnemy class with unique mechanics (12 mechanic types)
@@ -235,13 +242,12 @@ _Tracking spots found while going through the codebase to build a better underst
 - **Impact**: Minimal - System.Random works fine for current needs
 - **Note**: Optional enhancement for players who want specific RNG behaviors
 
-### 🟢 10. Custom Map Loading
-- **File**: `game_logic/world/map_manager.cs:269`
-- **Status**: ❌ Not Implemented
-- **Description**: LoadMap() method doesn't actually load handcrafted maps from files
-- **Impact**: Minimal - procedural generation works well
-- **Current**: Procedural map generation functional
-- **Future**: Load predefined map layouts from JSON/XML files
+### 🔴 10. Replace Procedural Map with Fixed Story Map
+- **File**: `game_logic/world/map_manager.cs`
+- **Status**: ❌ Not Started (scope change, 2026-09-11)
+- **Description**: Scope reduced - the map is no longer randomized. It needs to become a fixed, story-driven map with specific spawn locations (tied to the new 8-boss roster above), replacing `GenerateNewMap()`/`GenerateMapFromSeed()`'s current procedural "Slay the Spire"-style linear generation.
+- **Impact**: This changes how saves store map state (`MapSeed` regeneration won't make sense for a fixed map) and how boss encounters are triggered (map location instead of free-select Champion menu).
+- **Not started yet** - needs design input (how many locations, what's at each, story beats) before implementation.
 
 ### 🟢 11. Player Execute Method
 - **File**: `game_logic/entities/player/player.cs:186`

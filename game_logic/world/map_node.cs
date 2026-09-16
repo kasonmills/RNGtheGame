@@ -34,7 +34,6 @@ namespace GameLogic.World
         public List<int> ConnectedNodeIds { get; set; }
 
         // Location Properties
-        public int DangerLevel { get; set; }        // 1-10, affects enemy difficulty
         public bool IsVisited { get; set; }
         public bool IsDiscovered { get; set; }      // Can see on map but haven't visited
         public bool IsLocked { get; set; }          // Requires key/quest completion
@@ -42,12 +41,22 @@ namespace GameLogic.World
         // Events
         public List<string> AvailableEvents { get; set; }  // Combat, Loot, Quest, etc.
 
-        public MapNode(int id, string name, LocationType type, int dangerLevel = 1)
+        // World position (used to place this node on the Godot map scene)
+        public float PositionX { get; set; }
+        public float PositionY { get; set; }
+
+        // Convenience flags for movement-driven event triggers (see godot_integration/scripts/map_controller.cs)
+        public bool HasEnemy => AvailableEvents.Contains("Combat") || AvailableEvents.Contains("BossCombat");
+        public bool HasLoot => AvailableEvents.Contains("Loot");
+        public bool HasBoss => AvailableEvents.Contains("BossCombat");
+
+        public MapNode(int id, string name, LocationType type, float positionX = 0, float positionY = 0)
         {
             Id = id;
             Name = name;
             Type = type;
-            DangerLevel = dangerLevel;
+            PositionX = positionX;
+            PositionY = positionY;
             ConnectedNodeIds = new List<int>();
             AvailableEvents = new List<string>();
             IsVisited = false;
@@ -126,9 +135,9 @@ namespace GameLogic.World
         public void EnterNode()
         {
             Visit();
+            // TODO-GODOT: arrival text below -> popup/HUD text once player sprite reaches this node's position
             Console.WriteLine($"\n=== {Name} ===");
             Console.WriteLine(Description);
-            Console.WriteLine($"Danger Level: {DangerLevel}/10");
 
             if (AvailableEvents.Count > 0)
             {

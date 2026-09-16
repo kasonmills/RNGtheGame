@@ -1088,15 +1088,12 @@ namespace GameLogic.Combat
 
             // Calculate rewards
             int xpGained = CalculateXPReward();
-            int goldGained = CalculateGoldReward();
 
             Console.WriteLine($"\n{_enemy.Name} has been defeated!");
             Console.WriteLine($"\nYou gained {xpGained} XP!");
-            Console.WriteLine($"You gained {goldGained} gold!");
 
-            // Apply rewards to player
+            // Apply XP to player
             _player.AddExperience(xpGained);
-            _player.Gold += goldGained;
 
             // Share XP with companions
             foreach (var entity in _allCombatants)
@@ -1107,12 +1104,24 @@ namespace GameLogic.Combat
                 }
             }
 
-            // Roll for loot drops
-            var lootDrops = _enemy.GetLootDrops(_rngManager);
-            if (lootDrops.Count > 0)
+            // Roll for loot (gold + items) from the unified loot table system
+            var lootTable = Progression.LootTableTemplates.CreateForEnemyType(_enemy.Type);
+            var lootGenerator = new Progression.LootGenerator(new RNGManagerRandomAdapter(_rngManager));
+            var loot = lootGenerator.GenerateLoot(lootTable, _player.Level, areaLevel: _enemy.Level);
+
+            _player.Gold += loot.Gold;
+            Console.WriteLine($"You gained {loot.Gold} gold!");
+
+            // Bosses additionally roll their Champion Key with diminishing returns on repeats
+            if (_enemy is BossEnemy boss)
+            {
+                loot.Items.AddRange(boss.GetLootDrops(_rngManager));
+            }
+
+            if (loot.Items.Count > 0)
             {
                 Console.WriteLine("\n--- LOOT DROPS ---");
-                foreach (var item in lootDrops)
+                foreach (var item in loot.Items)
                 {
                     _player.AddToInventory(item);
                     Console.WriteLine($"Obtained: {item.GetDisplayName()}");
