@@ -14,9 +14,14 @@ using Enemy = GameLogic.Entities.Enemies.EnemyBase;
 namespace GameLogic.Combat
 {
     /// <summary>
-    /// Orchestrates combat encounters between player and enemies
-    /// Delegates to specialized managers for turn order, damage, and actions
-    /// Uses a round-based system where each entity acts once per round
+    /// Orchestrates combat encounters between the player (plus companions) and one or
+    /// more enemies. Delegates to specialized managers for turn order, damage, and actions.
+    /// Uses a round-based system where each entity acts once per round.
+    ///
+    /// Non-blocking/resumable: StartCombat() sets up the fight and advances AI turns
+    /// automatically, pausing (IsWaitingForPlayerAction) whenever it's the player's turn.
+    /// The caller (e.g. a Godot combat scene) calls SubmitPlayerAction() to resume.
+    /// Subscribe to CombatMessage for narrative log lines and CombatEnded for the outcome.
     /// </summary>
     public class CombatManager
     {
@@ -26,16 +31,38 @@ namespace GameLogic.Combat
         private BossManager _bossManager;
 
         private Player _player;
-        private Enemy _enemy;
+        private List<Enemy> _enemies;
         private bool _combatActive;
 
         // Round-based combat tracking
         private int _currentRound;
         private List<Entity> _allCombatants;
         private HashSet<Entity> _entitiesActedThisRound;
+        private Queue<Entity> _turnQueue;
 
         // Universal defend tracking - any entity can defend
         private Dictionary<Entity, bool> _defendingEntities;
+
+        /// <summary>
+        /// Fired for narrative combat-log lines (attacks, abilities, items, round events, rewards).
+        /// TODO-GODOT: subscribe to this to drive a combat-log UI.
+        /// </summary>
+        public event Action<string> CombatMessage;
+
+        /// <summary>
+        /// Fired exactly once per combat, with true = victory, false = defeat or fled.
+        /// TODO-GODOT: subscribe to this to know when to leave the combat scene.
+        /// </summary>
+        public event Action<bool> CombatEnded;
+
+        /// <summary>
+        /// True whenever combat is paused waiting for SubmitPlayerAction().
+        /// </summary>
+        public bool IsWaitingForPlayerAction { get; private set; }
+
+        public Player Player => _player;
+        public IReadOnlyList<Enemy> Enemies => _enemies;
+        public IReadOnlyList<Entity> Combatants => _allCombatants;
 
         public CombatManager(RNGManager rngManager)
         {
@@ -45,28 +72,45 @@ namespace GameLogic.Combat
             _defendingEntities = new Dictionary<Entity, bool>();
             _allCombatants = new List<Entity>();
             _entitiesActedThisRound = new HashSet<Entity>();
+            _turnQueue = new Queue<Entity>();
+            _enemies = new List<Enemy>();
             _currentRound = 0;
         }
 
         /// <summary>
-        /// Start a combat encounter
+        /// Write a narrative combat-log line - keeps console text-testing working
+        /// while also notifying any subscriber (e.g. a Godot combat-log UI).
+        /// </summary>
+        private void Log(string message)
+        {
+            Console.WriteLine(message);
+            CombatMessage?.Invoke(message);
+        }
+
+        /// <summary>
+        /// Start a combat encounter against one or more enemies. Resolves AI turns
+        /// automatically and pauses (IsWaitingForPlayerAction = true) whenever it's the
+        /// player's turn - call SubmitPlayerAction() to resume. Subscribe to CombatEnded
+        /// for the outcome.
         /// </summary>
         /// <param name="player">The player character</param>
-        /// <param name="enemy">The enemy to fight</param>
+        /// <param name="enemies">The enemy or enemies to fight</param>
         /// <param name="companions">List of active companions (can be null or empty)</param>
         /// <param name="bossManager">Optional boss manager for boss encounters</param>
-        /// <returns>True if player won, False if player lost</returns>
-        public bool StartCombat(Player player, Enemy enemy, List<Entity> companions = null, BossManager bossManager = null)
+        public void StartCombat(Player player, List<Enemy> enemies, List<Entity> companions = null, BossManager bossManager = null)
         {
             _player = player;
-            _enemy = enemy;
+            _enemies = enemies;
             _combatActive = true;
             _bossManager = bossManager;
 
-            // If this is a boss fight, apply strength scaling
-            if (_enemy is BossEnemy boss && _bossManager != null)
+            // If any of these are bosses, apply strength scaling
+            foreach (var enemy in _enemies)
             {
-                _bossManager.ApplyBossScaling(boss);
+                if (enemy is BossEnemy boss && _bossManager != null)
+                {
+                    _bossManager.ApplyBossScaling(boss);
+                }
             }
 
             // Setup combatants list
@@ -87,71 +131,41 @@ namespace GameLogic.Combat
                 }
             }
 
-            _allCombatants.Add(_enemy);
+            _allCombatants.AddRange(_enemies);
 
             // Clear tracking structures
             _defendingEntities.Clear();
             _entitiesActedThisRound.Clear();
             _currentRound = 1;
 
-            // Initialize turn manager
-            _turnManager.InitializeCombat(player, enemy);
+            // Initialize turn manager (vestigial - kept for compatibility, not used to drive turns)
+            _turnManager.InitializeCombat(player, _enemies.FirstOrDefault());
 
             // Display combat start
             ShowCombatIntro();
 
-            // Main round-based combat loop
-            while (_combatActive && _player.Health > 0 && _enemy.Health > 0)
-            {
-                // Start a new round
-                StartNewRound();
+            BeginRound();
+            AdvanceTurns();
+        }
 
-                // Each entity gets one turn per round
-                foreach (var entity in _allCombatants)
-                {
-                    // Skip if entity is dead
-                    if (!entity.IsAlive())
-                        continue;
+        /// <summary>
+        /// Submit the player's chosen action (built via CombatAction.Attack/UseAbility/UseItem/Defend/Flee -
+        /// picking which enemy to target when there's more than one) while IsWaitingForPlayerAction is
+        /// true. Resolves it, applies the player's own end-of-turn effects, then automatically advances
+        /// through any remaining AI turns until the next player decision point or combat end.
+        /// TODO-GODOT: call this from the combat scene when the player confirms an action.
+        /// </summary>
+        public void SubmitPlayerAction(CombatAction action)
+        {
+            if (!IsWaitingForPlayerAction) return;
 
-                    // Skip if entity already acted this round
-                    if (_entitiesActedThisRound.Contains(entity))
-                        continue;
+            IsWaitingForPlayerAction = false;
 
-                    // Execute entity's turn
-                    ExecuteEntityTurn(entity);
+            ProcessAction(action);
 
-                    // Mark entity as having acted
-                    _entitiesActedThisRound.Add(entity);
+            if (FinishTurn(_player)) return;
 
-                    // Check for combat end after each action
-                    if (_enemy.Health <= 0)
-                    {
-                        return HandleVictory();
-                    }
-                    else if (_player.Health <= 0)
-                    {
-                        return HandleDefeat();
-                    }
-
-                    // Show status between turns if combat is still active
-                    if (_combatActive && entity.IsAlive())
-                    {
-                        ShowCombatStatus();
-                    }
-
-                    // If player or enemy fled, exit
-                    if (!_combatActive)
-                    {
-                        return false;
-                    }
-                }
-
-                // End of round - process end-of-round effects
-                EndRound();
-            }
-
-            // Fled from combat or something else
-            return false;
+            AdvanceTurns();
         }
 
         /// <summary>
@@ -160,25 +174,28 @@ namespace GameLogic.Combat
         private void ShowCombatIntro()
         {
             Console.Clear();
-            Console.WriteLine("=".PadRight(50, '='));
-            Console.WriteLine($"    COMBAT: {_player.Name} vs {_enemy.Name}");
-            Console.WriteLine("=".PadRight(50, '='));
+            Log("=".PadRight(50, '='));
+            Log($"    COMBAT: {_player.Name} vs {string.Join(", ", _enemies.Select(e => e.Name))}");
+            Log("=".PadRight(50, '='));
 
             // Show party composition
-            Console.WriteLine($"\nYour Party:");
-            Console.WriteLine($"  {_player.Name} (Level {_player.Level}) - HP: {_player.Health}/{_player.MaxHealth}");
+            Log($"\nYour Party:");
+            Log($"  {_player.Name} (Level {_player.Level}) - HP: {_player.Health}/{_player.MaxHealth}");
 
             foreach (var entity in _allCombatants)
             {
-                if (entity is Entities.NPCs.Companions.CompanionBase companion && entity != _player && entity != _enemy)
+                if (entity is Entities.NPCs.Companions.CompanionBase companion && entity != _player)
                 {
-                    Console.WriteLine($"  {companion.Name} (Level {companion.Level}) - HP: {companion.Health}/{companion.MaxHealth}");
+                    Log($"  {companion.Name} (Level {companion.Level}) - HP: {companion.Health}/{companion.MaxHealth}");
                 }
             }
 
-            Console.WriteLine($"\nEnemy:");
-            Console.WriteLine($"  {_enemy.Name} (Level {_enemy.Level}) - HP: {_enemy.Health}/{_enemy.MaxHealth}");
-            Console.WriteLine();
+            Log($"\nEnemies:");
+            foreach (var enemy in _enemies)
+            {
+                Log($"  {enemy.Name} (Level {enemy.Level}) - HP: {enemy.Health}/{enemy.MaxHealth}");
+            }
+            Log("");
         }
 
         /// <summary>
@@ -198,13 +215,13 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Start a new round - reset tracking and display round info
+        /// Begin a new round - sort turn order, fill the turn queue, and reset per-round tracking.
         /// </summary>
-        private void StartNewRound()
+        private void BeginRound()
         {
-            Console.WriteLine("\n" + "=".PadRight(50, '='));
-            Console.WriteLine($"           ROUND {_currentRound}");
-            Console.WriteLine("=".PadRight(50, '='));
+            Log("\n" + "=".PadRight(50, '='));
+            Log($"           ROUND {_currentRound}");
+            Log("=".PadRight(50, '='));
 
             // Clear entities that acted this round
             _entitiesActedThisRound.Clear();
@@ -219,7 +236,7 @@ namespace GameLogic.Combat
             });
 
             // Display turn order for this round
-            Console.WriteLine("\nTurn Order (by Speed):");
+            Log("\nTurn Order (by Speed):");
             foreach (var entity in _allCombatants)
             {
                 if (entity.IsAlive())
@@ -238,10 +255,10 @@ namespace GameLogic.Combat
                         }
                     }
 
-                    Console.WriteLine($"  {entity.Name} (Speed: {effectiveSpeed}{modifierText})");
+                    Log($"  {entity.Name} (Speed: {effectiveSpeed}{modifierText})");
                 }
             }
-            Console.WriteLine();
+            Log("");
 
             // Reset defend status for all entities at start of new round
             foreach (var entity in _allCombatants)
@@ -251,33 +268,122 @@ namespace GameLogic.Combat
                     _defendingEntities[entity] = false;
                 }
             }
+
+            // Fill the turn queue in speed order (dead entities are queued too, matching
+            // the old behavior of skipping them at the point their turn comes up - this
+            // preserves "revived mid-round" semantics: an entity gets to act this round
+            // only if their queue position hasn't been reached yet)
+            _turnQueue.Clear();
+            foreach (var entity in _allCombatants)
+            {
+                _turnQueue.Enqueue(entity);
+            }
         }
 
         /// <summary>
-        /// Execute a turn for the given entity
+        /// Resolve entities' turns automatically (AI-controlled) until the queue is
+        /// empty (round ends, next round begins), combat ends, or it's the player's
+        /// turn - at which point this returns and waits for SubmitPlayerAction().
+        /// </summary>
+        private void AdvanceTurns()
+        {
+            while (true)
+            {
+                if (_turnQueue.Count == 0)
+                {
+                    EndRound();
+                    if (!_combatActive)
+                    {
+                        CombatEnded?.Invoke(false);
+                        return;
+                    }
+
+                    _currentRound++;
+                    BeginRound();
+                    continue;
+                }
+
+                var entity = _turnQueue.Dequeue();
+
+                if (!entity.IsAlive() || _entitiesActedThisRound.Contains(entity))
+                {
+                    continue;
+                }
+
+                if (entity == _player)
+                {
+                    Log($"\n{entity.Name}'s Turn!");
+                    Log($"Your HP: {_player.Health}/{_player.MaxHealth}");
+                    Log($"Enemies: {string.Join(", ", _enemies.Where(e => e.IsAlive()).Select(e => $"{e.Name} ({e.Health}/{e.MaxHealth})"))}");
+
+                    IsWaitingForPlayerAction = true;
+                    return;
+                }
+
+                ExecuteEntityTurn(entity);
+
+                if (FinishTurn(entity)) return;
+            }
+        }
+
+        /// <summary>
+        /// Apply an entity's end-of-turn status effects (poison/bleed/etc. tick here now,
+        /// not at turn start), mark them as having acted, and check whether combat ended
+        /// as a result. Returns true if combat ended (caller should stop advancing turns).
+        /// </summary>
+        private bool FinishTurn(Entity entity)
+        {
+            _entitiesActedThisRound.Add(entity);
+
+            entity.ProcessEffects(_rngManager);
+
+            if (!entity.IsAlive())
+            {
+                Log($"{entity.Name} succumbed to a status effect!");
+            }
+
+            return CheckForCombatEnd();
+        }
+
+        /// <summary>
+        /// Check whether combat has ended (victory/defeat/fled) and, if so, resolve
+        /// rewards/cleanup and fire CombatEnded.
+        /// </summary>
+        private bool CheckForCombatEnd()
+        {
+            if (_enemies.All(e => !e.IsAlive()))
+            {
+                HandleVictory();
+                CombatEnded?.Invoke(true);
+                return true;
+            }
+
+            if (_player.Health <= 0)
+            {
+                HandleDefeat();
+                CombatEnded?.Invoke(false);
+                return true;
+            }
+
+            if (!_combatActive)
+            {
+                CombatEnded?.Invoke(false);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Execute a turn for the given (non-player) entity
         /// </summary>
         private void ExecuteEntityTurn(Entity entity)
         {
-            Console.WriteLine($"\n{entity.Name}'s Turn!");
+            Log($"\n{entity.Name}'s Turn!");
 
-            // Process status effects at start of turn
-            entity.ProcessEffects(_rngManager);
-
-            // Check if entity died from effects
-            if (!entity.IsAlive())
+            if (entity is Enemy enemy)
             {
-                Console.WriteLine($"{entity.Name} was defeated by status effects!");
-                return;
-            }
-
-            // Determine and execute action based on entity type
-            if (entity == _player)
-            {
-                PlayerTurn();
-            }
-            else if (entity == _enemy)
-            {
-                EnemyTurn();
+                EnemyTurn(enemy);
             }
             else if (entity is Entities.NPCs.Companions.CompanionBase companion)
             {
@@ -294,7 +400,7 @@ namespace GameLogic.Combat
         /// </summary>
         private void CalculateSpeedModifiers()
         {
-            Console.WriteLine("\n--- Speed Adjustments for Next Round ---");
+            Log("\n--- Speed Adjustments for Next Round ---");
 
             foreach (var entity in _allCombatants)
             {
@@ -334,17 +440,18 @@ namespace GameLogic.Combat
                 {
                     string changeText = modifier > 0 ? $"+{modifier}" : modifier.ToString();
                     string actionText = entity.LastAction.ToString();
-                    Console.WriteLine($"{entity.Name}'s speed {changeText} from {actionText}");
+                    Log($"{entity.Name}'s speed {changeText} from {actionText}");
                 }
             }
         }
 
         /// <summary>
-        /// End the current round - process end-of-round effects
+        /// End the current round - process end-of-round effects (duration countdown/expiry
+        /// only - the effect damage/healing itself is applied at end-of-turn via FinishTurn())
         /// </summary>
         private void EndRound()
         {
-            Console.WriteLine("\n--- End of Round ---");
+            Log("\n--- End of Round ---");
 
             // Reset speed modifiers from previous round before calculating new ones
             foreach (var entity in _allCombatants)
@@ -358,7 +465,8 @@ namespace GameLogic.Combat
             // Calculate speed modifiers for next round based on actions taken
             CalculateSpeedModifiers();
 
-            // Tick down effect durations for all entities
+            // Tick down effect durations for all entities (duration only - effects were
+            // already applied at each entity's own end-of-turn this round)
             foreach (var entity in _allCombatants)
             {
                 if (entity.IsAlive())
@@ -379,7 +487,7 @@ namespace GameLogic.Combat
                     bool cleansed = ironWill.TryCleanseEffects(_player, _rngManager);
                     if (cleansed)
                     {
-                        Console.WriteLine($"\n{_player.Name}'s Iron Will activated! All negative effects cleansed!");
+                        Log($"\n{_player.Name}'s Iron Will activated! All negative effects cleansed!");
                     }
                 }
             }
@@ -390,9 +498,12 @@ namespace GameLogic.Combat
                 _player.SelectedAbility.CurrentCooldown--;
             }
 
-            if (_enemy.SpecialAbility != null && _enemy.SpecialAbility.CurrentCooldown > 0)
+            foreach (var enemy in _enemies)
             {
-                _enemy.SpecialAbility.CurrentCooldown--;
+                if (enemy.SpecialAbility != null && enemy.SpecialAbility.CurrentCooldown > 0)
+                {
+                    enemy.SpecialAbility.CurrentCooldown--;
+                }
             }
 
             // Reduce companion ability cooldowns
@@ -406,158 +517,16 @@ namespace GameLogic.Combat
                     }
                 }
             }
-
-            // Increment round counter
-            _currentRound++;
-
-            Console.WriteLine("\nPress any key to continue to next round...");
-            Console.ReadKey();
         }
 
         /// <summary>
-        /// Handle the player's turn
+        /// Handle a specific enemy's turn
+        /// Uses AI to decide action based on that enemy's behavior and situation
         /// </summary>
-        private void PlayerTurn()
-        {
-            Console.WriteLine($"Your HP: {_player.Health}/{_player.MaxHealth}");
-            Console.WriteLine($"Enemy HP: {_enemy.Health}/{_enemy.MaxHealth}");
-
-            // Get player's action choice
-            CombatAction action = GetPlayerAction();
-
-            // Process the action
-            ProcessAction(action);
-        }
-
-        /// <summary>
-        /// Get the player's chosen action
-        /// </summary>
-        private CombatAction GetPlayerAction()
-        {
-            Console.WriteLine("\nChoose your action:");
-            Console.WriteLine("1. Attack");
-            Console.WriteLine("2. Use Active Ability");
-            Console.WriteLine("3. Use Item");
-            Console.WriteLine("4. Defend");
-            Console.WriteLine("5. Try to Flee");
-
-            Console.Write("\nChoice: ");
-            string choice = Console.ReadLine();
-
-            switch (choice)
-            {
-                case "1":
-                    return CombatAction.Attack(_player, _enemy);
-                case "2":
-                    // Use player's selected ability
-                    if (_player.SelectedAbility != null)
-                    {
-                        // Check if ability is on cooldown
-                        if (_player.SelectedAbility.CurrentCooldown > 0)
-                        {
-                            Console.WriteLine($"\n{_player.SelectedAbility.Name} is on cooldown for {_player.SelectedAbility.CurrentCooldown} more rounds!");
-                            Console.WriteLine("Attacking instead.");
-                            return CombatAction.Attack(_player, _enemy);
-                        }
-
-                        return CombatAction.UseAbility(_player, _player.SelectedAbility, _enemy);
-                    }
-                    else
-                    {
-                        Console.WriteLine("\nYou don't have an ability selected! Attacking instead.");
-                        return CombatAction.Attack(_player, _enemy);
-                    }
-                case "3":
-                    // Use item from inventory
-                    if (_player.Inventory.Items.Count == 0)
-                    {
-                        Console.WriteLine("\nYour inventory is empty! Attacking instead.");
-                        return CombatAction.Attack(_player, _enemy);
-                    }
-
-                    // Show inventory
-                    Console.WriteLine("\nYour Inventory:");
-                    for (int i = 0; i < _player.Inventory.Items.Count; i++)
-                    {
-                        Console.WriteLine($"{i + 1}. {_player.Inventory.Items[i].Name}");
-                    }
-                    Console.WriteLine($"{_player.Inventory.Items.Count + 1}. Cancel");
-
-                    Console.Write("\nSelect item: ");
-                    string itemChoice = Console.ReadLine();
-
-                    if (int.TryParse(itemChoice, out int itemIndex) && itemIndex > 0 && itemIndex <= _player.Inventory.Items.Count)
-                    {
-                        var item = _player.Inventory.Items[itemIndex - 1];
-
-                        // Check if it's a revival potion - needs target selection
-                        if (item is Items.Consumable consumable && consumable.Type == Items.ConsumableType.RevivePotion)
-                        {
-                            // Get dead allies to revive
-                            var deadAllies = new List<Entity>();
-                            foreach (var entity in _allCombatants)
-                            {
-                                if (!entity.IsAlive() && entity != _enemy)
-                                {
-                                    deadAllies.Add(entity);
-                                }
-                            }
-
-                            if (deadAllies.Count == 0)
-                            {
-                                Console.WriteLine("\nNo one needs reviving! Choose a different item.");
-                                return GetPlayerAction(); // Return to menu
-                            }
-
-                            // Show dead allies
-                            Console.WriteLine("\nWho do you want to revive?");
-                            for (int i = 0; i < deadAllies.Count; i++)
-                            {
-                                Console.WriteLine($"{i + 1}. {deadAllies[i].Name}");
-                            }
-                            Console.WriteLine($"{deadAllies.Count + 1}. Cancel");
-
-                            Console.Write("\nSelect target: ");
-                            string targetChoice = Console.ReadLine();
-
-                            if (int.TryParse(targetChoice, out int targetIndex) && targetIndex > 0 && targetIndex <= deadAllies.Count)
-                            {
-                                var target = deadAllies[targetIndex - 1];
-                                return CombatAction.UseItem(_player, item, target);
-                            }
-                            else
-                            {
-                                Console.WriteLine("Cancelled.");
-                                return GetPlayerAction(); // Return to menu
-                            }
-                        }
-
-                        // Regular item (no target needed)
-                        return CombatAction.UseItem(_player, item);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Invalid choice.");
-                        return GetPlayerAction(); // Return to menu
-                    }
-                case "4":
-                    return CombatAction.Defend(_player);
-                case "5":
-                    return CombatAction.Flee(_player);
-                default:
-                    Console.WriteLine("Invalid choice. Attacking by default.");
-                    return CombatAction.Attack(_player, _enemy);
-            }
-        }
-
-        /// <summary>
-        /// Handle the enemy's turn
-        /// Uses AI to decide action based on behavior and situation
-        /// </summary>
-        private void EnemyTurn()
+        private void EnemyTurn(Enemy enemy)
         {
             // Determine action based on enemy behavior and situation
-            CombatAction action = DetermineEnemyAction();
+            CombatAction action = DetermineEnemyAction(enemy);
 
             ProcessAction(action);
         }
@@ -568,145 +537,177 @@ namespace GameLogic.Combat
         /// </summary>
         private void CompanionTurn(Entity companion)
         {
-            Console.WriteLine($"{companion.Name}'s HP: {companion.Health}/{companion.MaxHealth}");
+            Log($"{companion.Name}'s HP: {companion.Health}/{companion.MaxHealth}");
 
             // Cast to CompanionBase to access companion-specific methods
             var companionBase = companion as CompanionBase;
             if (companionBase == null)
             {
                 // Fallback: basic attack if not a proper companion
-                Console.WriteLine($"{companion.Name} attacks!");
+                Log($"{companion.Name} attacks!");
                 companion.LastAction = Entities.CombatAction.Attack;
                 return;
             }
 
+            // Pick which enemy this companion engages (lowest-HP living enemy)
+            Enemy target = SelectCompanionAttackTarget();
+            if (target == null)
+            {
+                // No living enemies to act against (shouldn't happen if combat is still active)
+                return;
+            }
+
             // Use companion AI to decide action: 0 = Attack, 1 = Ability, 2 = Defend
-            int actionDecision = companionBase.DecideCombatAction(_enemy, _rngManager);
+            int actionDecision = companionBase.DecideCombatAction(target, _rngManager);
 
             switch (actionDecision)
             {
                 case 1: // Use Ability
                     if (companionBase.UniqueAbility != null && !companionBase.UniqueAbility.IsOnCooldown())
                     {
-                        Console.WriteLine($"{companionBase.Name} uses {companionBase.UniqueAbility.Name}!");
-                        companionBase.UniqueAbility.Execute(companionBase, _enemy, _rngManager);
+                        Log($"{companionBase.Name} uses {companionBase.UniqueAbility.Name}!");
+                        companionBase.UniqueAbility.Execute(companionBase, target, _rngManager);
                         companion.LastAction = Entities.CombatAction.UseAbility;
                     }
                     else
                     {
                         // Fallback to attack if ability not available
-                        Console.WriteLine($"{companionBase.Name} attacks!");
-                        companionBase.AttackEnemy(_enemy, _damageCalculator, _rngManager, _player);
+                        Log($"{companionBase.Name} attacks!");
+                        companionBase.AttackEnemy(target, _damageCalculator, _rngManager, _player);
                         companion.LastAction = Entities.CombatAction.Attack;
                     }
                     break;
 
                 case 2: // Defend
-                    Console.WriteLine($"{companionBase.Name} takes a defensive stance!");
+                    Log($"{companionBase.Name} takes a defensive stance!");
                     _defendingEntities[companion] = true;
                     companion.LastAction = Entities.CombatAction.Defend;
                     break;
 
                 case 0: // Attack
                 default:
-                    Console.WriteLine($"{companionBase.Name} attacks!");
-                    companionBase.AttackEnemy(_enemy, _damageCalculator, _rngManager, _player);
+                    Log($"{companionBase.Name} attacks!");
+                    companionBase.AttackEnemy(target, _damageCalculator, _rngManager, _player);
                     companion.LastAction = Entities.CombatAction.Attack;
                     break;
             }
         }
 
         /// <summary>
-        /// Determine enemy action based on AI behavior
+        /// Pick which enemy a companion should attack/target this turn - the lowest-HP
+        /// living enemy (mirrors SelectEnemyTarget()'s "prioritize wounded targets" heuristic).
         /// </summary>
-        private CombatAction DetermineEnemyAction()
+        private Enemy SelectCompanionAttackTarget()
+        {
+            Enemy target = null;
+            float lowestHealthPercent = float.MaxValue;
+
+            foreach (var enemy in _enemies)
+            {
+                if (!enemy.IsAlive()) continue;
+
+                float healthPercent = (float)enemy.Health / enemy.MaxHealth;
+                if (target == null || healthPercent < lowestHealthPercent)
+                {
+                    lowestHealthPercent = healthPercent;
+                    target = enemy;
+                }
+            }
+
+            return target;
+        }
+
+        /// <summary>
+        /// Determine an enemy's action based on its AI behavior
+        /// </summary>
+        private CombatAction DetermineEnemyAction(Enemy enemy)
         {
             // Calculate health percentage
-            float healthPercent = (float)_enemy.Health / _enemy.MaxHealth;
+            float healthPercent = (float)enemy.Health / enemy.MaxHealth;
 
             // Check if enemy has a special ability and can use it
-            bool canUseAbility = _enemy.SpecialAbility != null &&
-                                 _enemy.SpecialAbility.CurrentCooldown <= 0;
+            bool canUseAbility = enemy.SpecialAbility != null &&
+                                 enemy.SpecialAbility.CurrentCooldown <= 0;
 
             // Select target - enemies can target player or companions
             Entity target = SelectEnemyTarget();
 
             // Decision logic based on behavior type
-            switch (_enemy.Behavior)
+            switch (enemy.Behavior)
             {
                 case Entities.Enemies.EnemyBehavior.Aggressive:
                     // Always attack, use ability when available
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 70)
                     {
-                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
+                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
                     }
-                    return CombatAction.Attack(_enemy, target);
+                    return CombatAction.Attack(enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Defensive:
                     // Defend when low on health
                     if (healthPercent < 0.3f && _rngManager.Roll(1, 100) <= 60)
                     {
-                        return CombatAction.Defend(_enemy);
+                        return CombatAction.Defend(enemy);
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 40)
                     {
-                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
+                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
                     }
-                    return CombatAction.Attack(_enemy, target);
+                    return CombatAction.Attack(enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Tactical:
                     // Use abilities strategically
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 80)
                     {
-                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
+                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
                     }
                     if (healthPercent < 0.25f && _rngManager.Roll(1, 100) <= 50)
                     {
-                        return CombatAction.Defend(_enemy);
+                        return CombatAction.Defend(enemy);
                     }
-                    return CombatAction.Attack(_enemy, target);
+                    return CombatAction.Attack(enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Berserker:
                     // Always attack, rarely defend, use abilities aggressively
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 90)
                     {
-                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
+                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
                     }
-                    return CombatAction.Attack(_enemy, target);
+                    return CombatAction.Attack(enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Cautious:
                     // Defend frequently when low health, flee if very low
                     if (healthPercent < 0.15f && _rngManager.Roll(1, 100) <= 30)
                     {
-                        return CombatAction.Flee(_enemy);
+                        return CombatAction.Flee(enemy);
                     }
                     if (healthPercent < 0.4f && _rngManager.Roll(1, 100) <= 70)
                     {
-                        return CombatAction.Defend(_enemy);
+                        return CombatAction.Defend(enemy);
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 50)
                     {
-                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
+                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
                     }
-                    return CombatAction.Attack(_enemy, target);
+                    return CombatAction.Attack(enemy, target);
 
                 case Entities.Enemies.EnemyBehavior.Balanced:
                 default:
                     // Mix of all actions
                     if (healthPercent < 0.3f && _rngManager.Roll(1, 100) <= 40)
                     {
-                        return CombatAction.Defend(_enemy);
+                        return CombatAction.Defend(enemy);
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 60)
                     {
-                        return CombatAction.UseAbility(_enemy, _enemy.SpecialAbility, target);
+                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
                     }
-                    return CombatAction.Attack(_enemy, target);
+                    return CombatAction.Attack(enemy, target);
             }
         }
 
         /// <summary>
-        /// Select a target for the enemy to attack
+        /// Select a target for an attacking enemy
         /// Prioritizes low health targets and wounded allies
         /// </summary>
         private Entity SelectEnemyTarget()
@@ -784,7 +785,7 @@ namespace GameLogic.Combat
         /// </summary>
         private void ProcessAttack(CombatAction action)
         {
-            Console.WriteLine($"\n{action.Actor.Name} attacks {action.Target.Name}!");
+            Log($"\n{action.Actor.Name} attacks {action.Target.Name}!");
 
             // Track action for speed modifier calculation
             action.Actor.LastAction = Entities.CombatAction.Attack;
@@ -794,21 +795,23 @@ namespace GameLogic.Combat
             // Calculate damage based on attacker and target types
             if (action.Actor == _player)
             {
-                // Player attacking enemy
-                result = _damageCalculator.CalculatePlayerAttackDamage(_player, _enemy);
+                // Player attacking a specific enemy (action.Target, not a shared field - there
+                // can be several enemies now)
+                var targetEnemy = (Enemy)action.Target;
+                result = _damageCalculator.CalculatePlayerAttackDamage(_player, targetEnemy);
 
                 // Check if player is unarmed
                 if (_player.EquippedWeapon == null)
                 {
-                    Console.WriteLine("(Fighting unarmed - find a weapon!)");
+                    Log("(Fighting unarmed - find a weapon!)");
                 }
 
-                // Apply defense reduction if enemy is defending
-                if (_defendingEntities.ContainsKey(_enemy) && _defendingEntities[_enemy])
+                // Apply defense reduction if the targeted enemy is defending
+                if (_defendingEntities.ContainsKey(targetEnemy) && _defendingEntities[targetEnemy])
                 {
                     int damageReduction = result.FinalDamage / 2;
                     result.FinalDamage -= damageReduction;
-                    Console.WriteLine($"{_enemy.Name}'s defensive stance reduced damage by {damageReduction}!");
+                    Log($"{targetEnemy.Name}'s defensive stance reduced damage by {damageReduction}!");
                 }
             }
             else if (action.Actor is Entities.NPCs.Companions.CompanionBase)
@@ -819,15 +822,17 @@ namespace GameLogic.Combat
             }
             else
             {
-                // Enemy attacking player or companion
+                // A specific enemy (action.Actor) attacking the player or a companion
+                var attackingEnemy = (Enemy)action.Actor;
+
                 if (action.Target == _player)
                 {
-                    result = _damageCalculator.CalculateEnemyAttackDamage(_enemy, _player);
+                    result = _damageCalculator.CalculateEnemyAttackDamage(attackingEnemy, _player);
                 }
                 else if (action.Target is Entities.NPCs.Companions.CompanionBase companion)
                 {
                     // Calculate enemy damage to companion
-                    int baseDamage = _rngManager.Roll(_enemy.MinDamage, _enemy.MaxDamage);
+                    int baseDamage = _rngManager.Roll(attackingEnemy.MinDamage, attackingEnemy.MaxDamage);
                     int companionDefense = companion.EquippedArmor != null ? companion.EquippedArmor.Defense : 0;
                     int finalDamage = Math.Max(1, baseDamage - companionDefense);
 
@@ -842,7 +847,7 @@ namespace GameLogic.Combat
                 }
                 else
                 {
-                    result = _damageCalculator.CalculateEnemyAttackDamage(_enemy, _player);
+                    result = _damageCalculator.CalculateEnemyAttackDamage(attackingEnemy, _player);
                 }
 
                 // Check if target is defending (for evasion purposes)
@@ -853,7 +858,7 @@ namespace GameLogic.Combat
                 {
                     int damageReduction = result.FinalDamage / 2;
                     result.FinalDamage -= damageReduction;
-                    Console.WriteLine($"{action.Target.Name}'s defensive stance reduced damage by {damageReduction}!");
+                    Log($"{action.Target.Name}'s defensive stance reduced damage by {damageReduction}!");
                 }
 
                 // Check for Evasion passive ability (only for player, only when not defending)
@@ -861,7 +866,7 @@ namespace GameLogic.Combat
                 {
                     if (evasion.ShouldEvade(_rngManager, isDefending))
                     {
-                        Console.WriteLine($"{_player.Name} evaded the attack! No damage taken!");
+                        Log($"{_player.Name} evaded the attack! No damage taken!");
                         result.FinalDamage = 0;
                     }
                 }
@@ -870,13 +875,13 @@ namespace GameLogic.Combat
             // Display result
             if (result.Missed)
             {
-                Console.WriteLine("The attack missed!");
+                Log("The attack missed!");
             }
             else
             {
                 if (result.IsCritical)
                 {
-                    Console.WriteLine("CRITICAL HIT!");
+                    Log("CRITICAL HIT!");
                 }
 
                 if (result.DamageReduced > 0)
@@ -884,11 +889,11 @@ namespace GameLogic.Combat
                     // Display appropriate message based on who was attacked
                     if (action.Target == _player)
                     {
-                        Console.WriteLine($"Armor blocked {result.DamageReduced} damage!");
+                        Log($"Armor blocked {result.DamageReduced} damage!");
                     }
                     else
                     {
-                        Console.WriteLine($"Defense blocked {result.DamageReduced} damage!");
+                        Log($"Defense blocked {result.DamageReduced} damage!");
                     }
                 }
 
@@ -896,7 +901,7 @@ namespace GameLogic.Combat
                 if (result.FinalDamage > 0)
                 {
                     action.Target.TakeDamage(result.FinalDamage);
-                    Console.WriteLine($"{action.Target.Name} took {result.FinalDamage} damage!");
+                    Log($"{action.Target.Name} took {result.FinalDamage} damage!");
                 }
             }
         }
@@ -916,7 +921,7 @@ namespace GameLogic.Combat
             }
             else
             {
-                Console.WriteLine("Error: No ability provided!");
+                Log("Error: No ability provided!");
             }
         }
 
@@ -936,10 +941,17 @@ namespace GameLogic.Combat
                     // Special handling for combat consumables
                     if (consumable.Type == Items.ConsumableType.Bomb)
                     {
-                        // Apply bomb damage to enemy
-                        Console.WriteLine($"\n{action.Actor.Name} throws a {consumable.Name}!");
-                        _enemy.TakeDamage(consumable.EffectPower);
-                        Console.WriteLine($"The explosion dealt {consumable.EffectPower} damage to {_enemy.Name}!");
+                        // Bombs need a specific enemy target now that there can be several
+                        var targetEnemy = action.Target as Enemy;
+                        if (targetEnemy == null)
+                        {
+                            Log("Error: Bomb requires a target enemy!");
+                            return;
+                        }
+
+                        Log($"\n{action.Actor.Name} throws a {consumable.Name}!");
+                        targetEnemy.TakeDamage(consumable.EffectPower);
+                        Log($"The explosion dealt {consumable.EffectPower} damage to {targetEnemy.Name}!");
                         consumable.RemoveFromStack(1);
                     }
                     else if (consumable.Type == Items.ConsumableType.RevivePotion)
@@ -947,7 +959,7 @@ namespace GameLogic.Combat
                         // Revival potion requires a target
                         if (action.Target == null)
                         {
-                            Console.WriteLine($"\nError: Revival potion requires a target!");
+                            Log($"\nError: Revival potion requires a target!");
                             return;
                         }
 
@@ -959,13 +971,13 @@ namespace GameLogic.Combat
                             // Apply revival penalty: revived entities are disoriented and slower
                             int speedPenalty = _rngManager.Roll(2, 4);
                             action.Target.SpeedModifier = -speedPenalty;
-                            Console.WriteLine($"{action.Target.Name} is disoriented from revival! Speed -{speedPenalty} for this round.");
+                            Log($"{action.Target.Name} is disoriented from revival! Speed -{speedPenalty} for this round.");
 
                             // Add revived entity back to combat tracking if they were removed
                             if (!_entitiesActedThisRound.Contains(action.Target))
                             {
                                 // Entity was revived - they haven't acted this round yet
-                                Console.WriteLine($"{action.Target.Name} can act again this round!");
+                                Log($"{action.Target.Name} can act again this round!");
                             }
                         }
                     }
@@ -989,7 +1001,7 @@ namespace GameLogic.Combat
             }
             else
             {
-                Console.WriteLine("Error: No item provided!");
+                Log("Error: No item provided!");
             }
         }
 
@@ -998,7 +1010,7 @@ namespace GameLogic.Combat
         /// </summary>
         private void ProcessDefend(CombatAction action)
         {
-            Console.WriteLine($"\n{action.Actor.Name} takes a defensive stance!");
+            Log($"\n{action.Actor.Name} takes a defensive stance!");
 
             // Track action for speed modifier calculation
             action.Actor.LastAction = Entities.CombatAction.Defend;
@@ -1008,11 +1020,11 @@ namespace GameLogic.Combat
 
             if (action.Actor == _player)
             {
-                Console.WriteLine("Next incoming attack will deal reduced damage!");
+                Log("Next incoming attack will deal reduced damage!");
             }
             else
             {
-                Console.WriteLine($"{action.Actor.Name} braces for impact!");
+                Log($"{action.Actor.Name} braces for impact!");
             }
         }
 
@@ -1026,9 +1038,9 @@ namespace GameLogic.Combat
 
             if (fleeRoll <= fleeChance)
             {
-                Console.WriteLine($"\n{action.Actor.Name} successfully fled from combat!");
-                Console.WriteLine("You escaped, but gained no rewards...");
-                Console.WriteLine($"Remaining HP: {_player.Health}/{_player.MaxHealth}");
+                Log($"\n{action.Actor.Name} successfully fled from combat!");
+                Log("You escaped, but gained no rewards...");
+                Log($"Remaining HP: {_player.Health}/{_player.MaxHealth}");
 
                 // Reset combat usage for abilities
                 if (_player.SelectedAbility != null)
@@ -1040,14 +1052,11 @@ namespace GameLogic.Combat
                 Entities.NPCs.ShopKeeper.NotifyAllShopsOfFlee();
 
                 _combatActive = false;
-
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
             }
             else
             {
-                Console.WriteLine($"\n{action.Actor.Name} failed to escape!");
-                Console.WriteLine("Turn wasted!");
+                Log($"\n{action.Actor.Name} failed to escape!");
+                Log("Turn wasted!");
             }
         }
 
@@ -1056,86 +1065,95 @@ namespace GameLogic.Combat
         /// </summary>
         private void ShowCombatStatus()
         {
-            Console.WriteLine("\n" + "-".PadRight(50, '-'));
-            Console.WriteLine($"Player HP: {_player.Health}/{_player.MaxHealth}");
+            Log("\n" + "-".PadRight(50, '-'));
+            Log($"Player HP: {_player.Health}/{_player.MaxHealth}");
 
             // Show companion HP if any are in combat
             foreach (var entity in _allCombatants)
             {
-                if (entity is Entities.NPCs.Companions.CompanionBase companion && entity != _player && entity != _enemy)
+                if (entity is Entities.NPCs.Companions.CompanionBase companion && entity != _player)
                 {
                     string status = companion.IsAlive() ? $"{companion.Health}/{companion.MaxHealth}" : "DEFEATED";
-                    Console.WriteLine($"{companion.Name} HP: {status}");
+                    Log($"{companion.Name} HP: {status}");
                 }
             }
 
-            Console.WriteLine($"Enemy HP: {_enemy.Health}/{_enemy.MaxHealth}");
-            Console.WriteLine("-".PadRight(50, '-'));
+            foreach (var enemy in _enemies)
+            {
+                string status = enemy.IsAlive() ? $"{enemy.Health}/{enemy.MaxHealth}" : "DEFEATED";
+                Log($"{enemy.Name} HP: {status}");
+            }
 
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
+            Log("-".PadRight(50, '-'));
         }
 
         /// <summary>
-        /// Handle player victory
+        /// Handle player victory - rewards aggregate across every defeated enemy
         /// </summary>
-        private bool HandleVictory()
+        private void HandleVictory()
         {
             Console.Clear();
-            Console.WriteLine("\n" + "=".PadRight(50, '='));
-            Console.WriteLine("           VICTORY!");
-            Console.WriteLine("=".PadRight(50, '='));
+            Log("\n" + "=".PadRight(50, '='));
+            Log("           VICTORY!");
+            Log("=".PadRight(50, '='));
 
-            // Calculate rewards
-            int xpGained = CalculateXPReward();
+            int totalXP = 0;
+            int totalGold = 0;
+            var allLootItems = new List<Items.Item>();
+            var lootGenerator = new Progression.LootGenerator(new RNGManagerRandomAdapter(_rngManager));
 
-            Console.WriteLine($"\n{_enemy.Name} has been defeated!");
-            Console.WriteLine($"\nYou gained {xpGained} XP!");
+            foreach (var enemy in _enemies)
+            {
+                Log($"\n{enemy.Name} has been defeated!");
 
-            // Apply XP to player
-            _player.AddExperience(xpGained);
+                totalXP += CalculateXPReward(enemy);
+
+                // Roll for loot (gold + items) from the unified loot table system
+                var lootTable = Progression.LootTableTemplates.CreateForEnemyType(enemy.Type);
+                var loot = lootGenerator.GenerateLoot(lootTable, _player.Level, areaLevel: enemy.Level);
+                totalGold += loot.Gold;
+                allLootItems.AddRange(loot.Items);
+
+                // Bosses additionally roll their Champion Key with diminishing returns on repeats
+                if (enemy is BossEnemy boss)
+                {
+                    allLootItems.AddRange(boss.GetLootDrops(_rngManager));
+                }
+
+                // Handle boss defeats
+                if (enemy is BossEnemy defeatedBoss && _bossManager != null)
+                {
+                    _bossManager.DefeatBoss(defeatedBoss.BossId);
+                }
+            }
+
+            Log($"\nYou gained {totalXP} XP!");
+            _player.AddExperience(totalXP);
 
             // Share XP with companions
             foreach (var entity in _allCombatants)
             {
                 if (entity is Entities.NPCs.Companions.CompanionBase companion && companion.IsAlive())
                 {
-                    companion.GainExperience(xpGained);
+                    companion.GainExperience(totalXP);
                 }
             }
 
-            // Roll for loot (gold + items) from the unified loot table system
-            var lootTable = Progression.LootTableTemplates.CreateForEnemyType(_enemy.Type);
-            var lootGenerator = new Progression.LootGenerator(new RNGManagerRandomAdapter(_rngManager));
-            var loot = lootGenerator.GenerateLoot(lootTable, _player.Level, areaLevel: _enemy.Level);
+            _player.Gold += totalGold;
+            Log($"You gained {totalGold} gold!");
 
-            _player.Gold += loot.Gold;
-            Console.WriteLine($"You gained {loot.Gold} gold!");
-
-            // Bosses additionally roll their Champion Key with diminishing returns on repeats
-            if (_enemy is BossEnemy boss)
+            if (allLootItems.Count > 0)
             {
-                loot.Items.AddRange(boss.GetLootDrops(_rngManager));
-            }
-
-            if (loot.Items.Count > 0)
-            {
-                Console.WriteLine("\n--- LOOT DROPS ---");
-                foreach (var item in loot.Items)
+                Log("\n--- LOOT DROPS ---");
+                foreach (var item in allLootItems)
                 {
                     _player.AddToInventory(item);
-                    Console.WriteLine($"Obtained: {item.GetDisplayName()}");
+                    Log($"Obtained: {item.GetDisplayName()}");
                 }
             }
             else
             {
-                Console.WriteLine("\nNo items dropped.");
-            }
-
-            // Handle boss defeats
-            if (_enemy is BossEnemy defeatedBoss && _bossManager != null)
-            {
-                _bossManager.DefeatBoss(defeatedBoss.BossId);
+                Log("\nNo items dropped.");
             }
 
             // Reset combat usage for abilities
@@ -1158,79 +1176,48 @@ namespace GameLogic.Combat
 
             // Notify all shops that a combat encounter occurred (for restock tracking)
             Entities.NPCs.ShopKeeper.NotifyAllShopsOfCombat();
-
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
-
-            return true; // Player won
         }
 
         /// <summary>
         /// Handle player defeat
         /// </summary>
-        private bool HandleDefeat()
+        private void HandleDefeat()
         {
             Console.Clear();
-            Console.WriteLine("\n" + "=".PadRight(50, '='));
-            Console.WriteLine("           DEFEAT");
-            Console.WriteLine("=".PadRight(50, '='));
+            Log("\n" + "=".PadRight(50, '='));
+            Log("           DEFEAT");
+            Log("=".PadRight(50, '='));
 
-            Console.WriteLine($"\n{_player.Name} has been defeated by {_enemy.Name}...");
-            Console.WriteLine("\nGAME OVER");
+            Log($"\n{_player.Name} has been defeated...");
+            Log("\nGAME OVER");
 
             // Reset combat usage for abilities
             if (_player.SelectedAbility != null)
             {
                 _player.SelectedAbility.ResetCombatUsage();
             }
-
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
-
-            return false; // Player lost
         }
 
         /// <summary>
-        /// Calculate XP reward with randomness
+        /// Calculate XP reward for defeating a specific enemy, with randomness
         /// </summary>
-        private int CalculateXPReward()
+        private int CalculateXPReward(Enemy enemy)
         {
-            int minXP = _enemy.Level * 30;
-            int maxXP = _enemy.Level * 70;
-            
+            int minXP = enemy.Level * 30;
+            int maxXP = enemy.Level * 70;
+
             int baseXP = _rngManager.Roll(minXP, maxXP);
-            
+
             // 10% chance for bonus XP
             int bonusRoll = _rngManager.Roll(1, 100);
             if (bonusRoll <= 10)
             {
                 int bonus = baseXP / 2;
-                Console.WriteLine($"Bonus XP! +{bonus}");
+                Log($"Bonus XP! +{bonus}");
                 baseXP += bonus;
             }
-            
-            return baseXP;
-        }
 
-        /// <summary>
-        /// Calculate gold reward with randomness
-        /// </summary>
-        private int CalculateGoldReward()
-        {
-            int minGold = _enemy.Level * 3;
-            int maxGold = _enemy.Level * 20;
-            
-            int gold = _rngManager.Roll(minGold, maxGold);
-            
-            // 5% chance for treasure bonus
-            int treasureRoll = _rngManager.Roll(1, 100);
-            if (treasureRoll <= 5)
-            {
-                Console.WriteLine("The enemy dropped extra gold!");
-                gold *= 2;
-            }
-            
-            return gold;
+            return baseXP;
         }
     }
 }

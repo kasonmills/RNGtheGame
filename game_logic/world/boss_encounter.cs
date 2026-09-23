@@ -23,7 +23,11 @@ namespace GameLogic.World
         /// <param name="combatManager">The combat manager</param>
         /// <param name="companions">List of active companions</param>
         /// <returns>True if player won, False if player lost or fled</returns>
-        public static bool StartBossEncounter(
+        /// <summary>
+        /// TODO-GODOT: no longer blocks on a Yes/No confirmation - a Godot confirmation
+        /// dialog (if any) should happen before this is called at all.
+        /// </summary>
+        public static void StartBossEncounter(
             Player player,
             BossEnemy boss,
             BossManager bossManager,
@@ -33,7 +37,7 @@ namespace GameLogic.World
             if (boss == null)
             {
                 Console.WriteLine("Error: Boss not found!");
-                return false;
+                return;
             }
 
             // Display boss encounter screen
@@ -52,33 +56,11 @@ namespace GameLogic.World
                 Console.WriteLine("\n🏆 First-time encounter! Key drop is GUARANTEED on victory!");
             }
 
-            // Confirm engagement
-            Console.WriteLine("\n═══════════════════════════════════════");
-            Console.WriteLine("Do you wish to challenge this Champion?");
-            Console.WriteLine("[1] Yes, begin the battle!");
-            Console.WriteLine("[2] No, retreat for now");
-            Console.Write("\nChoice: ");
-
-            string choice = Console.ReadLine();
-
-            if (choice != "1")
-            {
-                Console.WriteLine("\nYou retreat to safety...");
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
-                return false;
-            }
-
-            // Start combat
             Console.WriteLine("\n⚔️  THE BATTLE BEGINS! ⚔️");
-            Console.WriteLine("Press any key to start...");
-            Console.ReadKey();
 
             // Convert companions to Entity list for combat manager
             var companionEntities = companions?.Cast<Entities.Entity>().ToList();
-            bool victory = combatManager.StartCombat(player, boss, companionEntities, bossManager);
-
-            return victory;
+            combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { boss }, companionEntities, bossManager);
         }
 
         /// <summary>
@@ -103,7 +85,11 @@ namespace GameLogic.World
         /// <param name="combatManager">The combat manager</param>
         /// <param name="companions">List of active companions</param>
         /// <returns>True if player won, False if player lost or fled</returns>
-        public static bool StartFinalBossEncounter(
+        /// <summary>
+        /// TODO-GODOT: no longer blocks on a Yes/No confirmation - a Godot confirmation
+        /// dialog (if any) should happen before this is called at all.
+        /// </summary>
+        public static void StartFinalBossEncounter(
             Player player,
             BossManager bossManager,
             CombatManager combatManager,
@@ -114,7 +100,7 @@ namespace GameLogic.World
             if (finalBoss == null)
             {
                 Console.WriteLine("Error: Final boss not found!");
-                return false;
+                return;
             }
 
             // Check if player has enough keys
@@ -126,9 +112,7 @@ namespace GameLogic.World
                 Console.WriteLine($"Champion Keys required: {BossManager.KEYS_REQUIRED}");
                 Console.WriteLine($"Champion Keys in inventory: {keyCount}");
                 Console.WriteLine($"You need {BossManager.KEYS_REQUIRED - keyCount} more unique Champion Key{(BossManager.KEYS_REQUIRED - keyCount > 1 ? "s" : "")}!");
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
-                return false;
+                return;
             }
 
             // Display epic final boss screen
@@ -150,24 +134,6 @@ namespace GameLogic.World
             Console.WriteLine("═══════════════════════════════════════════════════");
             Console.WriteLine();
 
-            // Confirm engagement
-            Console.WriteLine("Do you wish to enter the Final Gate?");
-            Console.WriteLine($"⚠️  WARNING: This will consume {BossManager.KEYS_REQUIRED} Champion Keys!");
-            Console.WriteLine("[1] Yes, face my destiny!");
-            Console.WriteLine("[2] No, I need more preparation");
-            Console.Write("\nChoice: ");
-
-            string choice = Console.ReadLine();
-
-            if (choice != "1")
-            {
-                Console.WriteLine("\nYou step back from the gate...");
-                Console.WriteLine("The final battle can wait.");
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
-                return false;
-            }
-
             // Consume the keys to open the gate
             Console.WriteLine("\n🔑 Using Champion Keys to unlock the Final Gate...");
             int keysConsumed = ConsumeChampionKeys(player.Inventory, bossManager, BossManager.KEYS_REQUIRED);
@@ -176,9 +142,7 @@ namespace GameLogic.World
             {
                 Console.WriteLine($"\nError: Failed to consume keys! Only {keysConsumed} keys were removed.");
                 Console.WriteLine("The gate did not open. Contact the developers!");
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
-                return false;
+                return;
             }
 
             Console.WriteLine($"✨ {BossManager.KEYS_REQUIRED} Champion Keys consumed!");
@@ -188,20 +152,22 @@ namespace GameLogic.World
 
             // Start final combat
             Console.WriteLine("\n⚔️  THE ULTIMATE BATTLE BEGINS! ⚔️");
-            Console.WriteLine("Press any key to start...");
-            Console.ReadKey();
+
+            void OnCombatEnded(bool victory)
+            {
+                combatManager.CombatEnded -= OnCombatEnded;
+
+                if (victory)
+                {
+                    DisplayFinalVictoryScreen(finalBoss);
+                }
+            }
+
+            combatManager.CombatEnded += OnCombatEnded;
 
             // Convert companions to Entity list for combat manager
             var companionEntities = companions?.Cast<Entities.Entity>().ToList();
-            bool victory = combatManager.StartCombat(player, finalBoss, companionEntities, bossManager);
-
-            if (victory)
-            {
-                // Display epic victory screen
-                DisplayFinalVictoryScreen(finalBoss);
-            }
-
-            return victory;
+            combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { finalBoss }, companionEntities, bossManager);
         }
 
         /// <summary>

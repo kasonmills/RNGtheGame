@@ -19,7 +19,7 @@ namespace GameLogic.Core
     {
         // === Core Systems ===
         private Player _player;
-        private List<Entities.Entity> _activeCompanions; // Companions in the party
+        private Entities.NPCs.Companions.PartyManager _partyManager;
         private MapManager _mapManager;
         private CombatManager _combatManager;
         private RNGManager _rngManager;
@@ -28,6 +28,7 @@ namespace GameLogic.Core
         private QuestGiver _questGiver;
         private GameSettings _gameSettings;
         private StatisticsTracker _statistics;
+        private GameStartup _gameStartup;
 
         // === Game State Management ===
         private GameState _currentState;
@@ -37,67 +38,44 @@ namespace GameLogic.Core
         // === Overworld Encounters ===
         private List<World.OverworldEnemySpawn> _activeOverworldEnemies;
 
+        /// <summary>
+        /// The single running GameManager instance. Minimum viable access pattern for a
+        /// Godot script to reach GameManager.Instance.Combat, etc.
+        /// TODO-GODOT: a fuller singleton/DI story for non-combat scenes is still deferred.
+        /// </summary>
+        public static GameManager Instance { get; private set; }
+
+        /// <summary>
+        /// The combat engine - subscribe to its CombatMessage/CombatEnded events and call
+        /// SubmitPlayerAction() from a combat scene.
+        /// </summary>
+        public CombatManager Combat => _combatManager;
+
+        /// <summary>
+        /// Fired whenever the game state changes (old state, new state) via ChangeState/PushState/PopState.
+        /// TODO-GODOT: subscribe to this instead of polling the current state.
+        /// </summary>
+        public event Action<GameState, GameState> StateChanged;
+
         // === Constructor ===
         public GameManager()
         {
+            Instance = this;
+
             _stateStack = new Stack<GameState>();
-            InitializeSystems();
-        }
-
-        /// <summary>
-        /// Initialize all game systems
-        /// </summary>
-        private void InitializeSystems()
-        {
-            // Console.WriteLine("Initializing game systems..."); // console-test debug noise, not needed in Godot
-
-            _rngManager = new RNGManager();
-            _gameSettings = new GameSettings(); // Initialize with default settings
-            _statistics = new StatisticsTracker(); // Initialize statistics tracker
-            Data.SaveManager.Initialize(); // Initialize static SaveManager
-            _mapManager = new MapManager();
-            _combatManager = new CombatManager(_rngManager);
-            _activeCompanions = new List<Entities.Entity>();
             _activeOverworldEnemies = new List<World.OverworldEnemySpawn>();
+            _partyManager = new Entities.NPCs.Companions.PartyManager();
+            _gameStartup = new GameStartup();
+
+            var systems = _gameStartup.InitializeSystems();
+            _rngManager = systems.RngManager;
+            _gameSettings = systems.GameSettings;
+            _statistics = systems.Statistics;
+            _mapManager = systems.MapManager;
+            _combatManager = systems.CombatManager;
 
             _currentState = GameState.MainMenu;
             _isRunning = true;
-
-            // Console.WriteLine("Systems initialized!\n"); // console-test debug noise, not needed in Godot
-        }
-
-        /// <summary>
-        /// Get the maximum party size based on player's Leadership ability
-        /// Base size is 4 (player + 3 companions)
-        /// Leadership passive ability can increase this up to 8 at level 100
-        /// </summary>
-        private int GetMaxPartySize()
-        {
-            const int basePartySize = 4;
-
-            if (_player == null || _player.SelectedAbility == null)
-            {
-                return basePartySize;
-            }
-
-            // Check if player has Leadership passive ability
-            if (_player.SelectedAbility is Abilities.LeadershipAbility leadership)
-            {
-                int bonus = leadership.GetPassiveBonusValue();
-                return basePartySize + bonus;
-            }
-
-            return basePartySize;
-        }
-
-        /// <summary>
-        /// Check if party has room for another companion
-        /// </summary>
-        private bool CanAddCompanion()
-        {
-            // _activeCompanions doesn't include the player, so max is (GetMaxPartySize() - 1)
-            int maxCompanions = GetMaxPartySize() - 1;
-            return _activeCompanions.Count < maxCompanions;
         }
 
         /// <summary>
@@ -106,8 +84,10 @@ namespace GameLogic.Core
         /// </summary>
         public void PushState(GameState newState)
         {
+            var oldState = _currentState;
             _stateStack.Push(_currentState);
             _currentState = newState;
+            StateChanged?.Invoke(oldState, newState);
         }
 
         /// <summary>
@@ -117,7 +97,9 @@ namespace GameLogic.Core
         {
             if (_stateStack.Count > 0)
             {
+                var oldState = _currentState;
                 _currentState = _stateStack.Pop();
+                StateChanged?.Invoke(oldState, _currentState);
             }
         }
 
@@ -127,103 +109,9 @@ namespace GameLogic.Core
         /// </summary>
         public void ChangeState(GameState newState)
         {
+            var oldState = _currentState;
             _currentState = newState;
-        }
-
-        /// <summary>
-        /// Let the player select difficulty (immutable after creation)
-        /// </summary>
-        private void SelectDifficulty()
-        {
-            // TODO-GODOT: difficulty options + descriptions below -> difficulty-select screen (radio buttons + info panel)
-            Console.WriteLine("=== Select Difficulty ===");
-            Console.WriteLine("This choice is permanent for this save file and cannot be changed!\n");
-
-            Console.WriteLine("1. Normal");
-            Console.WriteLine("   - Enemies have 75% stats");
-            Console.WriteLine("   - Rewards are 80% of normal");
-            Console.WriteLine("   - Recommended for learning the game\n");
-
-            Console.WriteLine("2. Hard (Recommended)");
-            Console.WriteLine("   - Balanced gameplay");
-            Console.WriteLine("   - Standard enemies and rewards");
-            Console.WriteLine("   - The intended experience\n");
-
-            Console.WriteLine("3. Difficult");
-            Console.WriteLine("   - Enemies have 150% stats");
-            Console.WriteLine("   - Rewards are 130% of normal");
-            Console.WriteLine("   - For experienced players\n");
-
-            Console.WriteLine("4. Unfair");
-            Console.WriteLine("   - Enemies have 200% stats");
-            Console.WriteLine("   - Rewards are 150% of normal");
-            Console.WriteLine("   - Extreme challenge\n");
-
-            int choice = -1;
-            while (choice < 1 || choice > 4)
-            {
-                Console.Write("Select difficulty (1-4): ");
-                string input = Console.ReadLine();
-
-                if (int.TryParse(input, out choice) && choice >= 1 && choice <= 4)
-                {
-                    break;
-                }
-
-                Console.WriteLine("Invalid choice. Please try again.");
-            }
-
-            _gameSettings.Difficulty = choice switch
-            {
-                1 => DifficultyLevel.Normal,
-                2 => DifficultyLevel.Hard,
-                3 => DifficultyLevel.Difficult,
-                4 => DifficultyLevel.Unfair,
-                _ => DifficultyLevel.Hard
-            };
-
-            Console.WriteLine($"\nDifficulty set to: {_gameSettings.Difficulty}");
-            Console.WriteLine("Remember: This cannot be changed for this save file!\n");
-        }
-
-        /// <summary>
-        /// Let the player choose their permanent starting ability
-        /// </summary>
-        private void ChooseStartingAbility()
-        {
-            // TODO-GODOT: ability list + descriptions below -> ability-select screen (cards/list + info panel)
-            Console.WriteLine("\n=== Choose Your Ability ===");
-            Console.WriteLine("This choice is permanent and will stay with you throughout the game!");
-            Console.WriteLine();
-
-            var abilities = Player.GetAvailableAbilities();
-
-            // Display all available abilities with descriptions
-            for (int i = 0; i < abilities.Length; i++)
-            {
-                Console.WriteLine($"{i + 1}. {abilities[i].Name}");
-                Console.WriteLine($"   {abilities[i].Description}");
-                Console.WriteLine($"   {abilities[i].GetInfo()}");
-                Console.WriteLine();
-            }
-
-            // Get player choice
-            int choice = -1;
-            while (choice < 1 || choice > abilities.Length)
-            {
-                Console.Write($"Choose your ability (1-{abilities.Length}): ");
-                string input = Console.ReadLine();
-
-                if (int.TryParse(input, out choice) && choice >= 1 && choice <= abilities.Length)
-                {
-                    break;
-                }
-
-                Console.WriteLine("Invalid choice. Please try again.");
-            }
-
-            // Set the chosen ability
-            _player.SetAbility(abilities[choice - 1]);
+            StateChanged?.Invoke(oldState, newState);
         }
 
         /// <summary>
@@ -231,54 +119,12 @@ namespace GameLogic.Core
         /// </summary>
         public void StartNewGame()
         {
-            Console.Clear();
-            // TODO-GODOT: landing/title screen text -> main menu scene
-            Console.WriteLine("=== Welcome to RNG: The Game ===\n");
+            var result = _gameStartup.CreateNewGame(_rngManager, _mapManager, _gameSettings);
 
-            // Get player name
-            Console.Write("Enter your character's name: ");
-            string playerName = Console.ReadLine();
-
-            if (string.IsNullOrWhiteSpace(playerName))
-            {
-                playerName = "Hero";
-            }
-
-            // Create new player
-            _player = new Player(playerName);
-
-            Console.WriteLine($"\nWelcome, {_player.Name}!");
-
-            // Select difficulty (once per save file, immutable)
-            SelectDifficulty();
-
-            // Let player choose starting ability
-            ChooseStartingAbility();
-
-            // Console.WriteLine("\n🎲 Initializing Champion Bosses..."); // console-test debug noise, not needed in Godot
-
-            // Create new boss manager and register all 15 bosses
-            _bossManager = new Entities.Enemies.Bosses.BossManager();
-            var championBosses = Entities.Enemies.Bosses.BossDefinitions.GetAllChampionBosses();
-            _bossManager.RegisterBosses(championBosses.ToArray());
-
-            // Randomly select the final boss
-            _bossManager.SelectRandomFinalBoss(_rngManager);
-
-            Console.WriteLine("\nThe champions await your challenge!");
-            Console.WriteLine("Defeat 10 of the 15 Champions to unlock the Final Gate.\n");
-
-            // Initialize quest system
-            // Console.WriteLine("🎲 Initializing Quest System..."); // console-test debug noise, not needed in Godot
-            _questManager = new QuestManager();
-            InitializeQuests();
-            _questGiver = new QuestGiver("Veteran Ranger", _questManager, _bossManager);
-            Console.WriteLine("Quests are now available at the Job Board and Quest Giver!\n");
-
-            Console.WriteLine("\nYour adventure begins...\n");
-
-            // Generate starting map
-            _mapManager.GenerateNewMap();
+            _player = result.Player;
+            _bossManager = result.BossManager;
+            _questManager = result.QuestManager;
+            _questGiver = result.QuestGiver;
 
             ChangeState(GameState.Playing);
             _isRunning = true;
@@ -289,56 +135,19 @@ namespace GameLogic.Core
         /// </summary>
         public void LoadGame()
         {
-            // Console.WriteLine("Loading saved game..."); // console-test debug noise, not needed in Godot
+            var result = _gameStartup.LoadGame("save1", _rngManager, _mapManager); // Default save slot
 
-            SaveData saveData = Data.SaveManager.LoadGame("save1"); // Default save slot
-
-            if (saveData != null)
+            if (result.Success)
             {
-                _player = Player.LoadFromSave(saveData);
-
-                // Load game settings from save data
-                _gameSettings = Data.SaveManager.LoadSettingsFromSaveData(saveData);
-
-                // Load statistics from save data
-                _statistics = Data.SaveManager.LoadStatisticsFromSaveData(saveData);
-
-                // Apply RNG settings
-                _rngManager.SetStatisticsTracking(_gameSettings.RngStatisticsTracking);
-                if (!string.IsNullOrEmpty(_gameSettings.RngAlgorithm))
-                {
-                    _rngManager.SwitchAlgorithm(_gameSettings.RngAlgorithm);
-                }
-
-                // Load boss manager from save data
-                _bossManager = Data.SaveManager.LoadBossManager(saveData, _rngManager);
-
-                // Initialize quest system and reconstruct quests from save
-                _questManager = new QuestManager();
-                if (saveData.Quests != null && saveData.Quests.Count > 0)
-                {
-                    // Reconstruct quests with their original RNG values from save
-                    QuestSerializationHelper.ReconstructQuests(_questManager, saveData.Quests, _bossManager);
-                    if (!string.IsNullOrEmpty(saveData.ActiveQuestId))
-                    {
-                        _questManager.SetActiveQuestId(saveData.ActiveQuestId);
-                    }
-                }
-                else
-                {
-                    // Fallback: If no quests in save (old save file), initialize new quests
-                    InitializeQuests();
-                }
-                _questGiver = new QuestGiver("Veteran Ranger", _questManager, _bossManager);
-
-                // Map layout is fixed, so just regenerate it and restore the player's position
-                _mapManager.GenerateNewMap();
-                _mapManager.SetCurrentNode(saveData.CurrentMapNodeId);
+                _player = result.Player;
+                _gameSettings = result.GameSettings;
+                _statistics = result.Statistics;
+                _bossManager = result.BossManager;
+                _questManager = result.QuestManager;
+                _questGiver = result.QuestGiver;
 
                 ChangeState(GameState.Playing);
                 _isRunning = true;
-
-                Console.WriteLine($"Welcome back, {_player.Name}!");
             }
             else
             {
@@ -382,10 +191,12 @@ namespace GameLogic.Core
         /// <summary>
         /// Main gameplay loop - exploration and navigation
         /// TODO-GODOT: this text-menu dispatch is a stub until Godot scene/input wiring exists.
-        /// The action methods below (Explore, ShowInventory, ShowStats, Rest, SaveGame, ShowChampionMenu,
+        /// The action methods below (Explore, OpenInventory, OpenStats, Rest, SaveGame,
         /// quest giver/job board/quest log/statistics menus) are still valid and will be called by
         /// player movement/interaction signals (walking onto an encounter tile, pressing an interact
         /// key near an NPC, opening a UI panel, etc.) instead of a numbered console choice.
+        /// Champion boss challenges no longer go through a menu at all - the player finds
+        /// champions by roaming, same as regular overworld encounters.
         /// </summary>
         private void GameLoop()
         {
@@ -434,7 +245,7 @@ namespace GameLogic.Core
             //         PushState(GameState.Paused); // Save current state and go to pause
             //         break;
             //     case "7":
-            //         ShowChampionMenu();
+            //         // Removed - champions are found by roaming, not picked from a menu
             //         break;
             //     case "8":
             //         _questGiver.Interact();
@@ -592,18 +403,25 @@ namespace GameLogic.Core
 
             ChangeState(GameState.Combat); // Combat always enters from Playing and returns to Playing/GameOver
 
-            // CombatManager handles the actual combat (including XP and loot rewards)
-            bool playerWon = _combatManager.StartCombat(_player, enemy, _activeCompanions);
+            void OnCombatEnded(bool victory)
+            {
+                _combatManager.CombatEnded -= OnCombatEnded;
 
-            if (playerWon)
-            {
-                ChangeState(GameState.Playing); // Return to Playing
+                if (victory)
+                {
+                    ChangeState(GameState.Playing); // Return to Playing
+                }
+                else
+                {
+                    Console.WriteLine("\nYou have been defeated...");
+                    ChangeState(GameState.GameOver); // One-way to game over
+                }
             }
-            else
-            {
-                Console.WriteLine("\nYou have been defeated...");
-                ChangeState(GameState.GameOver); // One-way to game over
-            }
+
+            _combatManager.CombatEnded += OnCombatEnded;
+
+            // CombatManager handles the actual combat (including XP and loot rewards)
+            _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { enemy }, _partyManager.ActiveCompanions);
         }
 
         /// <summary>
@@ -750,10 +568,13 @@ namespace GameLogic.Core
         /// <summary>
         /// Save the current game
         /// </summary>
-        private void SaveGame()
+        /// <summary>
+        /// Save the current game. Returns success/failure instead of blocking on a
+        /// keypress, so a Godot save button/toast can react to the result directly.
+        /// TODO-GODOT: call this from a save button (world HUD or pause panel).
+        /// </summary>
+        public bool SaveGame()
         {
-            // Console.WriteLine("\nSaving game..."); // console-test debug noise, not needed in Godot
-
             // Update statistics before saving
             _statistics.UpdatePlayTime(_player.PlayTime);
             _statistics.UpdateCurrentGold(_player.Gold);
@@ -762,287 +583,177 @@ namespace GameLogic.Core
 
             bool success = Data.SaveManager.SaveGame(_player, "save1", _bossManager, _mapManager, _questManager, _gameSettings, _statistics);
 
-            if (success)
-            {
-                Console.WriteLine("Game saved successfully!");
-            }
-            else
-            {
-                Console.WriteLine("Failed to save game.");
-            }
+            Console.WriteLine(success ? "Game saved successfully!" : "Failed to save game.");
 
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
-        } 
+            return success;
+        }
 
         /// <summary>
         /// Show main menu / landing screen - entry point of the game
+        /// TODO-GODOT: this text-menu dispatch is a stub until Godot scene/input wiring exists.
+        /// StartNewGame()/LoadGame()/QuitGame() are still valid and will be called directly
+        /// by the main menu scene's New Game/Load Game/Quit buttons instead of a numbered choice.
         /// </summary>
         private void ShowMainMenu()
         {
-            Console.Clear();
-            // TODO-GODOT: title/landing screen -> main menu scene (New Game / Load Game / Quit buttons)
-            Console.WriteLine("=====================================");
-            Console.WriteLine("           RNG: THE GAME");
-            Console.WriteLine("=====================================");
-            Console.WriteLine("A turn-based RPG where chance is everything.\n");
-            Console.WriteLine("1. New Game");
-            Console.WriteLine("2. Load Game");
-            Console.WriteLine("3. Quit");
-            Console.Write("\nChoice: ");
-
-            string choice = Console.ReadLine();
-
-            switch (choice)
-            {
-                case "1":
-                    StartNewGame();
-                    break;
-                case "2":
-                    LoadGame();
-                    break;
-                case "3":
-                    _isRunning = false;
-                    break;
-                default:
-                    Console.WriteLine("Invalid choice. Try again.");
-                    break;
-            }
+            // === TEXT-BASED VERSION (kept for reference, not called until Godot wiring replaces it) ===
+            // Console.Clear();
+            // Console.WriteLine("=====================================");
+            // Console.WriteLine("           RNG: THE GAME");
+            // Console.WriteLine("=====================================");
+            // Console.WriteLine("A turn-based RPG where chance is everything.\n");
+            // Console.WriteLine("1. New Game");
+            // Console.WriteLine("2. Load Game");
+            // Console.WriteLine("3. Quit");
+            // Console.Write("\nChoice: ");
+            //
+            // string choice = Console.ReadLine();
+            //
+            // switch (choice)
+            // {
+            //     case "1":
+            //         StartNewGame();
+            //         break;
+            //     case "2":
+            //         LoadGame();
+            //         break;
+            //     case "3":
+            //         QuitGame();
+            //         break;
+            //     default:
+            //         Console.WriteLine("Invalid choice. Try again.");
+            //         break;
+            // }
+            // === END TEXT-BASED VERSION ===
         }
 
         /// <summary>
         /// Show pause menu
+        /// TODO-GODOT: this text-menu dispatch is a stub until Godot scene/input wiring exists.
+        /// PopState() (Resume)/SaveGame()/LoadGame()/QuitToMainMenu()/QuitGame() are still valid
+        /// and will be called directly by the pause panel's buttons instead of a numbered choice.
         /// </summary>
         private void ShowPauseMenu()
         {
-            Console.Clear();
-            // TODO-GODOT: pause menu options -> pause menu scene/buttons
-            Console.WriteLine("\n=== PAUSED ===");
-            Console.WriteLine("1. Resume");
-            Console.WriteLine("2. Save Game");
-            Console.WriteLine("3. Load Game");
-            Console.WriteLine("4. Settings (placeholder)");
-            Console.WriteLine("5. Quit to Main Menu");
-            Console.WriteLine("6. Quit Game");
-            
-            Console.Write("\nChoice: ");
-            string choice = Console.ReadLine();
-            
-            switch (choice)
-            {
-                case "1":
-                    PopState(); // Return to previous state (Playing or Combat)
-                    break;
-                case "2":
-                    SaveGame();
-                    // Stay in pause menu
-                    break;
-                case "3":
-                    LoadGame();
-                    PopState(); // Clear pause state
-                    break;
-                case "4":
-                    Menus.SettingsMenu.DisplaySettingsMenu(_gameSettings, _rngManager, isDuringSaveFile: true);
-                    break;
-                case "5":
-                    _stateStack.Clear(); // Clear state stack
-                    ChangeState(GameState.MainMenu);
-                    break;
-                case "6":
-                    _isRunning = false;
-                    break;
-                default:
-                    Console.WriteLine("Invalid choice.");
-                    break;
-            }
+            // === TEXT-BASED VERSION (kept for reference, not called until Godot wiring replaces it) ===
+            // Console.Clear();
+            // Console.WriteLine("\n=== PAUSED ===");
+            // Console.WriteLine("1. Resume");
+            // Console.WriteLine("2. Save Game");
+            // Console.WriteLine("3. Load Game");
+            // Console.WriteLine("4. Settings (placeholder)");
+            // Console.WriteLine("5. Quit to Main Menu");
+            // Console.WriteLine("6. Quit Game");
+            //
+            // Console.Write("\nChoice: ");
+            // string choice = Console.ReadLine();
+            //
+            // switch (choice)
+            // {
+            //     case "1":
+            //         PopState(); // Return to previous state (Playing or Combat)
+            //         break;
+            //     case "2":
+            //         SaveGame();
+            //         // Stay in pause menu
+            //         break;
+            //     case "3":
+            //         LoadGame();
+            //         PopState(); // Clear pause state
+            //         break;
+            //     case "4":
+            //         Menus.SettingsMenu.DisplaySettingsMenu(_gameSettings, _rngManager, isDuringSaveFile: true);
+            //         break;
+            //     case "5":
+            //         QuitToMainMenu();
+            //         break;
+            //     case "6":
+            //         QuitGame();
+            //         break;
+            //     default:
+            //         Console.WriteLine("Invalid choice.");
+            //         break;
+            // }
+            // === END TEXT-BASED VERSION ===
         }
 
         /// <summary>
-        /// Show Champion Challenges menu (Boss Fights)
+        /// Clear the pause/interrupt state stack and return to the main menu.
+        /// TODO-GODOT: call this from the pause panel's "Quit to Main Menu" button.
         /// </summary>
-        private void ShowChampionMenu()
+        public void QuitToMainMenu()
         {
-            Console.Clear();
-
-            // TODO-GODOT: progression summary, final gate status, and menu options below -> Champion Challenges screen
-            // Display boss progression summary
-            Console.WriteLine(_bossManager.GetProgressionSummary());
-            Console.WriteLine();
-
-            // Display final gate status
-            int keyCount = _bossManager.CountChampionKeys(_player.Inventory);
-            Console.WriteLine(_bossManager.GetFinalGateStatus(_player.Inventory));
-            Console.WriteLine();
-
-            // Main menu options
-            Console.WriteLine("═══ CHAMPION CHALLENGES ═══");
-            Console.WriteLine("1. Challenge a Champion Boss");
-            Console.WriteLine("2. View Boss List");
-            Console.WriteLine("3. Enter Final Gate (Requires 10 Keys)");
-            Console.WriteLine("4. Return to Adventure");
-            Console.Write("\nChoice: ");
-
-            string choice = Console.ReadLine();
-
-            switch (choice)
-            {
-                case "1":
-                    SelectAndChallengeBoss();
-                    break;
-                case "2":
-                    ViewBossList();
-                    break;
-                case "3":
-                    ChallengeFinalBoss();
-                    break;
-                case "4":
-                    // Return to game loop
-                    break;
-                default:
-                    Console.WriteLine("Invalid choice.");
-                    Console.WriteLine("Press any key to continue...");
-                    Console.ReadKey();
-                    ShowChampionMenu(); // Re-show menu
-                    break;
-            }
+            _stateStack.Clear();
+            ChangeState(GameState.MainMenu);
         }
 
         /// <summary>
-        /// Select and challenge a champion boss
+        /// Stop the game loop entirely.
+        /// TODO-GODOT: call this from a Quit button (main menu or pause panel).
         /// </summary>
-        private void SelectAndChallengeBoss()
+        public void QuitGame()
         {
-            Console.Clear();
-
-            // Display available bosses
-            World.BossEncounter.DisplayBossSelectionMenu(_bossManager, true);
-
-            var availableBosses = World.BossEncounter.GetAvailableChampionBosses(_bossManager);
-
-            Console.WriteLine($"[{availableBosses.Count + 1}] Return to Champion Menu");
-            Console.Write("\nSelect a boss to challenge: ");
-
-            string choice = Console.ReadLine();
-
-            if (int.TryParse(choice, out int bossIndex))
-            {
-                if (bossIndex >= 1 && bossIndex <= availableBosses.Count)
-                {
-                    var selectedBoss = availableBosses[bossIndex - 1];
-
-                    // Start boss encounter
-                    bool victory = World.BossEncounter.StartBossEncounter(
-                        _player,
-                        selectedBoss,
-                        _bossManager,
-                        _combatManager,
-                        null); // TODO: Add companion support when implemented
-
-                    if (victory)
-                    {
-                        Console.WriteLine("\n✨ You may now save your progress or continue your adventure.");
-                    }
-                    else
-                    {
-                        // Player lost or fled
-                        if (_player.Health <= 0)
-                        {
-                            ChangeState(GameState.GameOver);
-                            return;
-                        }
-                    }
-                }
-                else if (bossIndex == availableBosses.Count + 1)
-                {
-                    // Return to champion menu
-                    ShowChampionMenu();
-                    return;
-                }
-                else
-                {
-                    Console.WriteLine("Invalid choice.");
-                }
-            }
-            else
-            {
-                Console.WriteLine("Invalid input.");
-            }
-
-            Console.WriteLine("Press any key to continue...");
-            Console.ReadKey();
-            ShowChampionMenu();
+            _isRunning = false;
         }
 
         /// <summary>
-        /// View detailed list of all bosses
+        /// Challenge a champion boss the player has found by roaming (replaces the old
+        /// menu-driven boss-selection list, per the Pokemon-style Route/Town map design).
+        /// TODO-GODOT: call this when the player walks into a champion boss's overworld hitbox,
+        /// same trigger shape as OnOverworldEnemyHitboxCollision for regular enemies. Boss
+        /// placement on the fixed map isn't designed yet, so nothing calls this today.
         /// </summary>
-        private void ViewBossList()
+        public void ChallengeBoss(Entities.Enemies.Bosses.BossEnemy boss)
         {
-            Console.Clear();
-            // TODO-GODOT: boss list + per-boss detail -> boss codex/selection screen
-            Console.WriteLine("═══ ALL CHAMPION BOSSES ═══\n");
-
-            var allBosses = _bossManager.AllBosses.Values.OrderBy(b => b.Level).ToList();
-
-            foreach (var boss in allBosses)
+            void OnCombatEnded(bool victory)
             {
-                bool isDefeated = _bossManager.IsBossDefeated(boss.BossId);
-                bool isFinalBoss = boss.BossId == _bossManager.FinalBossId;
+                _combatManager.CombatEnded -= OnCombatEnded;
 
-                string status = isFinalBoss ? " [FINAL BOSS]" :
-                               isDefeated ? " [✓ DEFEATED]" : " [NEW]";
-
-                Console.WriteLine($"{boss.Name}{status}");
-                Console.WriteLine($"  Level: {boss.Level} | Mechanic: {boss.MechanicType}");
-
-                if (isDefeated)
+                if (!victory && _player.Health <= 0)
                 {
-                    Console.WriteLine($"  Times Defeated: {boss.TimesDefeated}");
+                    ChangeState(GameState.GameOver);
                 }
-
-                if (isFinalBoss)
-                {
-                    Console.WriteLine($"  ⚠️  Requires 10 Champion Keys to unlock");
-                }
-
-                Console.WriteLine($"  {boss.Title}");
-                Console.WriteLine();
             }
 
-            Console.WriteLine("Press any key to return to Champion Menu...");
-            Console.ReadKey();
-            ShowChampionMenu();
+            _combatManager.CombatEnded += OnCombatEnded;
+
+            World.BossEncounter.StartBossEncounter(
+                _player,
+                boss,
+                _bossManager,
+                _combatManager,
+                null); // TODO: Add companion support when implemented
         }
 
         /// <summary>
-        /// Challenge the final boss
+        /// Challenge the final boss at the Final Gate.
+        /// TODO-GODOT: call this when the player reaches the Final Gate's map location
+        /// (the "Tyrant's Lair" BossRoom node) instead of from a menu.
         /// </summary>
-        private void ChallengeFinalBoss()
+        public void ChallengeFinalBoss()
         {
-            bool victory = World.BossEncounter.StartFinalBossEncounter(
+            void OnCombatEnded(bool victory)
+            {
+                _combatManager.CombatEnded -= OnCombatEnded;
+
+                if (victory)
+                {
+                    Console.WriteLine("\n🎉 YOU HAVE COMPLETED THE GAME! 🎉");
+                    Console.WriteLine("You may continue playing to explore or challenge bosses again.");
+                }
+                else if (_player.Health <= 0)
+                {
+                    ChangeState(GameState.GameOver);
+                }
+            }
+
+            _combatManager.CombatEnded += OnCombatEnded;
+
+            World.BossEncounter.StartFinalBossEncounter(
                 _player,
                 _bossManager,
                 _combatManager,
                 null); // TODO: Add companion support when implemented
-
-            if (victory)
-            {
-                Console.WriteLine("\n🎉 YOU HAVE COMPLETED THE GAME! 🎉");
-                Console.WriteLine("You may continue playing to explore or challenge bosses again.");
-            }
-            else
-            {
-                // Player lost or didn't meet requirements
-                if (_player.Health <= 0)
-                {
-                    ChangeState(GameState.GameOver);
-                    return;
-                }
-            }
-
-            Console.WriteLine("Press any key to continue...");
-            Console.ReadKey();
-            ShowChampionMenu();
         }
 
         /// <summary>
@@ -1080,180 +791,5 @@ namespace GameLogic.Core
             }
         }
 
-        /// <summary>
-        /// Initialize all quests for the game (ONLY called on new game creation)
-        /// </summary>
-        private void InitializeQuests()
-        {
-            // Create boss defeat quests for each champion (except final boss)
-            foreach (var boss in _bossManager.AllBosses.Values)
-            {
-                if (boss.BossId != _bossManager.FinalBossId)
-                {
-                    // Boss quests: 100 gold + 50 XP per quest (no RNG - these are fixed)
-                    var bossQuest = new BossDefeatQuest(boss.BossId, boss.Name, 100, 50);
-                    bossQuest.Discover(); // Make available immediately
-                    _questManager.RegisterQuest(bossQuest);
-                }
-            }
-
-            // Create final boss quest (no RNG - this is fixed)
-            var finalBoss = _bossManager.GetFinalBoss();
-            if (finalBoss != null)
-            {
-                var finalQuest = new FinalBossQuest(finalBoss.BossId, finalBoss.Name);
-                finalQuest.Discover(); // Make available immediately
-                _questManager.RegisterQuest(finalQuest);
-            }
-
-            // Create level progression quests (no RNG - fixed milestones)
-            int[] levelMilestones = { 5, 10, 15, 20, 25 };
-            foreach (int level in levelMilestones)
-            {
-                // Add RNG to rewards: ±20% variation
-                int baseGold = level * 50;
-                int baseXP = level * 25;
-                int gold = ApplyRewardVariation(baseGold, 0.2);
-                int xp = ApplyRewardVariation(baseXP, 0.2);
-
-                var levelQuest = new LevelQuest(level, gold, xp);
-                levelQuest.Discover();
-                _questManager.RegisterQuest(levelQuest);
-            }
-
-            // Create enemy kill quests with RNG on requirements and rewards
-            // Tier 1: 10 enemies (±6 = 4-16 range)
-            int tier1Kills = ApplyRequirementVariation(10, 6);
-            int tier1Gold = ApplyRewardVariation(75, 0.3);  // ±30% variation
-            int tier1XP = ApplyRewardVariation(40, 0.3);
-            var enemyQuest1 = new EnemyKillQuest("kill_tier1_enemies", "Novice Hunter", tier1Kills, tier1Gold, tier1XP);
-            enemyQuest1.Discover();
-            _questManager.RegisterQuest(enemyQuest1);
-
-            // Tier 2: 25 enemies (±6 = 19-31 range)
-            int tier2Kills = ApplyRequirementVariation(25, 6);
-            int tier2Gold = ApplyRewardVariation(150, 0.3);
-            int tier2XP = ApplyRewardVariation(75, 0.3);
-            var enemyQuest2 = new EnemyKillQuest("kill_tier2_enemies", "Experienced Hunter", tier2Kills, tier2Gold, tier2XP);
-            enemyQuest2.Discover();
-            _questManager.RegisterQuest(enemyQuest2);
-
-            // Tier 3: 50 enemies (±6 = 44-56 range)
-            int tier3Kills = ApplyRequirementVariation(50, 6);
-            int tier3Gold = ApplyRewardVariation(300, 0.3);
-            int tier3XP = ApplyRewardVariation(150, 0.3);
-            var enemyQuest3 = new EnemyKillQuest("kill_tier3_enemies", "Master Hunter", tier3Kills, tier3Gold, tier3XP);
-            enemyQuest3.Discover();
-            _questManager.RegisterQuest(enemyQuest3);
-
-            // Create gold collection quests with RNG on requirements and rewards
-            // Tier 1: 500 gold (±6 * 25 = ±150 = 350-650 range)
-            int tier1GoldReq = ApplyRequirementVariation(500, 6 * 25);
-            int tier1GoldReward = ApplyRewardVariation(100, 0.3);
-            int tier1GoldXP = ApplyRewardVariation(50, 0.3);
-            var goldQuest1 = new GoldCollectionQuest(tier1GoldReq, tier1GoldReward, tier1GoldXP);
-            goldQuest1.Discover();
-            _questManager.RegisterQuest(goldQuest1);
-
-            // Tier 2: 1000 gold (±150 = 850-1150 range)
-            int tier2GoldReq = ApplyRequirementVariation(1000, 150);
-            int tier2GoldReward = ApplyRewardVariation(200, 0.3);
-            int tier2GoldXP = ApplyRewardVariation(100, 0.3);
-            var goldQuest2 = new GoldCollectionQuest(tier2GoldReq, tier2GoldReward, tier2GoldXP);
-            goldQuest2.Discover();
-            _questManager.RegisterQuest(goldQuest2);
-
-            // Tier 3: 2500 gold (±300 = 2200-2800 range)
-            int tier3GoldReq = ApplyRequirementVariation(2500, 300);
-            int tier3GoldReward = ApplyRewardVariation(500, 0.3);
-            int tier3GoldXP = ApplyRewardVariation(250, 0.3);
-            var goldQuest3 = new GoldCollectionQuest(tier3GoldReq, tier3GoldReward, tier3GoldXP);
-            goldQuest3.Discover();
-            _questManager.RegisterQuest(goldQuest3);
-
-            // Create weapon upgrade quests with RNG on requirements and rewards
-            // Tier 1: Level 5 (±2 = 3-7 range)
-            int tier1WeaponLevel = ApplyRequirementVariation(5, 2);
-            int tier1WeaponGold = ApplyRewardVariation(150, 0.3);
-            int tier1WeaponXP = ApplyRewardVariation(75, 0.3);
-            var weaponQuest1 = new WeaponUpgradeQuest(tier1WeaponLevel, tier1WeaponGold, tier1WeaponXP);
-            weaponQuest1.Discover();
-            _questManager.RegisterQuest(weaponQuest1);
-
-            // Tier 2: Level 10 (±3 = 7-13 range)
-            int tier2WeaponLevel = ApplyRequirementVariation(10, 3);
-            int tier2WeaponGold = ApplyRewardVariation(300, 0.3);
-            int tier2WeaponXP = ApplyRewardVariation(150, 0.3);
-            var weaponQuest2 = new WeaponUpgradeQuest(tier2WeaponLevel, tier2WeaponGold, tier2WeaponXP);
-            weaponQuest2.Discover();
-            _questManager.RegisterQuest(weaponQuest2);
-
-            // Create equipment quests with RNG on requirements and rewards
-            // Tier 1: Level 3 (±1 = 2-4 range)
-            int tier1EquipLevel = ApplyRequirementVariation(3, 1);
-            int tier1EquipGold = ApplyRewardVariation(100, 0.3);
-            int tier1EquipXP = ApplyRewardVariation(50, 0.3);
-            var equipQuest1 = new EquipmentQuest(tier1EquipLevel, tier1EquipGold, tier1EquipXP);
-            equipQuest1.Discover();
-            _questManager.RegisterQuest(equipQuest1);
-
-            // Tier 2: Level 5 (±2 = 3-7 range)
-            int tier2EquipLevel = ApplyRequirementVariation(5, 2);
-            int tier2EquipGold = ApplyRewardVariation(200, 0.3);
-            int tier2EquipXP = ApplyRewardVariation(100, 0.3);
-            var equipQuest2 = new EquipmentQuest(tier2EquipLevel, tier2EquipGold, tier2EquipXP);
-            equipQuest2.Discover();
-            _questManager.RegisterQuest(equipQuest2);
-
-            // Create challenge quests with RNG on rewards
-            int challenge1Gold = ApplyRewardVariation(200, 0.3);
-            int challenge1XP = ApplyRewardVariation(100, 0.3);
-            var challenge1 = new ChallengeQuest("flawless_victory", "Flawless Victory", "Win a battle without taking any damage. Perfect defense and timing are key!", ChallengeType.FlawlessVictory, challenge1Gold, challenge1XP);
-            challenge1.Discover();
-            _questManager.RegisterQuest(challenge1);
-
-            int challenge2Gold = ApplyRewardVariation(150, 0.3);
-            int challenge2XP = ApplyRewardVariation(75, 0.3);
-            var challenge2 = new ChallengeQuest("crit_master", "Critical Master", "Land 5 critical hits in a single battle. Show your mastery of precision strikes!", ChallengeType.CriticalMaster, challenge2Gold, challenge2XP);
-            challenge2.Discover();
-            _questManager.RegisterQuest(challenge2);
-
-            int challenge3Gold = ApplyRewardVariation(175, 0.3);
-            int challenge3XP = ApplyRewardVariation(90, 0.3);
-            var challenge3 = new ChallengeQuest("survivor", "Survivor", "Win a battle with less than 10% health remaining. Live on the edge!", ChallengeType.Survivor, challenge3Gold, challenge3XP);
-            challenge3.Discover();
-            _questManager.RegisterQuest(challenge3);
-
-            // Win streak: 5 battles (±2 = 3-7 range)
-            int winStreakReq = ApplyRequirementVariation(5, 2);
-            int challenge4Gold = ApplyRewardVariation(250, 0.3);
-            int challenge4XP = ApplyRewardVariation(125, 0.3);
-            // Update description dynamically based on RNG requirement
-            string winStreakDesc = $"Win {winStreakReq} battles in a row without fleeing. Prove your consistency!";
-            var challenge4 = new ChallengeQuest("win_streak", "Undefeated", winStreakDesc, ChallengeType.WinStreak, challenge4Gold, challenge4XP, winStreakReq);
-            challenge4.Discover();
-            _questManager.RegisterQuest(challenge4);
-
-            // Console.WriteLine($"✓ {_questManager.AllQuests.Count} quests initialized with randomized requirements and rewards"); // console-test debug noise, not needed in Godot
-        }
-
-        /// <summary>
-        /// Apply RNG variation to quest requirements (±variance)
-        /// </summary>
-        private int ApplyRequirementVariation(int baseValue, int maxVariance)
-        {
-            int variation = _rngManager.Roll(-maxVariance, maxVariance);
-            return Math.Max(1, baseValue + variation); // Ensure minimum of 1
-        }
-
-        /// <summary>
-        /// Apply percentage-based RNG variation to rewards
-        /// </summary>
-        private int ApplyRewardVariation(int baseValue, double variancePercent)
-        {
-            int maxVariance = (int)(baseValue * variancePercent);
-            int variation = _rngManager.Roll(-maxVariance, maxVariance);
-            return Math.Max(1, baseValue + variation); // Ensure minimum of 1
-        }
     }
 }
