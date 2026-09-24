@@ -29,6 +29,7 @@ namespace GameLogic.Core
         private GameSettings _gameSettings;
         private StatisticsTracker _statistics;
         private GameStartup _gameStartup;
+        private TutorialManager _tutorialManager;
 
         // === Game State Management ===
         private GameState _currentState;
@@ -52,6 +53,11 @@ namespace GameLogic.Core
         public CombatManager Combat => _combatManager;
 
         /// <summary>
+        /// The opening tutorial's content and combat-teaching gate.
+        /// </summary>
+        public TutorialManager Tutorial => _tutorialManager;
+
+        /// <summary>
         /// Fired whenever the game state changes (old state, new state) via ChangeState/PushState/PopState.
         /// TODO-GODOT: subscribe to this instead of polling the current state.
         /// </summary>
@@ -66,6 +72,7 @@ namespace GameLogic.Core
             _activeOverworldEnemies = new List<World.OverworldEnemySpawn>();
             _partyManager = new Entities.NPCs.Companions.PartyManager();
             _gameStartup = new GameStartup();
+            _tutorialManager = new TutorialManager();
 
             var systems = _gameStartup.InitializeSystems();
             _rngManager = systems.RngManager;
@@ -115,19 +122,70 @@ namespace GameLogic.Core
         }
 
         /// <summary>
-        /// Start a brand new game
+        /// Start a brand new game. TODO-GODOT: call this from the character-creation scene
+        /// once it's collected name/difficulty/ability/weapon via UI (see GetStarterWeaponChoices()
+        /// and Player.GetAvailableAbilities() for the choices to present).
         /// </summary>
-        public void StartNewGame()
+        public void StartNewGame(string playerName, DifficultyLevel difficulty, Abilities.Ability ability, Items.Weapon startingWeapon)
         {
-            var result = _gameStartup.CreateNewGame(_rngManager, _mapManager, _gameSettings);
+            var result = _gameStartup.CreateNewGame(playerName, difficulty, ability, startingWeapon, _rngManager, _mapManager, _gameSettings);
 
             _player = result.Player;
             _bossManager = result.BossManager;
             _questManager = result.QuestManager;
             _questGiver = result.QuestGiver;
 
-            ChangeState(GameState.Playing);
+            ChangeState(GameState.Tutorial); // Opening tutorial before the player is free to roam
             _isRunning = true;
+        }
+
+        /// <summary>
+        /// Starter weapon choices for the character-creation scene's weapon-select step.
+        /// </summary>
+        public List<Items.Weapon> GetStarterWeaponChoices()
+        {
+            return _gameStartup.GetStarterWeaponChoices();
+        }
+
+        /// <summary>
+        /// Recruit the tutorial's starter companion into the party, before the Eagle Bear fight.
+        /// TODO-GODOT: call this from the tutorial/story scene once the player continues past the intro.
+        /// </summary>
+        public void RecruitStarterCompanion()
+        {
+            _partyManager.RecruitCompanion(_player, _tutorialManager.GetStarterCompanion());
+        }
+
+        /// <summary>
+        /// Begin the tutorial's first boss fight (Skarn, the Eagle Bear), with the tutorial's
+        /// action-teaching gate active.
+        /// TODO-GODOT: call this once the intro story/companion recruitment scene finishes.
+        /// During this fight, submit actions via GameManager.Instance.Tutorial.TrySubmitAction(...)
+        /// instead of Combat.SubmitPlayerAction(...) directly.
+        /// </summary>
+        public void BeginEagleBearEncounter()
+        {
+            var eagleBear = _tutorialManager.CreateEagleBearEncounter(_bossManager);
+
+            ChangeState(GameState.Combat);
+
+            void OnCombatEnded(bool victory)
+            {
+                _combatManager.CombatEnded -= OnCombatEnded;
+
+                if (victory)
+                {
+                    ChangeState(GameState.Playing); // Tutorial complete - the player is free to roam
+                }
+                else if (_player.Health <= 0)
+                {
+                    ChangeState(GameState.GameOver);
+                }
+            }
+
+            _combatManager.CombatEnded += OnCombatEnded;
+
+            _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { eagleBear }, _partyManager.ActiveCompanions, _bossManager);
         }
 
         /// <summary>

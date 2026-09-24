@@ -42,5 +42,32 @@ namespace GameLogic.Entities.NPCs.Companions
             int maxCompanions = GetMaxPartySize(player) - 1;
             return ActiveCompanions.Count < maxCompanions;
         }
+
+        /// <summary>
+        /// Recruit a companion into the active party - adds them to the roster, marks them
+        /// as in-party (so CombatManager.StartCombat includes them), and applies their
+        /// passive bonus to the player if they have one.
+        /// </summary>
+        public bool RecruitCompanion(Player.Player player, Entity companion)
+        {
+            if (!CanAddCompanion(player))
+            {
+                return false;
+            }
+
+            ActiveCompanions.Add(companion);
+
+            if (companion is NPCBase npcCompanion)
+            {
+                npcCompanion.JoinParty();
+            }
+
+            if (companion is CompanionBase companionBase)
+            {
+                companionBase.ApplyPassiveBonus(player);
+            }
+
+            return true;
+        }
     }
 }

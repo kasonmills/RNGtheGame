@@ -8,6 +8,7 @@ namespace GameLogic.Core
     public enum GameState
     {
         MainMenu,    // Title screen, new game, load game
+        Tutorial,    // Opening story/setup + first boss fight (Playing before it's unlocked)
         Playing,     // Exploring the world, navigating map
         Combat,      // In battle with an enemy
         Paused,      // Game paused (can resume)

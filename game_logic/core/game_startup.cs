@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GameLogic.Entities.Player;
 using GameLogic.World;
 using GameLogic.Systems;
@@ -6,6 +7,7 @@ using GameLogic.Combat;
 using GameLogic.Data;
 using GameLogic.Quests;
 using GameLogic.Abilities;
+using GameLogic.Items;
 
 namespace GameLogic.Core
 {
@@ -65,35 +67,30 @@ namespace GameLogic.Core
         }
 
         /// <summary>
-        /// Start a brand new game
+        /// Start a brand new game. Takes the player's already-made choices (collected by a
+        /// Godot character-creation scene) instead of prompting for them - no console I/O.
         /// </summary>
-        public GameStartupResult CreateNewGame(RNGManager rngManager, MapManager mapManager, GameSettings gameSettings)
+        public GameStartupResult CreateNewGame(
+            string playerName,
+            DifficultyLevel difficulty,
+            Ability ability,
+            Weapon startingWeapon,
+            RNGManager rngManager,
+            MapManager mapManager,
+            GameSettings gameSettings)
         {
-            Console.Clear();
-            // TODO-GODOT: landing/title screen text -> main menu scene
-            Console.WriteLine("=== Welcome to RNG: The Game ===\n");
-
-            // Get player name
-            Console.Write("Enter your character's name: ");
-            string playerName = Console.ReadLine();
-
             if (string.IsNullOrWhiteSpace(playerName))
             {
                 playerName = "Hero";
             }
 
-            // Create new player
             var player = new Player(playerName);
 
-            Console.WriteLine($"\nWelcome, {player.Name}!");
+            gameSettings.Difficulty = difficulty;
+            player.SetAbility(ability);
+            player.EquipWeapon(startingWeapon);
 
-            // Select difficulty (once per save file, immutable)
-            gameSettings.Difficulty = SelectDifficulty();
-
-            // Let player choose starting ability
-            player.SetAbility(ChooseStartingAbility());
-
-            // Register the boss roster (currently empty pending the 9-boss redesign).
+            // Register the boss roster (only boss #1, the tutorial fight, exists so far).
             // TODO: no final-boss assignment happens here anymore - SelectRandomFinalBoss()
             // is being retired since the final boss will be a fixed, specific boss once the
             // roster/order redesign lands, not a random pick.
@@ -101,15 +98,10 @@ namespace GameLogic.Core
             var bosses = Entities.Enemies.Bosses.BossDefinitions.GetAllChampionBosses();
             bossManager.RegisterBosses(bosses.ToArray());
 
-            Console.WriteLine("\nYour bosses await your challenge!\n");
-
             // Initialize quest system
             var questManager = new QuestManager();
             InitializeQuests(questManager, bossManager, rngManager);
             var questGiver = new QuestGiver("Veteran Ranger", questManager, bossManager);
-            Console.WriteLine("Quests are now available at the Job Board and Quest Giver!\n");
-
-            Console.WriteLine("\nYour adventure begins...\n");
 
             // Generate starting map
             mapManager.GenerateNewMap();
@@ -121,6 +113,22 @@ namespace GameLogic.Core
                 QuestManager = questManager,
                 QuestGiver = questGiver,
                 GameSettings = gameSettings
+            };
+        }
+
+        /// <summary>
+        /// A small curated set of starter weapons (melee/ranged/rogue/caster) for the
+        /// weapon-selection step of character creation.
+        /// TODO-GODOT: render as a weapon-select screen.
+        /// </summary>
+        public List<Weapon> GetStarterWeaponChoices()
+        {
+            return new List<Weapon>
+            {
+                ItemDatabase.GetWeapon("rusty sword"),
+                ItemDatabase.GetWeapon("hunting bow"),
+                ItemDatabase.GetWeapon("rusty dagger"),
+                ItemDatabase.GetWeapon("wooden staff")
             };
         }
 
@@ -190,100 +198,19 @@ namespace GameLogic.Core
         }
 
         /// <summary>
-        /// Let the player select difficulty (immutable after creation)
+        /// Descriptive text for a difficulty-select screen (immutable choice per save file).
+        /// TODO-GODOT: render as radio buttons + info panel.
         /// </summary>
-        private DifficultyLevel SelectDifficulty()
+        public static string GetDifficultyDescription(DifficultyLevel difficulty)
         {
-            // TODO-GODOT: difficulty options + descriptions below -> difficulty-select screen (radio buttons + info panel)
-            Console.WriteLine("=== Select Difficulty ===");
-            Console.WriteLine("This choice is permanent for this save file and cannot be changed!\n");
-
-            Console.WriteLine("1. Normal");
-            Console.WriteLine("   - Enemies have 75% stats");
-            Console.WriteLine("   - Rewards are 80% of normal");
-            Console.WriteLine("   - Recommended for learning the game\n");
-
-            Console.WriteLine("2. Hard (Recommended)");
-            Console.WriteLine("   - Balanced gameplay");
-            Console.WriteLine("   - Standard enemies and rewards");
-            Console.WriteLine("   - The intended experience\n");
-
-            Console.WriteLine("3. Difficult");
-            Console.WriteLine("   - Enemies have 150% stats");
-            Console.WriteLine("   - Rewards are 130% of normal");
-            Console.WriteLine("   - For experienced players\n");
-
-            Console.WriteLine("4. Unfair");
-            Console.WriteLine("   - Enemies have 200% stats");
-            Console.WriteLine("   - Rewards are 150% of normal");
-            Console.WriteLine("   - Extreme challenge\n");
-
-            int choice = -1;
-            while (choice < 1 || choice > 4)
+            return difficulty switch
             {
-                Console.Write("Select difficulty (1-4): ");
-                string input = Console.ReadLine();
-
-                if (int.TryParse(input, out choice) && choice >= 1 && choice <= 4)
-                {
-                    break;
-                }
-
-                Console.WriteLine("Invalid choice. Please try again.");
-            }
-
-            DifficultyLevel difficulty = choice switch
-            {
-                1 => DifficultyLevel.Normal,
-                2 => DifficultyLevel.Hard,
-                3 => DifficultyLevel.Difficult,
-                4 => DifficultyLevel.Unfair,
-                _ => DifficultyLevel.Hard
+                DifficultyLevel.Normal => "Enemies have 75% stats. Rewards are 80% of normal. Recommended for learning the game.",
+                DifficultyLevel.Hard => "Balanced gameplay - standard enemies and rewards. The intended experience.",
+                DifficultyLevel.Difficult => "Enemies have 150% stats. Rewards are 130% of normal. For experienced players.",
+                DifficultyLevel.Unfair => "Enemies have 200% stats. Rewards are 150% of normal. Extreme challenge.",
+                _ => ""
             };
-
-            Console.WriteLine($"\nDifficulty set to: {difficulty}");
-            Console.WriteLine("Remember: This cannot be changed for this save file!\n");
-
-            return difficulty;
-        }
-
-        /// <summary>
-        /// Let the player choose their permanent starting ability
-        /// </summary>
-        private Ability ChooseStartingAbility()
-        {
-            // TODO-GODOT: ability list + descriptions below -> ability-select screen (cards/list + info panel)
-            Console.WriteLine("\n=== Choose Your Ability ===");
-            Console.WriteLine("This choice is permanent and will stay with you throughout the game!");
-            Console.WriteLine();
-
-            var abilities = Player.GetAvailableAbilities();
-
-            // Display all available abilities with descriptions
-            for (int i = 0; i < abilities.Length; i++)
-            {
-                Console.WriteLine($"{i + 1}. {abilities[i].Name}");
-                Console.WriteLine($"   {abilities[i].Description}");
-                Console.WriteLine($"   {abilities[i].GetInfo()}");
-                Console.WriteLine();
-            }
-
-            // Get player choice
-            int choice = -1;
-            while (choice < 1 || choice > abilities.Length)
-            {
-                Console.Write($"Choose your ability (1-{abilities.Length}): ");
-                string input = Console.ReadLine();
-
-                if (int.TryParse(input, out choice) && choice >= 1 && choice <= abilities.Length)
-                {
-                    break;
-                }
-
-                Console.WriteLine("Invalid choice. Please try again.");
-            }
-
-            return abilities[choice - 1];
         }
 
         /// <summary>
