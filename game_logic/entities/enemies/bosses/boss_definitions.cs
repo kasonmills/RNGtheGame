@@ -25,6 +25,8 @@ namespace GameLogic.Entities.Enemies.Bosses
             {
                 // Boss #1 - the tutorial fight (see TutorialManager, game_logic/core/tutorial_manager.cs).
                 // Level/mechanic are a first-pass balance choice - easy to retune after playtesting.
+                // MechanicType is flavor/display text only - Mechanic is the real implementation
+                // (see EagleBearMechanic, game_logic/entities/enemies/bosses/boss_mechanic.cs).
                 new BossEnemy(
                     bossId: "skarn_eagle_bear",
                     name: "Skarn",
@@ -33,7 +35,10 @@ namespace GameLogic.Entities.Enemies.Bosses
                         + "furred bulk - that struck from the treeline while the princess's escort was ambushed.",
                     keyId: "skarn_key",
                     level: 2,
-                    mechanicType: BossMechanicType.Standard)
+                    mechanicType: BossMechanicType.MultiPhase)
+                {
+                    Mechanic = new EagleBearMechanic()
+                }
             };
         }
 

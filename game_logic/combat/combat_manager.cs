@@ -104,12 +104,18 @@ namespace GameLogic.Combat
             _combatActive = true;
             _bossManager = bossManager;
 
-            // If any of these are bosses, apply strength scaling
+            // If any of these are bosses, apply strength scaling and reset their mechanic
+            // state (so a repeat fight doesn't carry over stale grapple/charge state).
             foreach (var enemy in _enemies)
             {
-                if (enemy is BossEnemy boss && _bossManager != null)
+                if (enemy is BossEnemy boss)
                 {
-                    _bossManager.ApplyBossScaling(boss);
+                    if (_bossManager != null)
+                    {
+                        _bossManager.ApplyBossScaling(boss);
+                    }
+
+                    boss.Mechanic?.Reset();
                 }
             }
 
@@ -203,15 +209,30 @@ namespace GameLogic.Combat
         /// </summary>
         private int GetEntityEffectiveSpeed(Entity entity)
         {
+            int speed;
+
             // Check if entity is a companion
             if (entity is Entities.NPCs.Companions.CompanionBase companion)
             {
                 // Use companion's version that applies Swift Tactics
-                return companion.GetEffectiveSpeed(_player);
+                speed = companion.GetEffectiveSpeed(_player);
+            }
+            else
+            {
+                // For player and enemies, use base GetEffectiveSpeed()
+                speed = entity.GetEffectiveSpeed();
             }
 
-            // For player and enemies, use base GetEffectiveSpeed()
-            return entity.GetEffectiveSpeed();
+            // A multi-round slow (e.g. Skarn's grapple) is tracked as an ongoing effect
+            // rather than the per-round SpeedModifier (which gets recalculated every
+            // round based on LastAction and would otherwise overwrite it).
+            var grapple = entity.GetEffect<Abilities.EnemyAbilities.GrappledEffect>();
+            if (grapple != null)
+            {
+                speed -= grapple.Potency;
+            }
+
+            return Math.Max(1, speed);
         }
 
         /// <summary>
@@ -632,6 +653,21 @@ namespace GameLogic.Combat
             // Select target - enemies can target player or companions
             Entity target = SelectEnemyTarget();
 
+            // A boss's own unique mechanic (if any) gets first say - falls back to the
+            // generic Behavior-based logic below if it returns null.
+            if (enemy is BossEnemy boss && boss.Mechanic != null)
+            {
+                var mechanicAction = boss.Mechanic.DecideAction(boss, target, _rngManager, out string mechanicMessage);
+                if (!string.IsNullOrEmpty(mechanicMessage))
+                {
+                    Log(mechanicMessage);
+                }
+                if (mechanicAction != null)
+                {
+                    return mechanicAction;
+                }
+            }
+
             // Decision logic based on behavior type
             switch (enemy.Behavior)
             {
@@ -777,6 +813,11 @@ namespace GameLogic.Combat
                 case ActionType.Flee:
                     ProcessFlee(action);
                     break;
+                case ActionType.None:
+                    // No offensive action this turn (e.g. a boss holding a grapple) -
+                    // any narration was already logged by whatever decided this action.
+                    action.Actor.LastAction = Entities.CombatAction.None;
+                    break;
             }
         }
 
@@ -872,6 +913,14 @@ namespace GameLogic.Combat
                 }
             }
 
+            // Boss mechanics (e.g. a charge/stoop attack) can boost the damage of this
+            // specific hit. A flat multiplier commutes with the defend-reduction already
+            // applied above, so applying it here (after) is equivalent to applying it before.
+            if (!result.Missed && action.DamageMultiplier != 1.0)
+            {
+                result.FinalDamage = (int)(result.FinalDamage * action.DamageMultiplier);
+            }
+
             // Display result
             if (result.Missed)
             {
@@ -902,6 +951,12 @@ namespace GameLogic.Combat
                 {
                     action.Target.TakeDamage(result.FinalDamage);
                     Log($"{action.Target.Name} took {result.FinalDamage} damage!");
+
+                    // Some attacks also inflict a status effect on a successful hit (e.g. a grapple's slow)
+                    if (action.AppliesEffect != null)
+                    {
+                        action.Target.AddEffect(action.AppliesEffect);
+                    }
                 }
             }
         }

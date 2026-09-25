@@ -26,7 +26,14 @@ namespace GameLogic.Entities.Enemies.Bosses
 
         // Unique Combat Mechanics
         public string UniqueAbilityDescription { get; set; }  // Description of unique mechanic
-        public BossMechanicType MechanicType { get; set; }    // Type of unique mechanic
+        public BossMechanicType MechanicType { get; set; }    // Type of unique mechanic (flavor/display only)
+
+        /// <summary>
+        /// The actual implementation of this boss's unique mechanic, if it has one.
+        /// Null means "no override" - CombatManager falls back to the generic
+        /// Behavior-based AI (i.e. MechanicType alone does nothing on its own).
+        /// </summary>
+        public IBossMechanic Mechanic { get; set; }
 
         // Base stats (before scaling)
         private int _baseMinDamage;

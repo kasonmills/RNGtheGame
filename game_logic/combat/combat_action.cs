@@ -18,7 +18,11 @@ namespace GameLogic.Combat
         // Optional data depending on action type
         public Ability Ability { get; set; }     // If using an ability
         public Item Item { get; set; }           // If using an item
-        
+
+        // Optional, generically reusable by any boss mechanic:
+        public double DamageMultiplier { get; set; } = 1.0;  // Applied to attack damage before defend/evasion (e.g. a charge attack)
+        public AbilityEffect AppliesEffect { get; set; }      // Applied to the target if the attack lands (e.g. a slow/grapple)
+
         public CombatAction(ActionType type, Entity actor, Entity target = null)
         {
             Type = type;
@@ -57,8 +61,16 @@ namespace GameLogic.Combat
         {
             return new CombatAction(ActionType.Flee, actor);
         }
+
+        /// <summary>
+        /// No offensive action this turn (e.g. a boss occupied holding a grapple).
+        /// </summary>
+        public static CombatAction None(Entity actor)
+        {
+            return new CombatAction(ActionType.None, actor);
+        }
     }
-    
+
     /// <summary>
     /// All possible combat actions
     /// </summary>
@@ -68,6 +80,7 @@ namespace GameLogic.Combat
         UseAbility,
         UseItem,
         Defend,
-        Flee
+        Flee,
+        None
     }
 }
