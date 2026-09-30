@@ -12,6 +12,64 @@
 
 ---
 
+## ⭐ ACTIVE FOCUS: STORY-DRIVEN FEATURE ROADMAP (added 2026-09-28)
+_This is the living plan for turning the current codebase into what the story needs. It supersedes/extends item 5 (Boss Key Progression System) and item 10 (Replace Procedural Map) below - see those for original context, both are cross-referenced from here._
+
+**How this is organized:**
+- **Bucket A** - story/creative decisions still needed from the designer. This is the actual bottleneck right now - most "code work" below is a mechanical consequence of these, not independent work.
+- **Bucket B** - confirmed features, sorted into tiers by dependency (foundational first), not by size. Tackling Tier 0 first collapses the most downstream uncertainty.
+
+### Bucket A: Open story decisions
+1. Does character-creation Gender selection affect any mechanics/stats, or is it purely cosmetic/narrative (pronouns, visual model)?
+2. Librarian-Monk boss - unique mechanic not yet designed.
+3. Giant House Centipede boss - unique mechanic not yet designed.
+4. Cyclops Brothers boss - unique mechanic not yet designed.
+5. Demon Prince boss - mechanic loosely Chaos-magic themed, not finalized.
+6. Princess (final boss) - whether her mechanic is "randomly use one of the other bosses' mechanics" is not committed yet.
+7. Slime Dragon fight - does defeating just the main dragon end the fight, or must every spawned dragling be cleared too?
+8. Army interaction section - what does "interact with the army" actually consist of (dialogue? a questline? recruiting soldiers?)?
+9. Day/night cycle - what actually drives the clock (real time, in-game turns/actions, travel count, etc.)?
+10. Which of the existing companions (Warrior/Mage/Ranger/Rogue/Healer) survive as-is, get adjusted, or get fully replaced? (Warrior → Captain of the Royal Guard is the one confirmed swap so far.)
+
+### Bucket B: Confirmed work, dependency-ordered
+
+**Tier 0 - foundational, unblocks the most downstream work:**
+- Remove the Champion Key/Final Gate system, replace with order-based progression (defeating boss N-1 unlocks boss N) - already flagged as deferred (see item 5 below); now directly blocks a clean "final boss = the princess, story-triggered, not key-gated" design.
+- "Champion" → "Boss" terminology cleanup - cross-cutting rename, already deferred (see item 5 below); touches the same files as the key/gate removal, worth doing in the same pass.
+- Fixed/hand-drawn map (replacing the placeholder `GenerateFixedMap()`, see item 10 below) - blocks *placing* any new boss/NPC in the actual explorable world (Elder of the Elven Village, every new boss's encounter location). Each boss's combat mechanic can still be designed/built/tested independently of map placement.
+
+**Tier 1 - companion system consolidation (do as one pass, not piecemeal - they all touch the same roster):**
+- Decide the final companion roster (Bucket A #10).
+- Build Fluke (luck companion) - needs a new team-wide buff/debuff concept ("luck"), since today's effect system (`AbilityEffect`) is single-target only.
+- Swap Warrior → Captain of the Royal Guard (pending Bucket A #10 confirmation).
+- Build the companion→boss transition plumbing (a leave-party trigger + a bridge from a `CompanionBase` instance to a matching `BossEnemy` instance) - needed for the Captain's late-game turn.
+- General companion recruitment UI (beyond the one scripted tutorial method) - already deferred; now clearly needed since Fluke and any roster changes need a real recruit flow, not just the tutorial's one-off `RecruitStarterCompanion()`.
+
+**Tier 2 - new bosses (each independent once its mechanic is decided; can be built in any order):**
+- Librarian-Monk (mechanic TBD)
+- Giant House Centipede (mechanic TBD)
+- Slime Dragon - reactive "spawns draglings whenever hit" mechanic. Needs `IBossMechanic` to grow a new on-damage/reactive hook (today it only supports "decide my own turn"), and `CombatManager` to support enemies joining a fight already in progress - a real engine change, bigger than a typical new-boss addition.
+- Cyclops Brothers (mechanic TBD) - already fits the multi-enemy combat engine (two bosses, one fight) with no new architecture needed for that part.
+- Demon Prince (Chaos-magic themed, TBD)
+- Captain of the Royal Guard - signature is very high crit chance + crit multiplier; may need crit multiplier to become per-enemy configurable (unconfirmed whether it's currently a fixed global value - check `damage_calculator.cs`).
+- Princess (final boss) - build last, once the others' mechanics exist, in case she ends up borrowing from them (Bucket A #6). Also depends on the Tier 0 key/gate removal for a clean story-triggered final fight.
+
+  **Consistency check worth confirming**: this list, in the order it was given, exactly resolves an earlier open question - the existing note that "bosses 5 and 6 can be fought in either order, every other boss is fixed" makes perfect sense if the Cyclops Brothers occupy slots #5 and #6 (two brothers = two roster slots, order between just the two of them doesn't matter). That gives: #1 Skarn (tutorial) → #2 Librarian-Monk → #3 Centipede → #4 Slime Dragon → #5/#6 Cyclops Brothers → #7 Demon Prince → #8 Captain of the Royal Guard → #9 Princess (final) = exactly 9 bosses, matching the confirmed roster size. Worth confirming this is really the intended order rather than just an artifact of how the list was described.
+
+**Tier 3 - large parallel systems (big, but don't block or get blocked by the boss/companion work above):**
+- NG+ ghost mechanic + secret ghost-only boss - needs New Game+ save tracking, a death-flow branch point (offer the ghost choice instead of an immediate game over), and a new "weapon enchantment" concept that doesn't exist yet. Note: enemies don't deal damage via `Weapon` objects today (just flat `MinDamage`/`MaxDamage` stats), so "only enchanted weapons can hurt a ghost" needs a new tag-based system, not a literal weapon check.
+- Magic/spellcasting + component system - foundational for player build diversity, but nothing else on this list strictly requires it to exist first, so it can proceed in parallel. Fits well as a `SpellAbility : Ability` subtype (reusing the existing ability/combat pipeline) with components as a new `ItemCategory` that slots naturally into the already-unified loot table system.
+
+**Tier 4 - smaller/independent additions (can slot in anytime):**
+- Character-creation Gender selection.
+- Elder of the Elven Village (NPC) - blocked on the fixed map existing (needs an Elven Village location to live at).
+- Army interaction section - needs scoping first (Bucket A #8).
+- Endless/gauntlet survival mode - mostly additive, doesn't depend on the other items here. "No healing between waves" already falls out for free from how `Player.Health` persists across separate fights today.
+- Day/night cycle affecting enemy spawns - needs its own clock mechanism (Bucket A #9); may interact with the already-flagged-broken difficulty-scaling gap (see the "Difficulty selection has zero mechanical effect" item under Code Cleanup below).
+- `Rest()` → inn-based, location-gated mechanic (unrelated to the story list above, but already an agreed-on change - carried over so it doesn't get lost).
+
+---
+
 ## HIGH PRIORITY - Core Gameplay
 
 ### 🔴 1. Equipment Leveling System
@@ -88,6 +146,7 @@
 ## MEDIUM PRIORITY - Systems & Features
 
 ### 🔴 5. Boss Key Progression System - SCOPE REDUCTION IN PROGRESS (2026-09-11)
+> **See the "STORY-DRIVEN FEATURE ROADMAP" section above (2026-09-28) for the current plan** - the key/gate removal and the confirmed 9-boss roster (with mechanics) now live there as Tier 0/Tier 2 work.
 - **Files**: `game_logic/entities/enemies/bosses/boss_enemy.cs`, `game_logic/entities/enemies/bosses/boss_manager.cs`, `game_logic/entities/enemies/bosses/boss_definitions.cs`, `game_logic/world/boss_encounter.cs`
 - **Status**: 🚧 Framework complete, roster emptied pending redesign
 - **Scope change**: Reduced from 15 bosses to 8, tied to a fixed story map with specific spawn locations (procedural map generation is being replaced - see item below). The original 15-boss roster was archived to `docs/boss_ideas_archive.md` for inspiration; `BossDefinitions.GetAllChampionBosses()` now returns an empty list.
@@ -243,6 +302,7 @@ _Tracking spots found while going through the codebase to build a better underst
 - **Note**: Optional enhancement for players who want specific RNG behaviors
 
 ### 🔴 10. Replace Procedural Map with Fixed Story Map
+> **See the "STORY-DRIVEN FEATURE ROADMAP" section above (2026-09-28) for the current plan** - this is Tier 0 foundational work there, blocking where new bosses/NPCs get placed in the world.
 - **File**: `game_logic/world/map_manager.cs`
 - **Status**: ❌ Not Started (scope change, 2026-09-11)
 - **Description**: Scope reduced - the map is no longer randomized. It needs to become a fixed, story-driven map with specific spawn locations (tied to the new 8-boss roster above), replacing `GenerateNewMap()`/`GenerateMapFromSeed()`'s current procedural "Slay the Spire"-style linear generation.
