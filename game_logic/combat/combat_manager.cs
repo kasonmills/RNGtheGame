@@ -1169,12 +1169,6 @@ namespace GameLogic.Combat
                 totalGold += loot.Gold;
                 allLootItems.AddRange(loot.Items);
 
-                // Bosses additionally roll their Champion Key with diminishing returns on repeats
-                if (enemy is BossEnemy boss)
-                {
-                    allLootItems.AddRange(boss.GetLootDrops(_rngManager));
-                }
-
                 // Handle boss defeats
                 if (enemy is BossEnemy defeatedBoss && _bossManager != null)
                 {

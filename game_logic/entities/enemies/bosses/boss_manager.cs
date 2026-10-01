@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using GameLogic.Entities.Player;
-using GameLogic.Items;
 
 namespace GameLogic.Entities.Enemies.Bosses
 {
     /// <summary>
-    /// Manages boss progression, tracking, and the champion key system
-    /// Handles boss strength scaling and final gate unlock logic
+    /// Manages boss progression and tracking.
+    /// Handles boss strength scaling and order-based unlock logic - defeating boss N-1
+    /// unlocks boss N, following the fixed story order bosses are registered in.
     /// </summary>
     public class BossManager
     {
         // Boss tracking
         private Dictionary<string, BossEnemy> _allBosses;           // All registered bosses
+        private List<string> _bossOrder;                             // Story order (registration order)
         private List<string> _defeatedBossIds;                       // IDs of defeated bosses
         private int _bossesDefeated;                                 // Count of defeated bosses
 
@@ -22,13 +22,11 @@ namespace GameLogic.Entities.Enemies.Bosses
         public List<string> DefeatedBossIds { get { return _defeatedBossIds; } }
         public int BossesDefeated { get { return _bossesDefeated; } }
 
-        // Final boss configuration
-        public string FinalBossId { get; private set; }             // Randomly selected final boss
-        public bool FinalGateUnlocked { get; private set; }         // Is final boss accessible?
+        // Total bosses in the roster - tracks whatever has been registered so far
+        // (currently 1 of the confirmed 9; grows as the other 8 are added).
+        public int TotalBosses { get { return _allBosses.Count; } }
 
         // Configuration
-        public const int TOTAL_BOSSES = 15;                          // Total champion bosses available
-        public const int KEYS_REQUIRED = 10;                         // Keys needed to unlock final gate
         public const double STRENGTH_SCALING_PER_BOSS = 0.15;        // 15% stronger per boss defeated
         public const double REPEAT_PENALTY_PER_DEFEAT = 0.50;        // 50% stronger per repeat of same boss
 
@@ -38,10 +36,9 @@ namespace GameLogic.Entities.Enemies.Bosses
         public BossManager()
         {
             _allBosses = new Dictionary<string, BossEnemy>();
+            _bossOrder = new List<string>();
             _defeatedBossIds = new List<string>();
             _bossesDefeated = 0;
-            FinalGateUnlocked = false;
-            FinalBossId = null;
         }
 
         /// <summary>
@@ -52,6 +49,7 @@ namespace GameLogic.Entities.Enemies.Bosses
             if (!_allBosses.ContainsKey(boss.BossId))
             {
                 _allBosses[boss.BossId] = boss;
+                _bossOrder.Add(boss.BossId);
             }
         }
 
@@ -67,33 +65,60 @@ namespace GameLogic.Entities.Enemies.Bosses
         }
 
         /// <summary>
-        /// Select a random final boss from available bosses
-        /// Called at game start / save creation
-        /// </summary>
-        public void SelectRandomFinalBoss(Systems.RNGManager rng)
-        {
-            if (_allBosses.Count == 0)
-            {
-                Console.WriteLine("No bosses registered! Cannot select final boss.");
-                return;
-            }
-
-            // Pick a random boss to be the final boss
-            var bossIds = _allBosses.Keys.ToList();
-            int randomIndex = rng.Roll(0, bossIds.Count - 1);
-            FinalBossId = bossIds[randomIndex];
-
-            Console.WriteLine($"\n🎲 The Final Champion has been determined...");
-            Console.WriteLine($"Defeat 10 of the 15 Champions to face: {_allBosses[FinalBossId].Name}");
-        }
-
-        /// <summary>
         /// Get a boss by ID
         /// </summary>
         public BossEnemy GetBoss(string bossId)
         {
             _allBosses.TryGetValue(bossId, out BossEnemy boss);
             return boss;
+        }
+
+        /// <summary>
+        /// Check whether a boss is currently accessible - the first boss in the story order
+        /// is always unlocked, and every boss after that unlocks once the previous one falls.
+        /// </summary>
+        public bool IsBossUnlocked(string bossId)
+        {
+            int index = _bossOrder.IndexOf(bossId);
+            if (index < 0) return false;
+            if (index == 0) return true;
+
+            string previousBossId = _bossOrder[index - 1];
+            return IsBossDefeated(previousBossId);
+        }
+
+        /// <summary>
+        /// Get the next boss the player needs to face (first undefeated boss in story order),
+        /// or null if every registered boss has been defeated.
+        /// </summary>
+        public BossEnemy GetNextBoss()
+        {
+            foreach (var bossId in _bossOrder)
+            {
+                if (!IsBossDefeated(bossId))
+                {
+                    return _allBosses[bossId];
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Get the final boss - always the last boss in the fixed story order.
+        /// </summary>
+        public BossEnemy GetFinalBoss()
+        {
+            if (_bossOrder.Count == 0) return null;
+            return GetBoss(_bossOrder[_bossOrder.Count - 1]);
+        }
+
+        /// <summary>
+        /// Check whether a given boss is the final boss (last in story order).
+        /// </summary>
+        public bool IsFinalBoss(string bossId)
+        {
+            return _bossOrder.Count > 0 && bossId == _bossOrder[_bossOrder.Count - 1];
         }
 
         /// <summary>
@@ -106,15 +131,14 @@ namespace GameLogic.Entities.Enemies.Bosses
 
         /// <summary>
         /// Mark a boss as defeated and update scaling
-        /// Returns the boss key that should be dropped (may be null on repeat defeats with bad RNG)
         /// Handles both first-time defeats and repeat fights
         /// </summary>
-        public QuestItem DefeatBoss(string bossId)
+        public void DefeatBoss(string bossId)
         {
             if (!_allBosses.TryGetValue(bossId, out BossEnemy boss))
             {
                 Console.WriteLine($"Boss '{bossId}' not found!");
-                return null;
+                return;
             }
 
             // Check if this is a first-time defeat or repeat
@@ -127,26 +151,20 @@ namespace GameLogic.Entities.Enemies.Bosses
                 _defeatedBossIds.Add(bossId);
                 _bossesDefeated++;
 
-                Console.WriteLine($"\n🏆 CHAMPION DEFEATED!");
+                Console.WriteLine($"\n🏆 BOSS DEFEATED!");
                 Console.WriteLine($"{boss.Name} has fallen for the first time!");
-                Console.WriteLine($"Unique bosses defeated: {_bossesDefeated}/{TOTAL_BOSSES}");
-
-                // Note: Final gate unlocks when keys are consumed, not when bosses are defeated
+                Console.WriteLine($"Unique bosses defeated: {_bossesDefeated}/{TotalBosses}");
             }
             else
             {
                 // Repeat defeat
-                Console.WriteLine($"\n🏆 CHAMPION DEFEATED AGAIN!");
+                Console.WriteLine($"\n🏆 BOSS DEFEATED AGAIN!");
                 Console.WriteLine($"{boss.Name} has fallen once more!");
                 Console.WriteLine($"This is your {boss.TimesDefeated + 1}{GetOrdinalSuffix(boss.TimesDefeated + 1)} victory against this boss.");
             }
 
             // Increment repeat counter (tracks total defeats of THIS boss)
             boss.TimesDefeated++;
-
-            // Boss will drop key based on diminishing returns (handled in BossEnemy.GetLootDrops)
-            // Return null here - key drop is handled through GetLootDrops() during combat
-            return null;
         }
 
         /// <summary>
@@ -155,54 +173,6 @@ namespace GameLogic.Entities.Enemies.Bosses
         public void ApplyBossScaling(BossEnemy boss)
         {
             boss.ApplyStrengthScaling(_bossesDefeated);
-        }
-
-        /// <summary>
-        /// Unlock the final gate (called when keys are consumed)
-        /// </summary>
-        public void UnlockFinalGate()
-        {
-            if (!FinalGateUnlocked)
-            {
-                FinalGateUnlocked = true;
-                Console.WriteLine($"\n✨✨✨ THE FINAL GATE HAS BEEN UNLOCKED! ✨✨✨");
-                Console.WriteLine($"The 10 Champion Keys resonate with ancient power!");
-                Console.WriteLine($"The path to {_allBosses[FinalBossId].Name} is now open!");
-            }
-        }
-
-        /// <summary>
-        /// Count unique champion keys in player inventory
-        /// </summary>
-        public int CountChampionKeys(PlayerInventory inventory)
-        {
-            int keyCount = 0;
-
-            foreach (var item in inventory.GetAllItems())
-            {
-                if (item is QuestItem questItem && IsChampionKey(questItem))
-                {
-                    keyCount++;
-                }
-            }
-
-            return keyCount;
-        }
-
-        /// <summary>
-        /// Check if an item is a champion key
-        /// </summary>
-        private bool IsChampionKey(QuestItem item)
-        {
-            // Champion keys follow naming pattern: "{boss_id}_key"
-            foreach (var boss in _allBosses.Values)
-            {
-                if (item.QuestId == boss.KeyId)
-                {
-                    return true;
-                }
-            }
-            return false;
         }
 
         /// <summary>
@@ -221,60 +191,8 @@ namespace GameLogic.Entities.Enemies.Bosses
         public List<BossEnemy> GetRemainingBosses()
         {
             return _allBosses.Values
-                .Where(boss => !IsBossDefeated(boss.BossId) && boss.BossId != FinalBossId)
+                .Where(boss => !IsBossDefeated(boss.BossId))
                 .ToList();
-        }
-
-        /// <summary>
-        /// Check if player can fight the final boss
-        /// </summary>
-        public bool CanFightFinalBoss(PlayerInventory inventory)
-        {
-            int keyCount = CountChampionKeys(inventory);
-            return keyCount >= KEYS_REQUIRED;
-        }
-
-        /// <summary>
-        /// Get final boss (if unlocked and selected)
-        /// </summary>
-        public BossEnemy GetFinalBoss()
-        {
-            if (string.IsNullOrEmpty(FinalBossId))
-            {
-                return null;
-            }
-
-            return GetBoss(FinalBossId);
-        }
-
-        /// <summary>
-        /// Display final gate status
-        /// </summary>
-        public string GetFinalGateStatus(PlayerInventory inventory)
-        {
-            int keyCount = CountChampionKeys(inventory);
-            string status = "═══ FINAL GATE STATUS ═══\n";
-
-            if (FinalGateUnlocked)
-            {
-                status += "🔓 UNLOCKED\n";
-                status += $"Final Boss: {_allBosses[FinalBossId].Name}\n";
-                status += "You may now challenge the ultimate Champion!\n";
-            }
-            else if (keyCount >= KEYS_REQUIRED)
-            {
-                status += "🔑 READY TO UNLOCK\n";
-                status += $"Champion Keys: {keyCount}/{KEYS_REQUIRED}\n";
-                status += "You have enough keys! Enter the Final Gate to unlock it.\n";
-            }
-            else
-            {
-                status += "🔒 SEALED\n";
-                status += $"Champion Keys: {keyCount}/{KEYS_REQUIRED}\n";
-                status += $"Collect {KEYS_REQUIRED - keyCount} more unique Champion Key{(KEYS_REQUIRED - keyCount > 1 ? "s" : "")} to unlock.\n";
-            }
-
-            return status;
         }
 
         /// <summary>
@@ -282,13 +200,12 @@ namespace GameLogic.Entities.Enemies.Bosses
         /// </summary>
         public string GetProgressionSummary()
         {
-            string summary = "═══ CHAMPION PROGRESSION ═══\n";
-            summary += $"Bosses Defeated: {_bossesDefeated}/{TOTAL_BOSSES}\n";
-            summary += $"Final Gate: {(FinalGateUnlocked ? "UNLOCKED" : "LOCKED")}\n";
+            string summary = "═══ BOSS PROGRESSION ═══\n";
+            summary += $"Bosses Defeated: {_bossesDefeated}/{TotalBosses}\n";
 
             if (_bossesDefeated > 0)
             {
-                summary += "\nDefeated Champions:\n";
+                summary += "\nDefeated Bosses:\n";
                 foreach (var bossId in _defeatedBossIds)
                 {
                     if (_allBosses.ContainsKey(bossId))
@@ -298,15 +215,10 @@ namespace GameLogic.Entities.Enemies.Bosses
                 }
             }
 
-            int remaining = TOTAL_BOSSES - _bossesDefeated;
-            if (remaining > 0)
+            var nextBoss = GetNextBoss();
+            if (nextBoss != null)
             {
-                summary += $"\nRemaining Champions: {remaining}\n";
-            }
-
-            if (FinalGateUnlocked && !string.IsNullOrEmpty(FinalBossId))
-            {
-                summary += $"\n⚔️  Final Boss: {_allBosses[FinalBossId].Name}\n";
+                summary += $"\n⚔️  Next Boss: {nextBoss.Name}\n";
             }
 
             return summary;
@@ -349,8 +261,6 @@ namespace GameLogic.Entities.Enemies.Bosses
         {
             _defeatedBossIds.Clear();
             _bossesDefeated = 0;
-            FinalGateUnlocked = false;
-            FinalBossId = null;
 
             // Reset all bosses
             foreach (var boss in _allBosses.Values)
@@ -362,14 +272,6 @@ namespace GameLogic.Entities.Enemies.Bosses
         }
 
         // === Setter Methods for Save System ===
-
-        /// <summary>
-        /// Set the final boss (used when loading from save)
-        /// </summary>
-        public void SetFinalBoss(string bossId)
-        {
-            FinalBossId = bossId;
-        }
 
         /// <summary>
         /// Add a defeated boss ID (used when loading from save)
@@ -388,14 +290,6 @@ namespace GameLogic.Entities.Enemies.Bosses
         public void SetBossesDefeated(int count)
         {
             _bossesDefeated = count;
-        }
-
-        /// <summary>
-        /// Set the final gate unlocked status (used when loading from save)
-        /// </summary>
-        public void SetFinalGateUnlocked(bool unlocked)
-        {
-            FinalGateUnlocked = unlocked;
         }
     }
 }

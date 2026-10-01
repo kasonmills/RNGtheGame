@@ -21,7 +21,7 @@ namespace GameLogic.Entities.NPCs
         public QuestGiver(string name, QuestManager questManager, BossManager bossManager)
         {
             Name = name;
-            Description = "A seasoned warrior who knows the locations of all the Champions in the realm. They offer guidance to those brave enough to seek them out.";
+            Description = "A seasoned warrior who knows the locations of all the bosses in the realm. They offer guidance to those brave enough to seek them out.";
             _questManager = questManager;
             _bossManager = bossManager;
         }
@@ -61,7 +61,7 @@ namespace GameLogic.Entities.NPCs
                         Talk();
                         break;
                     case "5":
-                        Console.WriteLine($"\n{Name}: \"May fortune favor you on your journey, Champion.\"");
+                        Console.WriteLine($"\n{Name}: \"May fortune favor you on your journey, warrior.\"");
                         Console.WriteLine("Press any key to continue...");
                         Console.ReadKey();
                         return;
@@ -82,9 +82,9 @@ namespace GameLogic.Entities.NPCs
             Console.WriteLine("═══════════════════════════════════════");
             Console.WriteLine($"        {Name.ToUpper()}");
             Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine($"\n{Name}: \"Greetings, brave warrior. I know of powerful Champions");
-            Console.WriteLine("scattered across the realm. Each holds a Champion Key.");
-            Console.WriteLine("Defeat 10 of them to unlock the path to the Final Champion.\"");
+            Console.WriteLine($"\n{Name}: \"Greetings, brave warrior. Powerful bosses lie");
+            Console.WriteLine("scattered across the realm. Defeat them in turn, one clearing");
+            Console.WriteLine("the way to the next, until you reach the greatest threat of all.\"");
         }
 
         /// <summary>
@@ -267,30 +267,30 @@ namespace GameLogic.Entities.NPCs
             Console.WriteLine("═══════════════════════════════════════\n");
 
             int bossesDefeated = _bossManager.BossesDefeated;
-            int keysNeeded = BossManager.KEYS_REQUIRED;
+            var nextBoss = _bossManager.GetNextBoss();
 
             if (bossesDefeated == 0)
             {
-                Console.WriteLine($"{Name}: \"The Champions are scattered across the land.\"");
-                Console.WriteLine("\"Each one guards a legendary key. Defeat them to prove your strength.\"");
+                Console.WriteLine($"{Name}: \"Powerful bosses are scattered across the land.\"");
+                Console.WriteLine("\"Each one must be faced in turn - defeat one to find your way to the next.\"");
                 Console.WriteLine("\"But beware - these are no ordinary foes. They will test your limits.\"");
             }
-            else if (bossesDefeated < keysNeeded)
+            else if (nextBoss != null && !_bossManager.IsFinalBoss(nextBoss.BossId))
             {
-                Console.WriteLine($"{Name}: \"You've defeated {bossesDefeated} Champion{(bossesDefeated > 1 ? "s" : "")} so far.\"");
-                Console.WriteLine($"\"Only {keysNeeded - bossesDefeated} more key{(keysNeeded - bossesDefeated > 1 ? "s" : "")} stand between you and the Final Gate.\"");
+                Console.WriteLine($"{Name}: \"You've defeated {bossesDefeated} boss{(bossesDefeated > 1 ? "es" : "")} so far.\"");
+                Console.WriteLine($"\"Your path now leads to {nextBoss.Name}.\"");
                 Console.WriteLine("\"Keep pushing forward, warrior. Your legend grows with each victory.\"");
             }
-            else if (!_bossManager.FinalGateUnlocked)
+            else if (nextBoss != null)
             {
-                Console.WriteLine($"{Name}: \"Incredible! You've collected {keysNeeded} Champion Keys!\"");
-                Console.WriteLine("\"The Final Gate awaits you. When you're ready, use those keys to enter.\"");
-                Console.WriteLine("\"Inside waits the ultimate challenge. Prepare yourself well.\"");
+                Console.WriteLine($"{Name}: \"You've proven yourself against every boss but one.\"");
+                Console.WriteLine($"\"{nextBoss.Name} awaits you - the final battle.\"");
+                Console.WriteLine("\"Prepare yourself well. This is what you've been training for.\"");
             }
             else
             {
-                Console.WriteLine($"{Name}: \"The Final Gate is open. The ultimate Champion awaits.\"");
-                Console.WriteLine("\"This is what you've been training for. Show them what you're made of!\"");
+                Console.WriteLine($"{Name}: \"Every boss has fallen before you.\"");
+                Console.WriteLine("\"Nothing stands in your way now. Show them what you're made of!\"");
             }
 
             Console.WriteLine("\nPress any key to continue...");

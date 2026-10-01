@@ -1,22 +1,16 @@
 using System;
-using System.Collections.Generic;
 using GameLogic.Entities.Enemies;
-using GameLogic.Items;
-using GameLogic.Abilities;
-using GameLogic.Systems;
 
 namespace GameLogic.Entities.Enemies.Bosses
 {
     /// <summary>
-    /// Boss enemy class - powerful unique enemies that drop champion keys
-    /// Each boss has unique combat mechanics and drops a specific key required to unlock the Final Gate
+    /// Boss enemy class - powerful unique enemies with their own combat mechanics.
     /// Boss strength scales based on number of bosses defeated (15% per boss)
     /// </summary>
     public class BossEnemy : EnemyBase
     {
         // Boss Identity
         public string BossId { get; set; }              // Unique boss identifier (e.g., "flame_warden")
-        public string KeyId { get; set; }               // ID of the key this boss drops
         public string Title { get; set; }               // Boss title (e.g., "Guardian of the Eternal Flame")
 
         // Boss Tracking
@@ -50,7 +44,6 @@ namespace GameLogic.Entities.Enemies.Bosses
             string name,
             string title,
             string description,
-            string keyId,
             int level,
             BossMechanicType mechanicType = BossMechanicType.Standard)
         {
@@ -58,7 +51,6 @@ namespace GameLogic.Entities.Enemies.Bosses
             Name = name;
             Title = title;
             Description = description;
-            KeyId = keyId;
             Level = level;
             Type = EnemyType.Boss;
             Behavior = EnemyBehavior.Tactical;
@@ -178,15 +170,6 @@ namespace GameLogic.Entities.Enemies.Bosses
         }
 
         /// <summary>
-        /// Get the key item this boss drops
-        /// </summary>
-        public QuestItem GetBossKey()
-        {
-            // This will be implemented in ItemDatabase
-            return Items.ItemDatabase.GetQuestItem(KeyId);
-        }
-
-        /// <summary>
         /// Override GetDescription to include boss title
         /// </summary>
         public override string GetDescription()
@@ -201,7 +184,7 @@ namespace GameLogic.Entities.Enemies.Bosses
         public string GetBossInfo()
         {
             string info = "═══════════════════════════════════════\n";
-            info += $"⚔️  CHAMPION BOSS  ⚔️\n";
+            info += "⚔️  BOSS  ⚔️\n";
             info += "═══════════════════════════════════════\n";
             info += $"{Name}\n";
             info += $"{Title}\n";
@@ -217,7 +200,6 @@ namespace GameLogic.Entities.Enemies.Bosses
             info += $"Unique Mechanic: {MechanicType}\n";
             info += $"{UniqueAbilityDescription}\n";
             info += "───────────────────────────────────────\n";
-            info += $"Drops: 🔑 {KeyId} (Champion Key)\n";
 
             if (BossNumber > 0)
             {
@@ -241,54 +223,6 @@ namespace GameLogic.Entities.Enemies.Bosses
 
             // For now, bosses attack aggressively
             return EnemyAction.Attack;
-        }
-
-        /// <summary>
-        /// Override GetLootDrops - bosses drop their key with diminishing returns on repeats
-        /// First defeat: 100% key drop (guaranteed)
-        /// Second defeat: 50% key drop
-        /// Third defeat: 25% key drop
-        /// Fourth+ defeat: 10% key drop
-        /// </summary>
-        public override List<Item> GetLootDrops(RNGManager rng)
-        {
-            var drops = base.GetLootDrops(rng);
-
-            // Determine key drop chance based on times defeated
-            int keyDropChance = TimesDefeated switch
-            {
-                0 => 100,  // First time: guaranteed drop
-                1 => 50,   // Second time: 50% chance
-                2 => 25,   // Third time: 25% chance
-                _ => 10    // Fourth+ time: 10% chance
-            };
-
-            // Roll for key drop
-            int roll = rng.Roll(1, 100);
-            if (roll <= keyDropChance)
-            {
-                var key = GetBossKey();
-                if (key != null)
-                {
-                    drops.Add(key);
-
-                    if (TimesDefeated == 0)
-                    {
-                        Console.WriteLine($"🔑 Guaranteed key drop: {key.Name}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"🔑 Lucky! Key dropped despite repeat ({keyDropChance}% chance): {key.Name}");
-                    }
-                }
-            }
-            else if (TimesDefeated > 0)
-            {
-                Console.WriteLine($"❌ No key dropped this time ({keyDropChance}% chance on repeat #{TimesDefeated + 1})");
-                Console.WriteLine($"💡 This boss has already been defeated {TimesDefeated} time{(TimesDefeated > 1 ? "s" : "")} - key drops are rare on repeats!");
-            }
-
-            return drops;
         }
 
         /// <summary>

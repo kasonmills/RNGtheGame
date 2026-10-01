@@ -16,8 +16,8 @@ namespace GameLogic.Quests
         public FinalBossQuest(string finalBossId, string finalBossName)
             : base(
                 questId: "final_boss_quest",
-                questName: "The Ultimate Champion",
-                description: $"Face the ultimate challenge and defeat {finalBossName}, the Final Champion. This is the culmination of your journey. Victory here will prove you are the greatest warrior in the realm.",
+                questName: "The Final Challenge",
+                description: $"Face the ultimate challenge and defeat {finalBossName}. This is the culmination of your journey. Victory here will prove you are the greatest warrior in the realm.",
                 reward: new QuestReward(), // No rewards - game ends
                 requiresAcceptance: true)   // MUST accept before completing
         {
@@ -25,27 +25,7 @@ namespace GameLogic.Quests
             FinalBossName = finalBossName;
 
             // Objectives
-            Objectives.Add(new QuestObjective("Collect 10 Champion Keys", 10));
-            Objectives.Add(new QuestObjective($"Enter the Final Gate", 1));
             Objectives.Add(new QuestObjective($"Defeat {finalBossName}", 1));
-        }
-
-        /// <summary>
-        /// Update key count progress
-        /// </summary>
-        public void UpdateKeyCount(int keyCount)
-        {
-            Objectives[0].SetProgress(keyCount);
-            CheckCompletion();
-        }
-
-        /// <summary>
-        /// Mark final gate as entered
-        /// </summary>
-        public void OnFinalGateEntered()
-        {
-            Objectives[1].SetProgress(1);
-            CheckCompletion();
         }
 
         /// <summary>
@@ -53,28 +33,18 @@ namespace GameLogic.Quests
         /// </summary>
         public void OnFinalBossDefeated()
         {
-            Objectives[2].SetProgress(1);
+            Objectives[0].SetProgress(1);
             CheckCompletion();
         }
 
         /// <summary>
         /// Check progress based on current game state (retroactive check)
         /// </summary>
-        public void CheckProgress(BossManager bossManager, int keyCount)
+        public void CheckProgress(BossManager bossManager)
         {
-            // Update key count
-            Objectives[0].SetProgress(keyCount);
-
-            // Check if final gate is unlocked (means they entered it)
-            if (bossManager.FinalGateUnlocked)
-            {
-                Objectives[1].SetProgress(1);
-            }
-
-            // Check if final boss is defeated
             if (bossManager.IsBossDefeated(FinalBossId))
             {
-                Objectives[2].SetProgress(1);
+                Objectives[0].SetProgress(1);
             }
 
             // Note: Will NOT auto-complete because RequiresAcceptanceToComplete = true
@@ -85,7 +55,7 @@ namespace GameLogic.Quests
             Console.WriteLine("\n═══════════════════════════════════════");
             Console.WriteLine("    🏆 FINAL QUEST COMPLETED! 🏆");
             Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("You have proven yourself the ultimate Champion!");
+            Console.WriteLine("You have proven yourself the realm's greatest warrior!");
             Console.WriteLine("Your legend will be remembered for all time.");
             Console.WriteLine("═══════════════════════════════════════\n");
         }

@@ -90,12 +90,11 @@ namespace GameLogic.Core
             player.SetAbility(ability);
             player.EquipWeapon(startingWeapon);
 
-            // Register the boss roster (only boss #1, the tutorial fight, exists so far).
-            // TODO: no final-boss assignment happens here anymore - SelectRandomFinalBoss()
-            // is being retired since the final boss will be a fixed, specific boss once the
-            // roster/order redesign lands, not a random pick.
+            // Register the boss roster in fixed story order (only boss #1, the tutorial
+            // fight, exists so far). The final boss is always the last one registered -
+            // no separate assignment/selection step needed.
             var bossManager = new Entities.Enemies.Bosses.BossManager();
-            var bosses = Entities.Enemies.Bosses.BossDefinitions.GetAllChampionBosses();
+            var bosses = Entities.Enemies.Bosses.BossDefinitions.GetAllBosses();
             bossManager.RegisterBosses(bosses.ToArray());
 
             // Initialize quest system
@@ -221,7 +220,7 @@ namespace GameLogic.Core
             // Create boss defeat quests for each boss (except final boss)
             foreach (var boss in bossManager.AllBosses.Values)
             {
-                if (boss.BossId != bossManager.FinalBossId)
+                if (!bossManager.IsFinalBoss(boss.BossId))
                 {
                     // Boss quests: 100 gold + 50 XP per quest (no RNG - these are fixed)
                     var bossQuest = new BossDefeatQuest(boss.BossId, boss.Name, 100, 50);
@@ -231,6 +230,13 @@ namespace GameLogic.Core
             }
 
             // Create final boss quest (no RNG - this is fixed)
+            // SPOILER RISK (see project_boss_terminology_and_roster memory): once the final
+            // boss is the Princess (Tier 2), calling Discover() here immediately - at game
+            // start, long before she's actually reachable - will expose "Defeat [her name]"
+            // as a visible quest, spoiling the late-game twist that she's the final boss.
+            // Revisit this Discover() call before Tier 2 lands the real final boss - the
+            // final quest should likely only Discover() once bossManager.IsBossUnlocked()
+            // is true for her, not unconditionally at game start like the other bosses.
             var finalBoss = bossManager.GetFinalBoss();
             if (finalBoss != null)
             {

@@ -253,8 +253,8 @@ namespace GameLogic.Core
         /// quest giver/job board/quest log/statistics menus) are still valid and will be called by
         /// player movement/interaction signals (walking onto an encounter tile, pressing an interact
         /// key near an NPC, opening a UI panel, etc.) instead of a numbered console choice.
-        /// Champion boss challenges no longer go through a menu at all - the player finds
-        /// champions by roaming, same as regular overworld encounters.
+        /// Boss challenges no longer go through a menu at all - the player finds
+        /// bosses by roaming, same as regular overworld encounters.
         /// </summary>
         private void GameLoop()
         {
@@ -272,7 +272,7 @@ namespace GameLogic.Core
             // Console.WriteLine("4. Rest (restore health)");
             // Console.WriteLine("5. Save Game");
             // Console.WriteLine("6. Pause Menu");
-            // Console.WriteLine("7. ⚔️  Champion Challenges (Boss Fights)");
+            // Console.WriteLine("7. ⚔️  Boss Challenges (Boss Fights)");
             // Console.WriteLine("8. 📋 Quest Giver (Boss Quests)");
             // Console.WriteLine("9. 📌 Job Board (Other Quests)");
             // Console.WriteLine("10. 📖 Quest Log");

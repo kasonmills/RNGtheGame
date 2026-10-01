@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace GameLogic.Entities.Enemies.Bosses
 {
     /// <summary>
-    /// Defines the champion bosses in the game.
+    /// Defines the bosses in the game, in fixed story order.
     /// The original 15-boss roster (procedural-map era) was pulled from here on 2026-09-11
     /// after the scope was reduced to a fixed, story-driven map with specific spawn locations.
     /// That original roster is archived at docs/boss_ideas_archive.md for inspiration - none
@@ -15,11 +15,13 @@ namespace GameLogic.Entities.Enemies.Bosses
     public static class BossDefinitions
     {
         /// <summary>
-        /// Create and return the champion bosses.
+        /// Create and return the bosses, in fixed story order. Order matters: BossManager
+        /// derives its order-based unlock progression (defeat boss N-1 to unlock boss N) and
+        /// its final-boss identity (always the last entry) directly from this list's order.
         /// TODO: only boss #1 (the tutorial fight) exists so far - the other 8 are still
         /// pending design (see docs/boss_ideas_archive.md for the retired 15-boss list this replaces).
         /// </summary>
-        public static List<BossEnemy> GetAllChampionBosses()
+        public static List<BossEnemy> GetAllBosses()
         {
             return new List<BossEnemy>
             {
@@ -33,7 +35,6 @@ namespace GameLogic.Entities.Enemies.Bosses
                     title: "the Eagle Bear",
                     description: "A monstrous fusion of eagle and bear - taloned wings and a crushing, "
                         + "furred bulk - that struck from the treeline while the princess's escort was ambushed.",
-                    keyId: "skarn_key",
                     level: 2,
                     mechanicType: BossMechanicType.MultiPhase)
                 {
@@ -47,7 +48,7 @@ namespace GameLogic.Entities.Enemies.Bosses
         /// </summary>
         public static BossEnemy GetBoss(string bossId)
         {
-            var bosses = GetAllChampionBosses();
+            var bosses = GetAllBosses();
             return bosses.Find(b => b.BossId == bossId);
         }
 
@@ -56,9 +57,8 @@ namespace GameLogic.Entities.Enemies.Bosses
         /// </summary>
         public static string GetBossListSummary()
         {
-            var bosses = GetAllChampionBosses();
-            string summary = "═══ CHAMPION BOSSES ═══\n";
-            summary += "Defeat any 10 to unlock the Final Gate\n\n";
+            var bosses = GetAllBosses();
+            string summary = "═══ BOSSES ═══\n\n";
 
             foreach (var boss in bosses)
             {

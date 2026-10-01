@@ -4,7 +4,7 @@ using GameLogic.Entities.Enemies.Bosses;
 namespace GameLogic.Quests
 {
     /// <summary>
-    /// Quest to defeat a specific boss and obtain their champion key
+    /// Quest to defeat a specific boss
     /// </summary>
     public class BossDefeatQuest : Quest
     {
@@ -15,7 +15,7 @@ namespace GameLogic.Quests
             : base(
                 questId: $"boss_defeat_{bossId}",
                 questName: $"Defeat {bossName}",
-                description: $"Challenge and defeat the Champion known as {bossName}. Claim their Champion Key as proof of your victory.",
+                description: $"Challenge and defeat the boss known as {bossName}. Prove your victory over them.",
                 reward: new QuestReward(goldReward, xpReward))
         {
             BossId = bossId;

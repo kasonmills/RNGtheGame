@@ -111,9 +111,7 @@ namespace GameLogic.Data
 
         // Boss Progression
         public List<string> DefeatedBossIds { get; set; }          // IDs of defeated bosses
-        public string FinalBossId { get; set; }                    // Selected final boss
         public int BossesDefeated { get; set; }                    // Count of unique bosses defeated
-        public bool FinalGateUnlocked { get; set; }                // Is final gate accessible
         public Dictionary<string, int> BossTimesDefeated { get; set; }  // bossId -> defeat count
 
         // Quest System

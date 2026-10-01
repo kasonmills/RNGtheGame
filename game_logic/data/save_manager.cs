@@ -62,9 +62,7 @@ namespace GameLogic.Data
                 if (bossManager != null)
                 {
                     saveData.DefeatedBossIds = new System.Collections.Generic.List<string>(bossManager.DefeatedBossIds);
-                    saveData.FinalBossId = bossManager.FinalBossId;
                     saveData.BossesDefeated = bossManager.BossesDefeated;
-                    saveData.FinalGateUnlocked = bossManager.FinalGateUnlocked;
 
                     // Save individual boss repeat counts
                     saveData.BossTimesDefeated = new System.Collections.Generic.Dictionary<string, int>();
@@ -554,31 +552,16 @@ namespace GameLogic.Data
         /// Load and reconstruct BossManager from save data
         /// </summary>
         /// <param name="data">SaveData containing boss progression</param>
-        /// <param name="rng">RNG manager for random final boss selection</param>
+        /// <param name="rng">RNG manager (kept for signature compatibility with callers; no longer used here)</param>
         /// <returns>Reconstructed BossManager</returns>
         public static Entities.Enemies.Bosses.BossManager LoadBossManager(SaveData data, Systems.RNGManager rng)
         {
             var bossManager = new Entities.Enemies.Bosses.BossManager();
 
-            // Register all 15 champion bosses
-            var allBosses = Entities.Enemies.Bosses.BossDefinitions.GetAllChampionBosses();
+            // Register the bosses in fixed story order - the final boss is always
+            // derived from this order (the last one registered), not persisted/selected.
+            var allBosses = Entities.Enemies.Bosses.BossDefinitions.GetAllBosses();
             bossManager.RegisterBosses(allBosses.ToArray());
-
-            // Restore final boss selection
-            if (!string.IsNullOrEmpty(data.FinalBossId))
-            {
-                bossManager.SetFinalBoss(data.FinalBossId);
-                var finalBoss = bossManager.GetFinalBoss();
-                if (finalBoss != null)
-                {
-                    Console.WriteLine($"Final Boss: {finalBoss.Name}");
-                }
-            }
-            else
-            {
-                // Fallback: select random final boss if not set
-                bossManager.SelectRandomFinalBoss(rng);
-            }
 
             // Restore defeated boss list
             if (data.DefeatedBossIds != null)
@@ -596,7 +579,6 @@ namespace GameLogic.Data
 
             // Restore boss defeat counts
             bossManager.SetBossesDefeated(data.BossesDefeated);
-            bossManager.SetFinalGateUnlocked(data.FinalGateUnlocked);
 
             // Restore individual boss repeat counts
             if (data.BossTimesDefeated != null)
@@ -611,7 +593,7 @@ namespace GameLogic.Data
                 }
             }
 
-            Console.WriteLine($"Boss Progress: {data.BossesDefeated}/{Entities.Enemies.Bosses.BossManager.TOTAL_BOSSES} defeated");
+            Console.WriteLine($"Boss Progress: {data.BossesDefeated}/{bossManager.TotalBosses} defeated");
             return bossManager;
         }
 

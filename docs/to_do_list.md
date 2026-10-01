@@ -34,9 +34,9 @@ _This is the living plan for turning the current codebase into what the story ne
 ### Bucket B: Confirmed work, dependency-ordered
 
 **Tier 0 - foundational, unblocks the most downstream work:**
-- Remove the Champion Key/Final Gate system, replace with order-based progression (defeating boss N-1 unlocks boss N) - already flagged as deferred (see item 5 below); now directly blocks a clean "final boss = the princess, story-triggered, not key-gated" design.
-- "Champion" → "Boss" terminology cleanup - cross-cutting rename, already deferred (see item 5 below); touches the same files as the key/gate removal, worth doing in the same pass.
-- Fixed/hand-drawn map (replacing the placeholder `GenerateFixedMap()`, see item 10 below) - blocks *placing* any new boss/NPC in the actual explorable world (Elder of the Elven Village, every new boss's encounter location). Each boss's combat mechanic can still be designed/built/tested independently of map placement.
+- ✅ **Done (2026-09-30)** Remove the Champion Key/Final Gate system, replace with order-based progression (defeating boss N-1 unlocks boss N). `BossManager` now has `IsBossUnlocked`/`GetNextBoss`/`GetFinalBoss`/`IsFinalBoss` derived from registration order instead of keys/randomness.
+- ✅ **Done (2026-09-30)** "Champion" → "Boss" terminology cleanup across the boss/quest system (`boss_manager.cs`, `boss_enemy.cs`, `boss_definitions.cs`, `boss_encounter.cs`, `final_boss_quest.cs`, `boss_defeat_quest.cs`, `quest_giver.cs`).
+- ⏳ **Still pending, separate pass** Fixed/hand-drawn map (replacing the placeholder `GenerateFixedMap()`, see item 10 below) - blocks *placing* any new boss/NPC in the actual explorable world (Elder of the Elven Village, every new boss's encounter location). Each boss's combat mechanic can still be designed/built/tested independently of map placement. Needs real location design first (village/route names, where each boss lives) - deliberately not started yet.
 
 **Tier 1 - companion system consolidation (do as one pass, not piecemeal - they all touch the same roster):**
 - Decide the final companion roster (Bucket A #10).
@@ -45,16 +45,17 @@ _This is the living plan for turning the current codebase into what the story ne
 - Build the companion→boss transition plumbing (a leave-party trigger + a bridge from a `CompanionBase` instance to a matching `BossEnemy` instance) - needed for the Captain's late-game turn.
 - General companion recruitment UI (beyond the one scripted tutorial method) - already deferred; now clearly needed since Fluke and any roster changes need a real recruit flow, not just the tutorial's one-off `RecruitStarterCompanion()`.
 
-**Tier 2 - new bosses (each independent once its mechanic is decided; can be built in any order):**
-- Librarian-Monk (mechanic TBD)
-- Giant House Centipede (mechanic TBD)
-- Slime Dragon - reactive "spawns draglings whenever hit" mechanic. Needs `IBossMechanic` to grow a new on-damage/reactive hook (today it only supports "decide my own turn"), and `CombatManager` to support enemies joining a fight already in progress - a real engine change, bigger than a typical new-boss addition.
-- Cyclops Brothers (mechanic TBD) - already fits the multi-enemy combat engine (two bosses, one fight) with no new architecture needed for that part.
-- Demon Prince (Chaos-magic themed, TBD)
-- Captain of the Royal Guard - signature is very high crit chance + crit multiplier; may need crit multiplier to become per-enemy configurable (unconfirmed whether it's currently a fixed global value - check `damage_calculator.cs`).
-- Princess (final boss) - build last, once the others' mechanics exist, in case she ends up borrowing from them (Bucket A #6). Also depends on the Tier 0 key/gate removal for a clean story-triggered final fight.
+**Tier 2 - new bosses, in confirmed story order (corrected 2026-09-30, supersedes the earlier tentative order below this list used to describe):**
+- #1 Skarn the Eagle Bear - ✅ done (tutorial fight).
+- #2 Librarian-Monk (mechanic TBD)
+- #3 Giant House Centipede (mechanic TBD)
+- #4/#5 Cyclops Brothers (mechanic TBD) - already fits the multi-enemy combat engine (two bosses, one fight) with no new architecture needed for that part.
+- #6 Demon Prince (Chaos-magic themed, TBD)
+- #7 Slime Dragon - reactive "spawns draglings whenever hit" mechanic. Needs `IBossMechanic` to grow a new on-damage/reactive hook (today it only supports "decide my own turn"), and `CombatManager` to support enemies joining a fight already in progress - a real engine change, bigger than a typical new-boss addition.
+- #8 Captain of the Royal Guard - signature is very high crit chance + crit multiplier; may need crit multiplier to become per-enemy configurable (unconfirmed whether it's currently a fixed global value - check `damage_calculator.cs`).
+- #9 Princess (final boss) - build last, once the others' mechanics exist, in case she ends up borrowing from them (Bucket A #6). Tier 0's order-based progression is already in place, so this boss needs no key/gate work - just registering her last in `BossDefinitions.GetAllBosses()`.
 
-  **Consistency check worth confirming**: this list, in the order it was given, exactly resolves an earlier open question - the existing note that "bosses 5 and 6 can be fought in either order, every other boss is fixed" makes perfect sense if the Cyclops Brothers occupy slots #5 and #6 (two brothers = two roster slots, order between just the two of them doesn't matter). That gives: #1 Skarn (tutorial) → #2 Librarian-Monk → #3 Centipede → #4 Slime Dragon → #5/#6 Cyclops Brothers → #7 Demon Prince → #8 Captain of the Royal Guard → #9 Princess (final) = exactly 9 bosses, matching the confirmed roster size. Worth confirming this is really the intended order rather than just an artifact of how the list was described.
+  **Important (confirmed 2026-09-30):** the Princess being the final boss/antagonist is a twist that must stay hidden until the very end - she spends most of the game as a quest-giver sending the player on story quests. When building her: (1) don't add any flavor text elsewhere that foreshadows her before the reveal; (2) she needs both a quest-giver presence (early/mid-game) and a `BossEnemy` instance (late-game) - same shape as the Captain of the Royal Guard's companion→boss transition in Tier 1, but for a quest-giver→boss transition instead; (3) `GameStartup.InitializeQuests()` currently calls `finalQuest.Discover()` unconditionally at game start for whoever the final boss is - **this will spoil her identity immediately** once she's boss #9 unless that's changed to only discover the final quest once she's actually unlocked (see the `SPOILER RISK` comment left in `game_logic/core/game_startup.cs`).
 
 **Tier 3 - large parallel systems (big, but don't block or get blocked by the boss/companion work above):**
 - NG+ ghost mechanic + secret ghost-only boss - needs New Game+ save tracking, a death-flow branch point (offer the ghost choice instead of an immediate game over), and a new "weapon enchantment" concept that doesn't exist yet. Note: enemies don't deal damage via `Weapon` objects today (just flat `MinDamage`/`MaxDamage` stats), so "only enchanted weapons can hurt a ghost" needs a new tag-based system, not a literal weapon check.
