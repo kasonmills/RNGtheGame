@@ -41,11 +41,28 @@ namespace GameLogic.Tests
         }
 
         /// <summary>
+        /// A StringWriter that restores the original Console.Out on Dispose. Without
+        /// this, a failed assertion inside `using (RedirectConsoleOutput())` skips the
+        /// RestoreConsoleOutput() call below it, leaving Console.Out pointing at a
+        /// disposed writer for every test that runs afterward in this process.
+        /// </summary>
+        private sealed class ConsoleRedirectWriter : StringWriter
+        {
+            private readonly TextWriter _original;
+            public ConsoleRedirectWriter(TextWriter original) => _original = original;
+            protected override void Dispose(bool disposing)
+            {
+                Console.SetOut(_original);
+                base.Dispose(disposing);
+            }
+        }
+
+        /// <summary>
         /// Redirect console output to capture it for testing
         /// </summary>
         private StringWriter RedirectConsoleOutput()
         {
-            var output = new StringWriter();
+            var output = new ConsoleRedirectWriter(Console.Out);
             Console.SetOut(output);
             return output;
         }

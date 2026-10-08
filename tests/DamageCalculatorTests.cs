@@ -170,7 +170,7 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void CalculatePlayerAttackDamage_CriticalHit_Increases Damage()
+        public void CalculatePlayerAttackDamage_CriticalHit_IncreasesDamage()
         {
             // Arrange
             var rng = new RNGManager(seed: 42);
