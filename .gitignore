@@ -1,2 +1,21 @@
 # Generated output from tools/git_time_tracker.py - personal time-tracking data, never commit
 tools/coding_sessions.json
+
+# .NET build output
+bin/
+obj/
+
+# Godot
+.godot/
+.import/
+
+# Godot Mono
+.mono/
+data_*/
+mono_crash.*.json
+
+# User-specific / OS
+.vs/
+*.user
+.DS_Store
+Thumbs.db

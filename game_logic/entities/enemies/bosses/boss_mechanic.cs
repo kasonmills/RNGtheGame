@@ -1,6 +1,11 @@
 using GameLogic.Combat;
 using GameLogic.Entities;
 using GameLogic.Systems;
+// This file's namespace (GameLogic.Entities.Enemies.Bosses) nests under GameLogic.Entities,
+// whose CombatAction enum wins enclosing-namespace lookup over both a plain `using
+// GameLogic.Combat;` and even a `using CombatAction = ...` alias -- enclosing-namespace
+// members beat using directives entirely. So every CombatAction below must be fully
+// qualified as GameLogic.Combat.CombatAction, not just imported.
 
 namespace GameLogic.Entities.Enemies.Bosses
 {
@@ -21,7 +26,7 @@ namespace GameLogic.Entities.Enemies.Bosses
         /// the generic Behavior-based AI (CombatManager.DetermineEnemyAction's existing
         /// switch) instead. `message`, if non-null, is logged before the action resolves.
         /// </summary>
-        CombatAction DecideAction(BossEnemy self, Entity target, RNGManager rng, out string message);
+        GameLogic.Combat.CombatAction DecideAction(BossEnemy self, Entity target, RNGManager rng, out string message);
     }
 
     /// <summary>
@@ -47,7 +52,7 @@ namespace GameLogic.Entities.Enemies.Bosses
             _chargeTarget = null;
         }
 
-        public CombatAction DecideAction(BossEnemy self, Entity target, RNGManager rng, out string message)
+        public GameLogic.Combat.CombatAction DecideAction(BossEnemy self, Entity target, RNGManager rng, out string message)
         {
             // Turn 2 of a charge: unleash the stoop attack.
             if (_isCharging)
@@ -56,7 +61,7 @@ namespace GameLogic.Entities.Enemies.Bosses
                 var chargeTarget = _chargeTarget;
                 _chargeTarget = null;
                 message = $"{self.Name} slams down in a devastating stoop attack!";
-                return new CombatAction(ActionType.Attack, self, chargeTarget) { DamageMultiplier = 2.5 };
+                return new GameLogic.Combat.CombatAction(ActionType.Attack, self, chargeTarget) { DamageMultiplier = 2.5 };
             }
 
             // Holding an active grapple - no attack of its own while it lasts.
@@ -73,7 +78,7 @@ namespace GameLogic.Entities.Enemies.Bosses
                 {
                     message = $"{self.Name} tightens its grip, holding {holdTarget.Name} fast!";
                 }
-                return CombatAction.None(self);
+                return GameLogic.Combat.CombatAction.None(self);
             }
 
             float healthPercent = (float)self.Health / self.MaxHealth;
@@ -94,7 +99,7 @@ namespace GameLogic.Entities.Enemies.Bosses
                 _isCharging = true;
                 _chargeTarget = target;
                 message = $"{self.Name} rears back, wings flaring - it's about to dive!";
-                return CombatAction.None(self);
+                return GameLogic.Combat.CombatAction.None(self);
             }
 
             // Remaining chance: fall back to a normal attack via the generic AI.
@@ -102,7 +107,7 @@ namespace GameLogic.Entities.Enemies.Bosses
             return null;
         }
 
-        private CombatAction StartGrapple(BossEnemy self, Entity target, RNGManager rng, out string message)
+        private GameLogic.Combat.CombatAction StartGrapple(BossEnemy self, Entity target, RNGManager rng, out string message)
         {
             int duration = rng.Roll(1, 3);
             _grappleTurnsRemaining = duration - 1; // this turn is the hit itself
@@ -110,7 +115,7 @@ namespace GameLogic.Entities.Enemies.Bosses
             message = $"{self.Name} seizes {target.Name} in a crushing grapple!";
 
             var slow = new Abilities.EnemyAbilities.GrappledEffect(duration, speedReduction: 6);
-            return new CombatAction(ActionType.Attack, self, target) { AppliesEffect = slow };
+            return new GameLogic.Combat.CombatAction(ActionType.Attack, self, target) { AppliesEffect = slow };
         }
     }
 }

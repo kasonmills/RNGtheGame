@@ -1,0 +1,23 @@
+#!/bin/sh
+# Fires immediately after `git pull` / `git merge` finishes.
+#
+# Git has no hook that can pause a pull before it completes -- a fast-forward
+# pull creates no merge commit, so there's no gate point beforehand. This is
+# the closest real equivalent: it warns you right away if what you just
+# pulled doesn't build, so you can decide whether to roll it back.
+
+echo "[post-merge] Checking that the solution still builds after pulling..."
+dotnet build RNGtheGame.sln --nologo -v quiet
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "=========================================================="
+  echo " WARNING: the code you just pulled does NOT build."
+  echo " Something brought in by this pull likely broke the project."
+  echo " To undo this pull and go back to where you were before it:"
+  echo "   git reset --hard ORIG_HEAD"
+  echo "=========================================================="
+fi
+
+exit 0

@@ -84,7 +84,7 @@ namespace GameLogic.Core
         /// otherwise forwards to CombatManager.SubmitPlayerAction(). Once the checklist
         /// is complete, every submission just passes through unblocked.
         /// </summary>
-        public bool TrySubmitAction(CombatManager combatManager, CombatAction action)
+        public bool TrySubmitAction(CombatManager combatManager, GameLogic.Combat.CombatAction action)
         {
             if (action.Type == ActionType.Flee)
             {

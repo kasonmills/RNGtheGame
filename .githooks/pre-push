@@ -1,0 +1,23 @@
+#!/bin/sh
+# Blocks `git push` if the solution doesn't build.
+#
+# Build artifacts (bin/, obj/, .godot/) are gitignored, so this hook never
+# touches anything a push/pull could accidentally delete -- it only protects
+# against pushing code that's actually broken.
+
+echo "[pre-push] Building RNGtheGame.sln before allowing push..."
+dotnet build RNGtheGame.sln --nologo -v quiet
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "=========================================================="
+  echo " PUSH BLOCKED: the solution failed to build."
+  echo " Fix the build error above, then try again."
+  echo " (Skip this check in an emergency with: git push --no-verify)"
+  echo "=========================================================="
+  exit 1
+fi
+
+echo "[pre-push] Build OK, proceeding with push."
+exit 0

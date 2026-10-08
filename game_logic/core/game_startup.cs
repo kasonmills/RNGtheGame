@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GameLogic.Entities.Player;
+using GameLogic.Entities.NPCs;
 using GameLogic.World;
 using GameLogic.Systems;
 using GameLogic.Combat;
