@@ -2,6 +2,9 @@
 tools/coding_sessions.json
 tools/time_tracker_last_run.json
 
+# Python virtual environment used to run tools/git_time_tracker.py
+.venv/
+
 # .NET build output
 bin/
 obj/

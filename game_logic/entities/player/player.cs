@@ -77,8 +77,9 @@ namespace GameLogic.Entities.Player
                     return new Abilities.PlayerAbilities.DefenseBoost();
                 case "Critical Strike":
                     return new Abilities.PlayerAbilities.CriticalStrike();
-                case "Leadership":
-                    return new Abilities.LeadershipAbility();
+                // Leadership is out of scope for the MVP - disabled, not deleted (re-enable here and in GetAvailableAbilities)
+                // case "Leadership":
+                //     return new Abilities.LeadershipAbility();
                 case "Evasion":
                     return new Abilities.EvasionAbility();
                 case "Rallying Cry":
@@ -125,7 +126,7 @@ namespace GameLogic.Entities.Player
                 new Abilities.PlayerAbilities.HealingAbility(),
                 new Abilities.PlayerAbilities.DefenseBoost(),
                 new Abilities.PlayerAbilities.CriticalStrike(),
-                new Abilities.LeadershipAbility(),          // Passive ability - party size
+                // new Abilities.LeadershipAbility(),       // Passive ability - party size (out of scope for the MVP - disabled, not deleted)
                 new Abilities.EvasionAbility(),             // Passive ability - dodge damage
                 new Abilities.RallyingCryAbility(),         // Passive ability - companion attack buff
                 new Abilities.PrecisionTrainingAbility(),   // Passive ability - ally accuracy buff

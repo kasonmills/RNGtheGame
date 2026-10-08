@@ -20,16 +20,24 @@ _This is the living plan for turning the current codebase into what the story ne
 - **Bucket B** - confirmed features, sorted into tiers by dependency (foundational first), not by size. Tackling Tier 0 first collapses the most downstream uncertainty.
 
 ### Bucket A: Open story decisions
-1. Does character-creation Gender selection affect any mechanics/stats, or is it purely cosmetic/narrative (pronouns, visual model)?
+1. ✅ **Resolved (2026-10-05)** Character-creation Gender selection has no stat/mechanical difference between genders - purely cosmetic/narrative.
 2. Librarian-Monk boss - unique mechanic not yet designed.
 3. Giant House Centipede boss - unique mechanic not yet designed.
 4. Cyclops Brothers boss - unique mechanic not yet designed.
 5. Demon Prince boss - mechanic loosely Chaos-magic themed, not finalized.
 6. Princess (final boss) - whether her mechanic is "randomly use one of the other bosses' mechanics" is not committed yet.
 7. Slime Dragon fight - does defeating just the main dragon end the fight, or must every spawned dragling be cleared too?
-8. Army interaction section - what does "interact with the army" actually consist of (dialogue? a questline? recruiting soldiers?)?
+8. ✅ **Resolved (2026-10-05)** Army interaction section - an optional, non-story area: an army camp preparing to go to war. The player can talk to the soldiers (dialogue only), or talk to one of the commanders, who offers to have his soldiers "test your strength" - the entry point into the endless combat mode (see Tier 4). Still open: the exact reward structure (gold and/or a prize, scaled by how long the player lasted and/or how many enemies they defeated).
 9. Day/night cycle - what actually drives the clock (real time, in-game turns/actions, travel count, etc.)?
 10. Which of the existing companions (Warrior/Mage/Ranger/Rogue/Healer) survive as-is, get adjusted, or get fully replaced? (Warrior → Captain of the Royal Guard is the one confirmed swap so far.)
+11. Boss difficulty scaling - now that boss order is fixed, what should the difficulty curve look like? The current automatic scaling (15% per boss defeated, 50% per repeat fight) was designed for the old any-order key system (see item 5 below).
+12. **Level cap and XP system review (decided 2026-10-08: cap drops from 100 to 50; XP rework deliberately deferred)** - the game is now about 8 bosses with roughly 5 combat encounters between each, not the 10+ encounters and 15 bosses the levelling was built for, so level 100 is out of reach in a normal playthrough. Plan: halve the level cap to 50 for abilities, weapons and armor. Do NOT rework XP yet - wait until more of the game is defined (map routes, encounter counts, boss difficulty curve in #11) so it can be scaled against real numbers. Not started in code. Things to cover when this is picked up:
+    - Where the cap lives: `Ability.MaxLevel` (`game_logic/abilities/ability.cs`), `Weapon.MaxLevel`, `Armor.MaxLevel`, `Constants.MaxLevels`, plus the enemy abilities that set `MaxLevel = 100` or divide by 99 (`rage.cs`, `poison_attack.cs`). Decide whether player/enemy levels follow the same cap.
+    - Hard-coded level thresholds that assume 100: ability cooldown reductions at levels 25 and 75, milestone levels 10/25/50/75/100 in `leveling_system.cs`, Leadership's 25/50/75/100 (post-MVP).
+    - Ability effects scale linearly from level 1 to `MaxLevel`, so changing the cap alone keeps the same top-end values but doubles the gain per level - confirm that is wanted.
+    - XP curve: currently base XP by rarity (100/200/300/400/500) x 1.035 per level. Set a target first (what level should a typical player reach by the final boss?) and build the curve backwards from the expected number of fights.
+    - XP sources: only active abilities gain XP today (per use in combat). Passive abilities, weapons and armor are never awarded XP anywhere in the code, so they cannot level at all - the "Equipment Leveling System" below is complete except for this.
+    - Whether rarity should still slow levelling (Legendary currently needs 5x the XP of Common).
 
 ### Bucket B: Confirmed work, dependency-ordered
 
@@ -58,16 +66,21 @@ _This is the living plan for turning the current codebase into what the story ne
   **Important (confirmed 2026-09-30):** the Princess being the final boss/antagonist is a twist that must stay hidden until the very end - she spends most of the game as a quest-giver sending the player on story quests. When building her: (1) don't add any flavor text elsewhere that foreshadows her before the reveal; (2) she needs both a quest-giver presence (early/mid-game) and a `BossEnemy` instance (late-game) - same shape as the Captain of the Royal Guard's companion→boss transition in Tier 1, but for a quest-giver→boss transition instead; (3) `GameStartup.InitializeQuests()` currently calls `finalQuest.Discover()` unconditionally at game start for whoever the final boss is - **this will spoil her identity immediately** once she's boss #9 unless that's changed to only discover the final quest once she's actually unlocked (see the `SPOILER RISK` comment left in `game_logic/core/game_startup.cs`).
 
 **Tier 3 - large parallel systems (big, but don't block or get blocked by the boss/companion work above):**
-- NG+ ghost mechanic + secret ghost-only boss - needs New Game+ save tracking, a death-flow branch point (offer the ghost choice instead of an immediate game over), and a new "weapon enchantment" concept that doesn't exist yet. Note: enemies don't deal damage via `Weapon` objects today (just flat `MinDamage`/`MaxDamage` stats), so "only enchanted weapons can hurt a ghost" needs a new tag-based system, not a literal weapon check.
 - Magic/spellcasting + component system - foundational for player build diversity, but nothing else on this list strictly requires it to exist first, so it can proceed in parallel. Fits well as a `SpellAbility : Ability` subtype (reusing the existing ability/combat pipeline) with components as a new `ItemCategory` that slots naturally into the already-unified loot table system.
 
 **Tier 4 - smaller/independent additions (can slot in anytime):**
-- Character-creation Gender selection.
+- Character-creation Gender selection - cosmetic/narrative only, no stat differences (Bucket A #1, resolved).
 - Elder of the Elven Village (NPC) - blocked on the fixed map existing (needs an Elven Village location to live at).
-- Army interaction section - needs scoping first (Bucket A #8).
-- Endless/gauntlet survival mode - mostly additive, doesn't depend on the other items here. "No healing between waves" already falls out for free from how `Player.Health` persists across separate fights today.
+- Army camp (optional, non-story area) + endless "test your strength" mode (scoped 2026-10-05, Bucket A #8 - these were two separate items, now one feature since the camp is how the player reaches the endless mode):
+  - Camp: soldiers camping and preparing for war, each with dialogue. Placing it in the world is blocked on the fixed map, same as the Elder.
+  - Commander NPC: talking to him offers the challenge, which throws the player into back-to-back combat encounters with no healing between fights, until they fall.
+  - Reward on exit: gold and/or a prize based on how long the player lasted and/or how many enemies they defeated (exact structure still open).
+  - The combat loop itself is mostly additive and can be built/tested before the camp exists. "No healing between fights" already falls out for free from how `Player.Health` persists across separate fights today. Needs deciding at build time: what losing here means (it shouldn't be a normal game over, since the point is to last as long as possible).
 - Day/night cycle affecting enemy spawns - needs its own clock mechanism (Bucket A #9); may interact with the already-flagged-broken difficulty-scaling gap (see the "Difficulty selection has zero mechanical effect" item under Code Cleanup below).
 - `Rest()` → inn-based, location-gated mechanic (unrelated to the story list above, but already an agreed-on change - carried over so it doesn't get lost).
+
+**Deferred - post-MVP (not needed to ship the MVP; revisit once there's time for features beyond it):**
+- NG+ ghost mechanic + secret ghost-only boss (deferred 2026-10-05, was Tier 3) - fun, but not required for the MVP. Notes kept for when it's revisited: needs New Game+ save tracking, a death-flow branch point (offer the ghost choice instead of an immediate game over), and a new "weapon enchantment" concept that doesn't exist yet. Enemies don't deal damage via `Weapon` objects today (just flat `MinDamage`/`MaxDamage` stats), so "only enchanted weapons can hurt a ghost" needs a new tag-based system, not a literal weapon check.
 
 ---
 
@@ -146,38 +159,20 @@ _This is the living plan for turning the current codebase into what the story ne
 
 ## MEDIUM PRIORITY - Systems & Features
 
-### 🔴 5. Boss Key Progression System - SCOPE REDUCTION IN PROGRESS (2026-09-11)
-> **See the "STORY-DRIVEN FEATURE ROADMAP" section above (2026-09-28) for the current plan** - the key/gate removal and the confirmed 9-boss roster (with mechanics) now live there as Tier 0/Tier 2 work.
-- **Files**: `game_logic/entities/enemies/bosses/boss_enemy.cs`, `game_logic/entities/enemies/bosses/boss_manager.cs`, `game_logic/entities/enemies/bosses/boss_definitions.cs`, `game_logic/world/boss_encounter.cs`
-- **Status**: 🚧 Framework complete, roster emptied pending redesign
-- **Scope change**: Reduced from 15 bosses to 8, tied to a fixed story map with specific spawn locations (procedural map generation is being replaced - see item below). The original 15-boss roster was archived to `docs/boss_ideas_archive.md` for inspiration; `BossDefinitions.GetAllChampionBosses()` now returns an empty list.
-- **Still needed** (not done yet, deliberately deferred):
-  - Design and add the new 8-boss roster to `BossDefinitions`
-  - Update `BossManager.TOTAL_BOSSES` (currently still 15) and `KEYS_REQUIRED` (currently still 10) to match the new 8-boss scale
-  - Fix stale UI text in `GameManager.StartNewGame()` ("Defeat 10 of the 15 Champions...") and `BossDefinitions.GetBossListSummary()` ("Defeat any 10...") once the new numbers are decided
-  - Tie boss encounters to the new fixed map's spawn locations instead of the Champion Challenges menu's free-select list (depends on the map work below)
-- **Previously completed work below still applies to the framework** (key drops, strength scaling, save/load) - only the content (which bosses, how many) is being redone:
-- **Description**: Complete boss progression system using champion keys to unlock final gate
-- **Phase 1 Complete** (✅ Framework):
-  - ✅ BossEnemy class with unique mechanics (12 mechanic types)
-  - ✅ BossManager for tracking and strength scaling
-  - ✅ 15 unique champion bosses defined
-  - ✅ 15 unique champion keys as QuestItems
-  - ✅ Dual strength scaling system:
-    - 15% stronger per unique boss defeated (progression scaling)
-    - 50% stronger per repeat defeat of same boss (anti-farming)
-  - ✅ Final gate unlock logic (need 10 of 15 keys)
-  - ✅ Random final boss selection per save file
-- **Phase 2 Complete** (✅ Integration):
-  - ✅ Combat manager integration (boss defeats tracked, key drops working)
-  - ✅ BossManager integrated with GameManager
-  - ✅ Game initialization complete (bosses registered, final boss selected)
-  - ✅ Save system integration (boss progress, defeats, repeat counts persisted)
-  - ✅ Boss encounter system with player warnings for repeat fights
-  - ✅ Final gate encounter with key consumption
-  - ✅ Champion menu for boss selection and status display
-  - ✅ Final gate unlock bug fixed (keys consumed = gate unlocked, prevents save/load exploit)
-- **Documentation**: See `docs/boss_system_phase2_plan.md`, `docs/boss_final_gate_fix.md`, `docs/boss_combat_verification.md`
+### 🔴 5. Boss Progression System - ORDER-BASED (key/gate system removed 2026-09-30)
+> **See the "STORY-DRIVEN FEATURE ROADMAP" section above for the current plan** - the confirmed 9-boss roster (with mechanics) lives there as Tier 2 work.
+- **Files**: `game_logic/entities/enemies/bosses/boss_enemy.cs`, `game_logic/entities/enemies/bosses/boss_manager.cs`, `game_logic/entities/enemies/bosses/boss_definitions.cs`, `game_logic/entities/enemies/bosses/boss_mechanic.cs`, `game_logic/world/boss_encounter.cs`
+- **Status**: 🚧 Framework complete, roster being built one boss at a time
+- **How it works now**: Bosses unlock in a fixed order (defeating boss N-1 unlocks boss N), derived from registration order in `BossDefinitions`. There are no champion keys, no final gate, and no random final boss. The original 15-boss roster is archived in `docs/boss_ideas_archive.md` for inspiration only.
+- **Still in the code from the old any-order design** (see "Still needed" below):
+  - Progression scaling: every boss is 15% stronger per unique boss already defeated (`BossManager.STRENGTH_SCALING_PER_BOSS`)
+  - Repeat penalty: a boss is 50% stronger per previous defeat of that same boss (`BossManager.REPEAT_PENALTY_PER_DEFEAT`), multiplied with the progression scaling
+  - Reward scaling: gold/XP +5% per unique boss defeated and +10% per repeat (`BossEnemy.ApplyStrengthScaling`)
+  - Boss progress, defeats and repeat counts are saved/loaded
+- **Still needed**:
+  - **Redesign boss difficulty scaling for the fixed order** - the 15%-per-boss and repeat-penalty rules were built for fighting bosses in any order, with key farming to discourage. With a set order, each boss's difficulty can be authored directly, so decide whether any automatic scaling (and any repeat penalty) is still wanted (Bucket A #11)
+  - Build the remaining bosses in the roster (Tier 2 above)
+  - Tie boss encounters to the fixed map's spawn locations (depends on the map work below)
 
 ### 🟡 6. Quest Event System
 - **Files**: `game_logic/quests/`, `game_logic/entities/npcs/quest_giver.cs`, `game_logic/menus/job_board.cs`
@@ -274,6 +269,24 @@ _This is the living plan for turning the current codebase into what the story ne
 
 ## CODE CLEANUP / REFACTORING
 _Tracking spots found while going through the codebase to build a better understanding of it and remove what isn't necessary._
+
+### 🟡 Finish the docs/ folder cleanup (started 2026-10-08)
+- **Status**: 🚧 In progress - boss docs (6 files down to 1) and ability docs (8 files down to `abilities.md`) are done
+- **Goal**: Get `docs/` down to a small set of files that reflect the current scope. For each group: read it against the current code, keep what is still true, merge or delete the rest.
+- **Still to review**:
+  - Item docs: `weapon_expansion_plan.md`, `armor_expansion_plan.md`, `new_weapons_definitions.md`
+  - "Implementation complete" write-ups: `quest_rng_system.md`, `quest_system_implementation.md`, `settings_system_implementation.md`, `statistics_system_implementation.md`, `unit_tests_implementation.md`, `companion_combat_integration.md`
+  - `player_class_system.md`
+  - This file: the "Equipment Leveling System" entry says FULLY COMPLETED although gear is never awarded XP (see Bucket A #12), and the "RECENT COMPLETIONS" section still describes the removed boss key system as "Phase 2 Complete"
+
+### 🟢 Ignore stray generated files
+- **Status**: ❌ Not Started
+- **Description**: `coding_sessions.json` at the repo root (written when `tools/git_time_tracker.py` is run from the root instead of from `tools/`) and `tools/__pycache__/` show up as untracked files. Add both to `.gitignore` and delete the stray root copy.
+
+### 🟢 Leadership ability disabled for the MVP (2026-10-08)
+- **Files**: `game_logic/entities/player/player.cs`, `game_logic/abilities/leadership_ability.cs`, `game_logic/entities/NPCs/companions/party_manager.cs`
+- **Status**: ⏸ Parked until after the MVP
+- **Description**: Leadership is commented out of `Player.GetAvailableAbilities()` and `Player.CreateAbilityFromName()`. The ability class and the party-size check in `PartyManager` are left in place, unused. To bring it back, uncomment those two spots. Not yet compiled or tested since the change.
 
 ### 🟢 Investigate progression/quest_system.cs and progression/loot_table.cs
 - **Files**: `game_logic/progression/quest_system.cs`, `game_logic/progression/loot_table.cs`
