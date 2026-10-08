@@ -17,6 +17,11 @@ from datetime import datetime, timedelta
 import sys
 from pathlib import Path
 
+# Windows' default console codepage (cp1252) can't encode the emoji used
+# throughout this script's output; force UTF-8 so it doesn't crash on launch.
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+
 def get_commit_history(repo_path="."):
     """
     Extract commit history from git repository.
@@ -132,47 +137,107 @@ def calculate_session_duration(session):
     return round(estimated_hours, 2)
 
 
-def generate_report(sessions):
+def load_last_run_marker(marker_file):
     """
-    Print a human-readable session report.
+    Return the timestamp of the last commit seen on a previous run, or None
+    if this is the first time the script has been run (nothing to compare
+    against yet, so everything counts as new).
     """
+    path = Path(marker_file)
+    if not path.exists():
+        return None
+
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return datetime.fromisoformat(data['last_commit_timestamp'])
+    except Exception:
+        return None
+
+
+def save_last_run_marker(marker_file, commits):
+    """
+    Record the newest commit seen this run, so next run can tell what's new.
+    """
+    if not commits:
+        return
+
+    latest = commits[-1]  # commits are sorted oldest-first
+    with open(marker_file, 'w') as f:
+        json.dump({
+            'last_commit_hash': latest['hash'],
+            'last_commit_timestamp': latest['timestamp'].isoformat()
+        }, f, indent=2)
+
+
+def print_session(i, session):
+    """
+    Print one session's details (used for both the "since last run" and
+    lifetime sections of the report).
+    """
+    duration = calculate_session_duration(session)
+    first_time = session[0]['timestamp']
+    last_time = session[-1]['timestamp']
+    commit_count = len(session)
+
+    print(f"Session {i}:")
+    print(f"  📅 Date:       {first_time.strftime('%A, %B %d, %Y')}")
+    print(f"  ⏰ Time:       {first_time.strftime('%H:%M')} → {last_time.strftime('%H:%M')}")
+    print(f"  📝 Commits:    {commit_count}")
+    print(f"  ⏱️  Duration:    {duration} hours")
+
+    first_msg = session[0]['message'][:50]
+    last_msg = session[-1]['message'][:50]
+    print(f"  📌 First:      {first_msg}...")
+    print(f"  📌 Last:       {last_msg}...")
+    print()
+
+    return duration
+
+
+def generate_report(sessions, last_run_timestamp):
+    """
+    Print a human-readable report split into:
+      - sessions since the last time this script was run (detailed)
+      - a lifetime total across all sessions ever recorded
+
+    `last_run_timestamp` is None on the very first run, in which case every
+    session counts as "since last run".
+    """
+    new_sessions = [
+        s for s in sessions
+        if last_run_timestamp is None or s[0]['timestamp'] > last_run_timestamp
+    ]
+
     print("\n" + "="*70)
-    print("📊 ESTIMATED CODING SESSIONS FROM GIT HISTORY")
+    if last_run_timestamp is None:
+        print("📊 CODING SESSIONS (first run - showing full history)")
+    else:
+        print(f"📊 CODING SESSIONS SINCE LAST RUN ({last_run_timestamp.strftime('%Y-%m-%d %H:%M')})")
     print("="*70 + "\n")
 
-    total_hours = 0
+    new_hours = 0
+    if not new_sessions:
+        print("No new sessions since the last run.\n")
+    else:
+        for i, session in enumerate(new_sessions, 1):
+            new_hours += print_session(i, session)
 
-    for i, session in enumerate(sessions, 1):
-        duration = calculate_session_duration(session)
-        total_hours += duration
-
-        first_time = session[0]['timestamp']
-        last_time = session[-1]['timestamp']
-        commit_count = len(session)
-
-        print(f"Session {i}:")
-        print(f"  📅 Date:       {first_time.strftime('%A, %B %d, %Y')}")
-        print(f"  ⏰ Time:       {first_time.strftime('%H:%M')} → {last_time.strftime('%H:%M')}")
-        print(f"  📝 Commits:    {commit_count}")
-        print(f"  ⏱️  Duration:    {duration} hours")
-
-        # Show first and last commit for context
-        first_msg = session[0]['message'][:50]
-        last_msg = session[-1]['message'][:50]
-        print(f"  📌 First:      {first_msg}...")
-        print(f"  📌 Last:       {last_msg}...")
-        print()
+    lifetime_hours = sum(calculate_session_duration(s) for s in sessions)
 
     print("="*70)
-    print(f"✅ Total Estimated Coding Hours: {total_hours:.2f}")
+    print(f"✅ Hours since last run:   {new_hours:.2f}")
+    print(f"📈 Lifetime total:         {lifetime_hours:.2f} hours across {len(sessions)} sessions")
     print("="*70 + "\n")
 
     print("💡 NOTES:")
     print("  • These are estimates based on commit patterns")
     print("  • You can adjust individual session hours in the spreadsheet")
-    print("  • The spreadsheet tracks both coding AND business tasks\n")
+    print("  • The spreadsheet tracks both coding AND business tasks")
+    print("  • This machine tracks its own sessions separately - add the")
+    print("    'Hours since last run' totals from each machine together\n")
 
-    return sessions, total_hours
+    return sessions, lifetime_hours, new_hours
 
 
 def export_to_json(sessions, output_file="coding_sessions.json"):
@@ -259,14 +324,21 @@ if __name__ == "__main__":
     sessions = estimate_sessions(commits, session_gap_minutes=120)
     print(f"✅ Grouped into {len(sessions)} coding sessions\n")
 
-    # Generate report
-    sessions_data, total_hours = generate_report(sessions)
+    # Figure out what's new since the last time this script ran on this machine
+    marker_file = "time_tracker_last_run.json"
+    last_run_timestamp = load_last_run_marker(marker_file)
 
-    # Export to JSON
+    # Generate report (lifetime totals + just what's new since last run)
+    sessions_data, lifetime_hours, new_hours = generate_report(sessions, last_run_timestamp)
+
+    # Export full lifetime session history to JSON
     json_file = "coding_sessions.json"
     export_to_json(sessions, json_file)
     print(f"✅ Exported to: {json_file}")
     print(f"   (Use this for reference or spreadsheet import)\n")
+
+    # Remember where we left off for next run
+    save_last_run_marker(marker_file, commits)
 
     # Print how to use
     print_instructions()

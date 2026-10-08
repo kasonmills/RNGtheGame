@@ -1,5 +1,6 @@
 # Generated output from tools/git_time_tracker.py - personal time-tracking data, never commit
 tools/coding_sessions.json
+tools/time_tracker_last_run.json
 
 # .NET build output
 bin/
