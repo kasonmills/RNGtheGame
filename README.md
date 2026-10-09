@@ -70,8 +70,7 @@ RNGtheGame/
 │   │   ├── map_manager.cs               # Handles map generation/navigation
 │   │   ├── map_node.cs                  # Individual map locations
 │   │   ├── location_type.cs             # Enum: City, Dungeon, Wilderness, Boss
-│   │   ├── city.cs                      # City data and shops
-│   │   └── dungeon.cs                   # Dungeon data and encounters
+│   │   └── city.cs                      # City data and shops
 │   │
 │   ├── progression/
 │   │   ├── leveling_system.cs           # XP curves, level requirements, stat scaling
@@ -88,9 +87,7 @@ RNGtheGame/
 │   │
 │   └── data/                            # Data containers and persistence
 │       ├── save_data.cs                 # Player save file structure (JSON)
-│       ├── save_manager.cs              # Save/load system (static class)
-│       ├── game_data.cs                 # Global game data
-│       └── constants.cs                 # Magic numbers and game constants
+│       └── save_manager.cs              # Save/load system (static class)
 │
 ├── tests/                               # Unit tests (xUnit framework)
 │   ├── RNGManagerTests.cs               # 40+ tests for RNG system
