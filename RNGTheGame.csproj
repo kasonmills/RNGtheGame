@@ -9,7 +9,12 @@
 
   <ItemGroup>
     <Compile Remove="tests\**" />
-    <Compile Remove="godot_integration\**" />
+    <Compile Remove="godot_project\**" />
+    <Compile Remove="game_logic\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="game_logic\GameLogic.csproj" />
   </ItemGroup>
 
 </Project>

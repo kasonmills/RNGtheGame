@@ -9,6 +9,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameLogicTests", "tests\GameLogicTests.csproj", "{A08C38B8-F236-4C00-86DB-7663E3464972}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "game_logic", "game_logic", "{D12C3270-43E8-9039-953B-DA78CE5ACAB7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameLogic", "game_logic\GameLogic.csproj", "{C44235CF-677F-4EB0-BD41-EFB764BCFC07}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "godot_project", "godot_project", "{F74FE0A8-89FA-7DF8-D7D4-1080AC82400E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RNGtheGameGodot", "godot_project\RNGtheGameGodot.csproj", "{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,12 +51,38 @@ Global
 		{A08C38B8-F236-4C00-86DB-7663E3464972}.Release|x64.Build.0 = Release|Any CPU
 		{A08C38B8-F236-4C00-86DB-7663E3464972}.Release|x86.ActiveCfg = Release|Any CPU
 		{A08C38B8-F236-4C00-86DB-7663E3464972}.Release|x86.Build.0 = Release|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Debug|x64.Build.0 = Debug|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Debug|x86.Build.0 = Debug|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Release|x64.ActiveCfg = Release|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Release|x64.Build.0 = Release|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Release|x86.ActiveCfg = Release|Any CPU
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07}.Release|x86.Build.0 = Release|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Debug|x64.Build.0 = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Debug|x86.Build.0 = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Release|x64.ActiveCfg = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Release|x64.Build.0 = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Release|x86.ActiveCfg = Debug|Any CPU
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA}.Release|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A08C38B8-F236-4C00-86DB-7663E3464972} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{C44235CF-677F-4EB0-BD41-EFB764BCFC07} = {D12C3270-43E8-9039-953B-DA78CE5ACAB7}
+		{C486EF63-E688-41E3-8A42-CD3AC7E23EBA} = {F74FE0A8-89FA-7DF8-D7D4-1080AC82400E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {70E7DA7D-25B8-4FB5-A327-076B79AABA45}

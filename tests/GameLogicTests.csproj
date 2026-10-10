@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RNGTheGame.csproj" />
+    <ProjectReference Include="..\game_logic\GameLogic.csproj" />
   </ItemGroup>
 
   <ItemGroup>
