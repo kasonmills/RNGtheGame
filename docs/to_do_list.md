@@ -541,22 +541,29 @@ _Big-picture pass over every folder to see where the code is at before the Godot
 ## FUTURE PHASE - GUI & Game Engine
 
 ### 🔴 Plan the Godot frontend file structure and file contents (added 2026-10-09)
-- **Status**: ❌ Not Started
+- **Status**: 🚧 Superseded by starting implementation directly (2026-10-10) - the full written plan below was never produced; building started iteratively instead. Still worth doing once the MVP combat scene settles, so structure stops being invented ad hoc screen-by-screen.
 - **Phase**: Planning - do this BEFORE any Godot implementation, so the thinking is finished separately from the building
 - **Goal**: a written plan of every folder and file the Godot frontend will have, and what each file contains and is responsible for. Implementation then follows the plan instead of inventing structure as it goes.
 - **Output**: one planning document in `docs/` (for example `docs/godot_frontend_plan.md`)
 - **What the plan needs to cover**:
   - **Folder layout** of the Godot project: scenes, scripts, UI, and art/audio assets (sprites, tiles, map images, icons, fonts, music, sound effects). Where the Godot project sits relative to `game_logic/`, and how the C# game logic is included in it.
-  - **Asset storage**: `game_logic/` holds code only. Images such as a world-map picture belong in a Godot assets folder, not in `game_logic/world/`. No assets folder and no image or scene files exist in the repo yet.
+  - **Asset storage**: `game_logic/` holds code only. Images such as a world-map picture belong in a Godot assets folder, not in `game_logic/world/`. No assets folder exists yet.
   - **Scene list**: one entry per screen or area - main menu, character creation/tutorial, overworld areas (routes, towns, camps), combat, boss fights, shop, blacksmith, quest giver/job board, inventory, character sheet, settings, statistics, pause, save/load, game over, ending.
   - **For each file**: its purpose, which `game_logic` classes it talks to, which `GameManager` Open/Close methods and events (`StateChanged`, `CombatMessage`, `CombatEnded`) it uses, and what the player sees and can do on it.
   - **Map display**: how `MapManager`/`MapNode` data (including each node's `PositionX`/`PositionY`) is drawn, whether each area is its own scene, and whether the MVP needs a world-map overview screen. Depends on the two-level node design logged under `game_logic/world/` in the code review.
   - **Gaps the plan will expose in `game_logic`**: hook-ups the frontend needs that do not exist yet (settings and statistics access is already logged in the code review; expect more).
-- **Starting point**: `godot_integration/` has 11 placeholder files (`scripts/` - combat scene, enemy, map and player controllers; `UI/` - UI manager, HUD and menus). All are empty except an 11-line `map_controller.cs`, and the folder is excluded from the build. The plan decides whether to keep, rename or replace them.
+- **Current state (2026-10-10)**: `godot_integration/`'s placeholder files are gone - folded into a real, committed Godot project at `godot_project/` (`project.godot` + `RNGtheGameGodot.csproj`, referencing a newly-split `game_logic/GameLogic.csproj`). First scene exists: `godot_project/scenes/combat_scene.tscn`, driving the real `CombatManager`. See the new entry directly below for its current issues.
 - **Best done after**: the folder-by-folder code review (so the plan is based on what the code really offers) and the Bucket A decisions that change which screens exist.
 
+### 🔴 Combat scene MVP - buttons not wired up correctly, layout needs rework (added 2026-10-10)
+- **Status**: 🚧 In Progress - first version runs in-editor (F6) but isn't actually usable yet
+- **What exists**: `godot_project/scenes/combat_scene.tscn` + `CombatSceneController.cs` - one `Player` vs. two `Goblin`s, `EntitySlot` components (mini HP bar + placeholder hitbox + hover/select popup) in dynamic rows, driving the real `CombatManager` (`StartCombat`/`SubmitPlayerAction`/`CombatMessage`/`CombatEnded`).
+- **Bug**: clicking the Attack button does nothing visible - no damage, no log update. Not yet root-caused. First thing to check next session: Godot's Output/Errors panel for a printed exception - `_Ready()`/`StartNewFight()` may be throwing partway through (a NullReferenceException from a failed `GetNode` lookup is the prime suspect), which could also explain why the combat log never displays anything either - one root cause may explain both symptoms.
+- **Layout**: current vertical stack (title / enemy row / party row / log / buttons) needs replacing with a layout the user actually wants - not yet specified, ask at the start of the next session rather than guessing.
+- **Wanted next**: a coordinate-grid reference system (x/y) overlaid on or documented for the combat scene, so the user can specify "put X at (3, 5)" instead of describing positions in words - removes the back-and-forth guessing game over layout changes. Design not started.
+
 ### 🔵 3. Get Godot
-- **Status**: ❌ Not Started
+- **Status**: ✅ Done (installed, Godot 4.7.2 mono build)
 - **Phase**: GUI Development
 
 ### 🔵 4. Figure Out Sprites

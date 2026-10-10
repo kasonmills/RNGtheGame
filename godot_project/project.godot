@@ -13,6 +13,11 @@ config_version=5
 config/name="RNGtheGame"
 config/features=PackedStringArray("4.7", "C#")
 
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+
 [dotnet]
 
 project/assembly_name="RNGtheGameGodot"
