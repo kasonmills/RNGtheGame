@@ -20,6 +20,7 @@ namespace GameLogic.Entities.Enemies
         public int CritChance { get; set; }    // Critical hit chance (1-100)
         public int Defense { get; set; }       // Damage reduction
         public int AggressionLevel { get; set; } // 0-100, how likely this enemy is to notice/charge the player in the overworld
+        public int FleeChance { get; set; } = 30; // 1-100: the chance of the party escaping this enemy, and of this enemy escaping the party (30 until each enemy type is tuned)
 
         // Rewards
         public int GoldValue { get; set; }     // Base gold dropped

@@ -1,4 +1,7 @@
 using System;
+using GameLogic.Entities;
+using GameLogic.Entities.NPCs;
+using GameLogic.Entities.NPCs.Companions;
 using GameLogic.Entities.Player;
 using GameLogic.Entities.Enemies;
 using GameLogic.Systems;
@@ -24,76 +27,73 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Calculate damage for attacks
+        /// Calculate one attack - any attacker against any target (the player, a companion or
+        /// an enemy, on either side). Same steps for everyone: hit roll, base damage, active
+        /// effects, crit roll, then the target's defense.
         /// </summary>
-        public DamageResult CalculatePlayerAttackDamage(Player attacker, Enemy target)
+        /// <param name="partyLeader">The player - needed for the player's passive abilities that
+        /// boost companions (Precision Training, Rallying Cry). Can be null.</param>
+        public DamageResult CalculateAttack(Entity attacker, Entity target, Player partyLeader = null)
         {
             DamageResult result = new DamageResult();
 
             // Step 1: Check if attack hits
-            int accuracy = GetPlayerAccuracy(attacker);
             int hitRoll = _rngManager.Roll(1, 100);
-            
-            if (hitRoll > accuracy)
+
+            if (hitRoll > GetAccuracy(attacker, partyLeader))
             {
                 result.Missed = true;
                 return result;
             }
 
-            // Step 2: Calculate base damage
-            int baseDamage = GetPlayerBaseDamage(attacker);
+            // Step 2: Base damage (weapon or claws, level bonus, passive abilities)
+            int baseDamage = GetBaseDamage(attacker);
 
-            // Step 3: Apply level scaling
-            int levelBonus = attacker.Level / 2; // +1 damage per 2 levels
-            baseDamage += levelBonus;
-
-            // Step 4: Apply passive ability modifiers
-            baseDamage = ApplyPlayerPassiveAbilities(attacker, baseDamage);
-
-            // Step 5: Apply AttackBoost effect if active
+            // Step 3: Active effects on the attacker
             if (attacker.HasEffect<AttackBoostEffect>())
             {
                 var attackBoost = attacker.GetEffect<AttackBoostEffect>();
-                double multiplier = attackBoost.GetDamageMultiplier();
-                baseDamage = (int)(baseDamage * multiplier);
+                baseDamage = (int)(baseDamage * attackBoost.GetDamageMultiplier());
             }
 
-            // Step 5b: Apply StrengthBoost effect from consumables if active
             if (attacker.HasEffect<StrengthBoostEffect>())
             {
                 var strengthBoost = attacker.GetEffect<StrengthBoostEffect>();
                 baseDamage += strengthBoost.GetDamageBonus();
             }
 
-            // Step 6: Check for critical hit
-            int critChance = GetPlayerCritChance(attacker);
-            int critRoll = _rngManager.Roll(1, 100);
-
-            if (critRoll <= critChance)
+            if (attacker.HasEffect<RageEffect>())
             {
-                result.IsCritical = true;
-
-                // Get crit multiplier (default 1.5x, or modified by Executioner)
-                double critMultiplier = 1.5;
-                if (attacker.SelectedAbility is ExecutionerAbility executioner)
-                {
-                    critMultiplier = executioner.GetCritMultiplier();
-                }
-
-                baseDamage = (int)(baseDamage * critMultiplier);
+                var rage = attacker.GetEffect<RageEffect>();
+                baseDamage = (int)(baseDamage * rage.GetDamageMultiplier());
             }
 
-            // Step 6: Apply enemy RageEffect defense penalty if active
-            // (Enraged enemies take more damage due to lowered defense)
+            // Step 4: Check for critical hit
+            int critRoll = _rngManager.Roll(1, 100);
+
+            if (critRoll <= GetCritChance(attacker))
+            {
+                result.IsCritical = true;
+                baseDamage = (int)(baseDamage * GetCritMultiplier(attacker));
+            }
+
+            // Step 5: Rallying Cry (the player's passive) boosts companion hits
+            if (attacker is CompanionBase && partyLeader?.SelectedAbility is RallyingCryAbility rallyingCry)
+            {
+                baseDamage = (int)(baseDamage * rallyingCry.GetDamageMultiplier());
+            }
+
+            // Step 6: An enraged target has lowered defense and takes more damage
             if (target.HasEffect<RageEffect>())
             {
                 var rage = target.GetEffect<RageEffect>();
-                double defenseMultiplier = rage.GetDefenseMultiplier();
-                baseDamage = (int)(baseDamage * defenseMultiplier);
+                baseDamage = (int)(baseDamage * rage.GetDefenseMultiplier());
             }
 
-            // Step 7: Apply enemy defense
-            int finalDamage = ApplyEnemyDefenseReduction(baseDamage, target);
+            // Step 7: The target's defense (enemy defense stat, or worn armor and defensive effects)
+            int finalDamage = target is Enemy enemyTarget
+                ? ApplyEnemyDefenseReduction(baseDamage, enemyTarget)
+                : ApplyArmorReduction(baseDamage, target);
 
             result.RawDamage = baseDamage;
             result.FinalDamage = finalDamage;
@@ -103,49 +103,111 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Calculate damage for an enemy attack
+        /// Calculate damage for a player attack on an enemy (kept for existing callers and tests)
+        /// </summary>
+        public DamageResult CalculatePlayerAttackDamage(Player attacker, Enemy target)
+        {
+            return CalculateAttack(attacker, target, attacker);
+        }
+
+        /// <summary>
+        /// Calculate damage for an enemy attack on the player (kept for existing callers and tests)
         /// </summary>
         public DamageResult CalculateEnemyAttackDamage(Enemy attacker, Player target)
         {
-            DamageResult result = new DamageResult();
+            return CalculateAttack(attacker, target, target);
+        }
 
-            // Step 1: Check if attack hits
-            int hitRoll = _rngManager.Roll(1, 100);
-            
-            if (hitRoll > attacker.Accuracy)
+        /// <summary>
+        /// Hit chance (1-100) for any attacker
+        /// </summary>
+        private int GetAccuracy(Entity attacker, Player partyLeader)
+        {
+            switch (attacker)
             {
-                result.Missed = true;
-                return result;
+                case Player player:
+                    return GetPlayerAccuracy(player);
+
+                case NPCBase companion:
+                    int accuracy = companion.EquippedWeapon != null ? companion.EquippedWeapon.Accuracy : 60;
+
+                    // Precision Training (the player's passive) improves companion accuracy
+                    if (partyLeader?.SelectedAbility is PrecisionTrainingAbility precisionTraining)
+                    {
+                        accuracy = (int)(accuracy + (accuracy * precisionTraining.GetAccuracyBonus()));
+                    }
+                    return accuracy;
+
+                case Enemy enemy:
+                    return enemy.Accuracy;
+
+                default:
+                    return 100;
+            }
+        }
+
+        /// <summary>
+        /// Base damage roll for any attacker, before effects, crits and defense
+        /// </summary>
+        private int GetBaseDamage(Entity attacker)
+        {
+            switch (attacker)
+            {
+                case Player player:
+                    int playerDamage = GetPlayerBaseDamage(player) + player.Level / 2; // +1 damage per 2 levels
+                    return ApplyPlayerPassiveAbilities(player, playerDamage);
+
+                case NPCBase companion:
+                    int companionDamage = companion.EquippedWeapon != null
+                        ? _rngManager.Roll(companion.EquippedWeapon.MinDamage, companion.EquippedWeapon.MaxDamage)
+                        : _rngManager.Roll(1, 3);
+                    return companionDamage + companion.Level / 2; // Same level bonus as the player
+
+                case Enemy enemy:
+                    return _rngManager.Roll(enemy.MinDamage, enemy.MaxDamage);
+
+                default:
+                    return 1;
+            }
+        }
+
+        /// <summary>
+        /// Critical hit chance (0-100) for any attacker
+        /// </summary>
+        private int GetCritChance(Entity attacker)
+        {
+            if (attacker is Player player)
+            {
+                return GetPlayerCritChance(player);
             }
 
-            // Step 2: Calculate base damage
-            int baseDamage = _rngManager.Roll(attacker.MinDamage, attacker.MaxDamage);
-
-            // Step 3: Apply RageEffect if active
-            if (attacker.HasEffect<RageEffect>())
+            int critChance = attacker switch
             {
-                var rage = attacker.GetEffect<RageEffect>();
-                double multiplier = rage.GetDamageMultiplier();
-                baseDamage = (int)(baseDamage * multiplier);
+                NPCBase companion => companion.EquippedWeapon != null ? companion.EquippedWeapon.CritChance : 2,
+                Enemy enemy => enemy.CritChance,
+                _ => 0
+            };
+
+            if (attacker.HasEffect<CriticalStrikeEffect>())
+            {
+                critChance += attacker.GetEffect<CriticalStrikeEffect>().GetCritChanceBonus();
             }
 
-            // Step 4: Check for critical hit
-            int critRoll = _rngManager.Roll(1, 100);
+            return Math.Max(0, Math.Min(100, critChance));
+        }
 
-            if (critRoll <= attacker.CritChance)
+        /// <summary>
+        /// Critical hit damage multiplier - the attacker's own value (1.5 unless something
+        /// changes it), or the Executioner ability's value for a player who has it
+        /// </summary>
+        private double GetCritMultiplier(Entity attacker)
+        {
+            if (attacker is Player player && player.SelectedAbility is ExecutionerAbility executioner)
             {
-                result.IsCritical = true;
-                baseDamage = (int)(baseDamage * 1.5f);
+                return executioner.GetCritMultiplier();
             }
 
-            // Step 5: Apply player armor reduction
-            int finalDamage = ApplyArmorReduction(baseDamage, target);
-
-            result.RawDamage = baseDamage;
-            result.FinalDamage = finalDamage;
-            result.DamageReduced = baseDamage - finalDamage;
-            
-            return result;
+            return attacker.CritMultiplier;
         }
 
         /// <summary>
@@ -304,9 +366,9 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Apply armor reduction to incoming damage (for player defense)
+        /// Apply armor reduction to incoming damage (for the player and companions)
         /// </summary>
-        private int ApplyArmorReduction(int rawDamage, Player target)
+        private int ApplyArmorReduction(int rawDamage, Entity target)
         {
             double damageMultiplier = 1.0;
             int flatReduction = 0;
@@ -331,19 +393,21 @@ namespace GameLogic.Combat
             // Then apply flat reduction
             adjustedDamage = Math.Max(1, adjustedDamage - flatReduction);
 
-            if (target.EquippedArmor != null)
-            {
-                int defense = target.EquippedArmor.Defense;
+            // Armor reduces damage but never below 1
+            return Math.Max(1, adjustedDamage - GetArmorDefense(target));
+        }
 
-                // Armor reduces damage but never below 1
-                int finalDamage = Math.Max(1, adjustedDamage - defense);
-                return finalDamage;
-            }
-            else
+        /// <summary>
+        /// Defense from the armor a party member is wearing (0 if none)
+        /// </summary>
+        private int GetArmorDefense(Entity target)
+        {
+            return target switch
             {
-                // No armor: Return adjusted damage (with effects if active)
-                return Math.Max(1, adjustedDamage);
-            }
+                Player player => player.EquippedArmor?.Defense ?? 0,
+                NPCBase companion => companion.EquippedArmor?.Defense ?? 0,
+                _ => 0
+            };
         }
 
         /// <summary>

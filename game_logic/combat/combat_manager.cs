@@ -14,17 +14,34 @@ using Enemy = GameLogic.Entities.Enemies.EnemyBase;
 namespace GameLogic.Combat
 {
     /// <summary>
-    /// Orchestrates combat encounters between the player (plus companions) and one or
-    /// more enemies. Delegates to specialized managers for turn order, damage, and actions.
-    /// Uses a round-based system where each entity acts once per round.
+    /// Orchestrates combat encounters between the party (the player plus up to three
+    /// companions) and one or more enemies.
     ///
-    /// Non-blocking/resumable: StartCombat() sets up the fight and advances AI turns
-    /// automatically, pausing (IsWaitingForPlayerAction) whenever it's the player's turn.
-    /// The caller (e.g. a Godot combat scene) calls SubmitPlayerAction() to resume.
-    /// Subscribe to CombatMessage for narrative log lines and CombatEnded for the outcome.
+    /// Rounds: every round has 8 turn slots - 4 for the party (one each) and 4 for the
+    /// opponents (more than 4 enemies share slots, the slowest paired up first). Slots act
+    /// in speed order, worked out fresh at the start of every round. See TurnOrder.
+    ///
+    /// Non-blocking/resumable: StartCombat() sets up the fight and runs computer-controlled
+    /// turns automatically, pausing (IsWaitingForPlayerAction) whenever a party member the
+    /// player controls is up - the player, or a companion switched to direct control. The
+    /// caller (e.g. a Godot combat scene) reads CurrentActor and calls SubmitPlayerAction().
+    ///
+    /// For a screen:
+    ///   Party / Enemies / Combatants - who is in the fight; read names, levels, health and
+    ///                                  effects from them at any time during the fight
+    ///   CombatEventOccurred - one event per thing that happens (hit, miss, damage, heal...)
+    ///   CombatMessage       - the same fight as readable log lines
+    ///   CombatFinished      - the end-of-fight result (outcome, XP, gold, items)
     /// </summary>
     public class CombatManager
     {
+        /// <summary>
+        /// The player plus at most this many companions fight (decided 2026-10-13).
+        /// </summary>
+        public const int MaxFightingCompanions = 3;
+
+        private const int SlotsPerSide = 4;
+
         private RNGManager _rngManager;
         private TurnManager _turnManager;
         private DamageCalculator _damageCalculator;
@@ -32,16 +49,21 @@ namespace GameLogic.Combat
 
         private Player _player;
         private List<Enemy> _enemies;
+        private readonly List<Entity> _party;
+        private readonly List<Entity> _allCombatants;
         private bool _combatActive;
+        private bool _partyFled;
 
         // Round-based combat tracking
         private int _currentRound;
-        private List<Entity> _allCombatants;
-        private HashSet<Entity> _entitiesActedThisRound;
-        private Queue<Entity> _turnQueue;
+        private List<TurnSlot> _turnOrder;
+        private readonly Queue<Entity> _turnQueue;
 
-        // Universal defend tracking - any entity can defend
-        private Dictionary<Entity, bool> _defendingEntities;
+        // Who is defending (until their next turn), which enemies fled, and which
+        // companions the player controls directly
+        private readonly HashSet<Entity> _defendingEntities;
+        private readonly HashSet<Enemy> _fledEnemies;
+        private readonly HashSet<Entity> _directlyControlled;
 
         /// <summary>
         /// Fired for narrative combat-log lines (attacks, abilities, items, round events, rewards).
@@ -50,29 +72,66 @@ namespace GameLogic.Combat
         public event Action<string> CombatMessage;
 
         /// <summary>
-        /// Fired exactly once per combat, with true = victory, false = defeat or fled.
-        /// TODO-GODOT: subscribe to this to know when to leave the combat scene.
+        /// Fired once for each thing that happens in the fight, in order - use it to show damage
+        /// numbers, "Miss", "Critical hit", health bars moving and so on at the right moment.
+        /// TODO-GODOT: subscribe to this to drive the combat scene's visual feedback.
+        /// </summary>
+        public event Action<CombatEvent> CombatEventOccurred;
+
+        /// <summary>
+        /// Fired exactly once per combat with the result (how it ended, XP, gold, items).
+        /// TODO-GODOT: subscribe to this to show the results screen and leave the combat scene.
+        /// </summary>
+        public event Action<CombatResult> CombatFinished;
+
+        /// <summary>
+        /// Older yes/no version of CombatFinished, kept so existing callers keep working: fired
+        /// exactly once per combat, true when the party won or the opponents fled, false when
+        /// the party lost or fled. New code should use CombatFinished.
         /// </summary>
         public event Action<bool> CombatEnded;
 
         /// <summary>
-        /// True whenever combat is paused waiting for SubmitPlayerAction().
+        /// True whenever combat is paused waiting for SubmitPlayerAction() - for the party
+        /// member in CurrentActor.
         /// </summary>
         public bool IsWaitingForPlayerAction { get; private set; }
 
+        /// <summary>
+        /// Whose turn it is (null between turns and after the fight).
+        /// </summary>
+        public Entity CurrentActor { get; private set; }
+
+        public bool IsCombatActive => _combatActive;
+        public int CurrentRound => _currentRound;
+
+        /// <summary>
+        /// The result of the most recent fight (null until a fight has ended).
+        /// </summary>
+        public CombatResult LastResult { get; private set; }
+
         public Player Player => _player;
         public IReadOnlyList<Enemy> Enemies => _enemies;
+        public IReadOnlyList<Entity> Party => _party;
         public IReadOnlyList<Entity> Combatants => _allCombatants;
+
+        /// <summary>
+        /// This round's 8 turn slots in the order they act. Empty slots come last.
+        /// </summary>
+        public IReadOnlyList<TurnSlot> TurnOrder => _turnOrder;
 
         public CombatManager(RNGManager rngManager)
         {
             _rngManager = rngManager;
             _turnManager = new TurnManager();
             _damageCalculator = new DamageCalculator(rngManager);
-            _defendingEntities = new Dictionary<Entity, bool>();
+            _defendingEntities = new HashSet<Entity>();
+            _fledEnemies = new HashSet<Enemy>();
+            _directlyControlled = new HashSet<Entity>();
+            _party = new List<Entity>();
             _allCombatants = new List<Entity>();
-            _entitiesActedThisRound = new HashSet<Entity>();
             _turnQueue = new Queue<Entity>();
+            _turnOrder = new List<TurnSlot>();
             _enemies = new List<Enemy>();
             _currentRound = 0;
         }
@@ -87,132 +146,424 @@ namespace GameLogic.Combat
             CombatMessage?.Invoke(message);
         }
 
+        private void Raise(CombatEvent combatEvent)
+        {
+            combatEvent.Round = _currentRound;
+            CombatEventOccurred?.Invoke(combatEvent);
+        }
+
+        private void Raise(CombatEventType type, Entity actor = null, Entity target = null, int amount = 0, string message = null)
+        {
+            Raise(new CombatEvent { Type = type, Actor = actor, Target = target, Amount = amount, Message = message });
+        }
+
         /// <summary>
-        /// Start a combat encounter against one or more enemies. Resolves AI turns
-        /// automatically and pauses (IsWaitingForPlayerAction = true) whenever it's the
-        /// player's turn - call SubmitPlayerAction() to resume. Subscribe to CombatEnded
-        /// for the outcome.
+        /// Start a combat encounter against one or more enemies. Runs computer-controlled
+        /// turns automatically and pauses (IsWaitingForPlayerAction = true) whenever a
+        /// player-controlled party member is up - call SubmitPlayerAction() to resume.
+        /// Subscribe to CombatFinished for the outcome.
         /// </summary>
         /// <param name="player">The player character</param>
-        /// <param name="enemies">The enemy or enemies to fight</param>
-        /// <param name="companions">List of active companions (can be null or empty)</param>
+        /// <param name="enemies">The enemy or enemies to fight - built by the caller (e.g. the
+        /// overworld spawn that was touched, or the boss being challenged)</param>
+        /// <param name="companions">The party's companions (can be null or empty) - the first
+        /// three that are in the party and standing fight</param>
         /// <param name="bossManager">Optional boss manager for boss encounters</param>
         public void StartCombat(Player player, List<Enemy> enemies, List<Entity> companions = null, BossManager bossManager = null)
         {
             _player = player;
-            _enemies = enemies;
-            _combatActive = true;
+            _enemies = enemies ?? new List<Enemy>(); // Fallback only - the caller passes the enemies in
             _bossManager = bossManager;
+            _combatActive = true;
+            _partyFled = false;
+            LastResult = null;
+            IsWaitingForPlayerAction = false;
+            CurrentActor = null;
 
-            // If any of these are bosses, apply strength scaling and reset their mechanic
-            // state (so a repeat fight doesn't carry over stale grapple/charge state).
             foreach (var enemy in _enemies)
             {
                 if (enemy is BossEnemy boss)
                 {
-                    if (_bossManager != null)
-                    {
-                        _bossManager.ApplyBossScaling(boss);
-                    }
+                    // MVP (decided 2026-10-14): the old boss strength multipliers (+15% per boss
+                    // beaten, +50% per repeat fight) are switched off - boss strength is to come
+                    // from the party's level through the difficulty scaler (Bucket A #11).
+                    // Kept for a possible update/DLC:
+                    // _bossManager?.ApplyBossScaling(boss);
 
+                    // A boss is the same object every attempt - start it at full health, and
+                    // reset its mechanic so a new attempt doesn't carry over grapple/charge state.
+                    boss.Health = boss.MaxHealth;
                     boss.Mechanic?.Reset();
                 }
             }
 
-            // Setup combatants list
-            _allCombatants.Clear();
-            _allCombatants.Add(_player);
+            // The party: the player plus up to three companions who are in the party and standing
+            _party.Clear();
+            _party.Add(_player);
 
-            // Add companions that are in the party
             if (companions != null)
             {
                 foreach (var companion in companions)
                 {
-                    // Cast to NPCBase to access InParty property
-                    var npcCompanion = companion as NPCBase;
-                    if (npcCompanion != null && npcCompanion.InParty && companion.IsAlive())
+                    if (_party.Count >= MaxFightingCompanions + 1) break;
+
+                    if (companion is NPCBase npc && npc.InParty && companion.IsAlive() && !_party.Contains(companion))
                     {
-                        _allCombatants.Add(companion);
+                        _party.Add(companion);
                     }
                 }
             }
 
+            _allCombatants.Clear();
+            _allCombatants.AddRange(_party);
             _allCombatants.AddRange(_enemies);
+
+            // Nobody carries a speed change or last action over from a previous fight
+            foreach (var combatant in _allCombatants)
+            {
+                combatant.ResetSpeedModifier();
+                combatant.LastAction = Entities.CombatAction.None;
+            }
 
             // Clear tracking structures
             _defendingEntities.Clear();
-            _entitiesActedThisRound.Clear();
+            _fledEnemies.Clear();
+            _turnQueue.Clear();
+            _turnOrder = new List<TurnSlot>();
             _currentRound = 1;
 
             // Initialize turn manager (vestigial - kept for compatibility, not used to drive turns)
             _turnManager.InitializeCombat(player, _enemies.FirstOrDefault());
 
-            // Display combat start
-            ShowCombatIntro();
+            Raise(CombatEventType.CombatStarted);
+
+            if (CheckForCombatEnd()) return;
 
             BeginRound();
             AdvanceTurns();
         }
 
         /// <summary>
-        /// Submit the player's chosen action (built via CombatAction.Attack/UseAbility/UseItem/Defend/Flee -
-        /// picking which enemy to target when there's more than one) while IsWaitingForPlayerAction is
-        /// true. Resolves it, applies the player's own end-of-turn effects, then automatically advances
-        /// through any remaining AI turns until the next player decision point or combat end.
+        /// Submit the chosen action for CurrentActor (built via CombatAction.Attack/UseAbility/
+        /// UseItem/Defend/Flee) while IsWaitingForPlayerAction is true. The action is checked
+        /// first (see ValidateAction) - a refused action changes nothing, raises ActionRejected
+        /// and returns false, and combat keeps waiting. An accepted action is resolved, then
+        /// computer-controlled turns run until the next player decision or the end of the fight.
         /// TODO-GODOT: call this from the combat scene when the player confirms an action.
         /// </summary>
-        public void SubmitPlayerAction(CombatAction action)
+        public bool SubmitPlayerAction(CombatAction action)
         {
-            if (!IsWaitingForPlayerAction) return;
+            if (!_combatActive || !IsWaitingForPlayerAction)
+            {
+                RejectAction("Combat is not waiting for an action right now.");
+                return false;
+            }
 
+            if (!ValidateAction(action, out string reason))
+            {
+                RejectAction(reason);
+                return false;
+            }
+
+            var actor = CurrentActor;
             IsWaitingForPlayerAction = false;
 
-            ProcessAction(action);
+            RunAction(action);
 
-            if (FinishTurn(_player)) return;
+            if (FinishTurn(actor)) return true;
 
             AdvanceTurns();
+            return true;
         }
 
-        /// <summary>
-        /// Display combat introduction
-        /// </summary>
-        private void ShowCombatIntro()
+        private void RejectAction(string reason)
         {
-            Console.Clear();
-            Log("=".PadRight(50, '='));
-            Log($"    COMBAT: {_player.Name} vs {string.Join(", ", _enemies.Select(e => e.Name))}");
-            Log("=".PadRight(50, '='));
-
-            // Show party composition
-            Log($"\nYour Party:");
-            Log($"  {_player.Name} (Level {_player.Level}) - HP: {_player.Health}/{_player.MaxHealth}");
-
-            foreach (var entity in _allCombatants)
-            {
-                if (entity is Entities.NPCs.Companions.CompanionBase companion && entity != _player)
-                {
-                    Log($"  {companion.Name} (Level {companion.Level}) - HP: {companion.Health}/{companion.MaxHealth}");
-                }
-            }
-
-            Log($"\nEnemies:");
-            foreach (var enemy in _enemies)
-            {
-                Log($"  {enemy.Name} (Level {enemy.Level}) - HP: {enemy.Health}/{enemy.MaxHealth}");
-            }
-            Log("");
+            Log(reason);
+            Raise(CombatEventType.ActionRejected, CurrentActor, message: reason);
         }
 
         /// <summary>
-        /// Get the effective speed for an entity, accounting for Swift Tactics if applicable
+        /// Check an action before it is used: it must be the actor's turn, the target must be
+        /// valid for the action, an ability must be off cooldown and activatable, an item must
+        /// be in the party bag, and fleeing is refused in boss fights. Fills in an obvious
+        /// missing target (yourself, for a self-only ability or a potion). Returns false with
+        /// the reason when the action can't be used.
+        /// </summary>
+        public bool ValidateAction(CombatAction action, out string reason)
+        {
+            reason = null;
+
+            if (action == null || action.Actor == null)
+            {
+                reason = "No action was chosen.";
+                return false;
+            }
+
+            if (action.Actor != CurrentActor)
+            {
+                reason = $"It is not {action.Actor.Name}'s turn.";
+                return false;
+            }
+
+            switch (action.Type)
+            {
+                case ActionType.Attack:
+                    if (!GetValidTargets(action.Actor, ActionType.Attack).Contains(action.Target))
+                    {
+                        reason = "Choose an enemy that is still in the fight to attack.";
+                        return false;
+                    }
+                    return true;
+
+                case ActionType.UseAbility:
+                    var ability = GetAbility(action.Actor);
+                    if (ability == null)
+                    {
+                        reason = $"{action.Actor.Name} has no ability to use.";
+                        return false;
+                    }
+                    if (action.Ability != null && action.Ability != ability)
+                    {
+                        reason = $"{action.Actor.Name} does not have {action.Ability.Name}.";
+                        return false;
+                    }
+                    if (ability.IsPassive)
+                    {
+                        reason = $"{ability.Name} is a passive ability - it is always on and can't be used as an action.";
+                        return false;
+                    }
+                    if (ability.IsOnCooldown())
+                    {
+                        reason = $"{ability.Name} is on cooldown ({ability.CurrentCooldown} more round{(ability.CurrentCooldown == 1 ? "" : "s")}).";
+                        return false;
+                    }
+
+                    action.Ability = ability;
+                    if (action.Target == null && ability.TargetType == AbilityTarget.Self)
+                    {
+                        action.Target = action.Actor;
+                    }
+                    if (!GetValidTargets(action.Actor, ActionType.UseAbility).Contains(action.Target))
+                    {
+                        reason = $"Choose a valid target for {ability.Name}.";
+                        return false;
+                    }
+                    return true;
+
+                case ActionType.UseItem:
+                    if (action.Item is not Items.Consumable consumable || !IsUsableInCombat(consumable))
+                    {
+                        reason = $"{action.Item?.Name ?? "That item"} can't be used in a fight.";
+                        return false;
+                    }
+                    if (consumable.Quantity <= 0 || !_player.Inventory.Items.Contains(consumable))
+                    {
+                        reason = $"The party has no {consumable.Name} left.";
+                        return false;
+                    }
+
+                    // Potions default to the user; a revive needs a chosen fallen party member
+                    if (action.Target == null && consumable.Type != Items.ConsumableType.RevivePotion)
+                    {
+                        action.Target = action.Actor;
+                    }
+                    if (!GetValidTargets(action.Actor, ActionType.UseItem, consumable).Contains(action.Target))
+                    {
+                        reason = consumable.Type == Items.ConsumableType.RevivePotion
+                            ? "Choose a fallen party member to revive."
+                            : $"Choose a party member who is still standing to use {consumable.Name} on.";
+                        return false;
+                    }
+                    return true;
+
+                case ActionType.Flee:
+                    if (IsBossFight())
+                    {
+                        reason = "There's no running from this fight!";
+                        return false;
+                    }
+                    return true;
+
+                case ActionType.Defend:
+                    return true;
+
+                default:
+                    reason = "Choose an action.";
+                    return false;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // What a combat screen can ask
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Who the actor may target with this action - opponents for attacks, standing party
+        /// members for potions and support abilities, fallen party members for revives.
+        /// An empty list means the action can't be used right now (grey out the button).
+        /// </summary>
+        public List<Entity> GetValidTargets(Entity actor, ActionType actionType, Items.Item item = null)
+        {
+            var targets = new List<Entity>();
+            if (actor == null) return targets;
+
+            switch (actionType)
+            {
+                case ActionType.Attack:
+                    targets.AddRange(GetOpponents(actor));
+                    break;
+
+                case ActionType.UseAbility:
+                    var ability = GetAbility(actor);
+                    if (ability == null) break;
+
+                    switch (ability.TargetType)
+                    {
+                        case AbilityTarget.Self:
+                            targets.Add(actor);
+                            break;
+                        case AbilityTarget.SingleAlly:
+                        case AbilityTarget.Ally:
+                        case AbilityTarget.AllAllies:
+                            targets.AddRange(GetAllies(actor));
+                            break;
+                        default:
+                            targets.AddRange(GetOpponents(actor));
+                            break;
+                    }
+                    break;
+
+                case ActionType.UseItem:
+                    if (item is Items.Consumable consumable && IsUsableInCombat(consumable))
+                    {
+                        if (consumable.Type == Items.ConsumableType.RevivePotion)
+                            targets.AddRange(GetFallenAllies(actor));
+                        else
+                            targets.AddRange(GetAllies(actor));
+                    }
+                    break;
+            }
+
+            return targets;
+        }
+
+        /// <summary>
+        /// The ability this combatant can use in a fight (the player's chosen ability, a
+        /// companion's unique ability, an enemy's special ability), or null.
+        /// </summary>
+        public Ability GetAbility(Entity combatant)
+        {
+            return combatant switch
+            {
+                Entities.Player.Player player => player.SelectedAbility,
+                CompanionBase companion => companion.UniqueAbility,
+                Enemy enemy => enemy.SpecialAbility,
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// True when the combatant's ability can be used as an action right now.
+        /// </summary>
+        public bool CanUseAbility(Entity combatant)
+        {
+            var ability = GetAbility(combatant);
+            return ability != null
+                && !ability.IsPassive
+                && !ability.IsOnCooldown()
+                && GetValidTargets(combatant, ActionType.UseAbility).Count > 0;
+        }
+
+        /// <summary>
+        /// The consumables in the shared party bag that can be used in a fight.
+        /// </summary>
+        public List<Items.Consumable> GetUsableItems()
+        {
+            if (_player == null) return new List<Items.Consumable>();
+
+            return _player.Inventory.Items
+                .OfType<Items.Consumable>()
+                .Where(item => item.Quantity > 0 && IsUsableInCombat(item))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Bombs are no longer combat items (decided 2026-10-14) - any still in the item list
+        /// can't be used in a fight.
+        /// </summary>
+        private static bool IsUsableInCombat(Items.Consumable consumable)
+        {
+            return consumable.Type != Items.ConsumableType.Bomb;
+        }
+
+        public bool IsPartyMember(Entity combatant) => _party.Contains(combatant);
+
+        /// <summary>
+        /// True while the combatant is defending (until their next turn comes).
+        /// </summary>
+        public bool IsDefending(Entity combatant) => _defendingEntities.Contains(combatant);
+
+        /// <summary>
+        /// True when an enemy has fled the fight.
+        /// </summary>
+        public bool HasFled(Entity combatant) => combatant is Enemy enemy && _fledEnemies.Contains(enemy);
+
+        /// <summary>
+        /// True when the combatant is down or has fled.
+        /// </summary>
+        public bool IsOutOfFight(Entity combatant) => !combatant.IsAlive() || HasFled(combatant);
+
+        /// <summary>
+        /// True when a boss is among the enemies - the party can't flee (decided 2026-10-14).
+        /// </summary>
+        public bool IsBossFight() => _enemies.Any(e => e is BossEnemy);
+
+        /// <summary>
+        /// The party's chance (1-100) to escape right now: the lowest flee chance among the
+        /// enemies still standing - the hardest enemy to get away from decides (decided
+        /// 2026-10-14). 0 in a boss fight.
+        /// </summary>
+        public int GetPartyFleeChance()
+        {
+            if (IsBossFight()) return 0;
+
+            var activeEnemies = GetActiveEnemies();
+            return activeEnemies.Count == 0 ? 100 : activeEnemies.Min(e => e.FleeChance);
+        }
+
+        /// <summary>
+        /// Switch a companion between direct control (the player chooses their actions, and
+        /// combat waits for them like it does for the player) and computer control. Stays set
+        /// between fights. Takes effect from the companion's next turn.
+        /// TODO-GODOT: call this from the companion control toggle in the combat scene.
+        /// </summary>
+        public void SetDirectControl(Entity companion, bool playerControls)
+        {
+            if (companion is not CompanionBase) return;
+
+            if (playerControls)
+                _directlyControlled.Add(companion);
+            else
+                _directlyControlled.Remove(companion);
+        }
+
+        public bool IsDirectlyControlled(Entity companion) => _directlyControlled.Contains(companion);
+
+        // ------------------------------------------------------------------
+        // Rounds and turns
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// The speed an entity acts at this round. Worked out fresh at the start of every round:
+        /// base speed, plus the change from their last action, plus Swift Tactics for companions,
+        /// minus any slow that is still active (e.g. Skarn's grapple - gone once the effect ends).
         /// </summary>
         private int GetEntityEffectiveSpeed(Entity entity)
         {
             int speed;
 
             // Check if entity is a companion
-            if (entity is Entities.NPCs.Companions.CompanionBase companion)
+            if (entity is CompanionBase companion)
             {
                 // Use companion's version that applies Swift Tactics
                 speed = companion.GetEffectiveSpeed(_player);
@@ -236,7 +587,7 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Begin a new round - sort turn order, fill the turn queue, and reset per-round tracking.
+        /// Begin a new round - build the 8 turn slots and fill the turn queue.
         /// </summary>
         private void BeginRound()
         {
@@ -244,80 +595,110 @@ namespace GameLogic.Combat
             Log($"           ROUND {_currentRound}");
             Log("=".PadRight(50, '='));
 
-            // Clear entities that acted this round
-            _entitiesActedThisRound.Clear();
-
-            // Sort combatants by effective speed (base speed + modifier + Swift Tactics) - highest to lowest
-            // Entities with higher speed act first in the turn order
-            _allCombatants.Sort((a, b) =>
-            {
-                int speedA = GetEntityEffectiveSpeed(a);
-                int speedB = GetEntityEffectiveSpeed(b);
-                return speedB.CompareTo(speedA);
-            });
+            _turnOrder = BuildTurnOrder();
 
             // Display turn order for this round
             Log("\nTurn Order (by Speed):");
-            foreach (var entity in _allCombatants)
+            foreach (var slot in _turnOrder)
             {
-                if (entity.IsAlive())
-                {
-                    int effectiveSpeed = GetEntityEffectiveSpeed(entity);
-                    string modifierText = entity.SpeedModifier != 0 ? $" ({entity.Speed}{(entity.SpeedModifier > 0 ? "+" : "")}{entity.SpeedModifier})" : "";
+                if (slot.IsEmpty) continue;
 
-                    // Show Swift Tactics bonus for companions
-                    if (entity is Entities.NPCs.Companions.CompanionBase && _player.SelectedAbility is Abilities.SwiftTacticsAbility swiftTactics)
-                    {
-                        int baseSpeed = entity.Speed + entity.SpeedModifier;
-                        int speedBonus = effectiveSpeed - baseSpeed;
-                        if (speedBonus > 0)
-                        {
-                            modifierText += $" [+{speedBonus} Swift Tactics]";
-                        }
-                    }
-
-                    Log($"  {entity.Name} (Speed: {effectiveSpeed}{modifierText})");
-                }
+                string names = string.Join(" + ", slot.Members.Select(m => m.Name));
+                string downText = slot.Members.All(m => !m.IsAlive()) ? " - down" : "";
+                Log($"  {names} (Speed: {slot.Speed}){downText}");
             }
             Log("");
 
-            // Reset defend status for all entities at start of new round
-            foreach (var entity in _allCombatants)
+            // Fill the turn queue slot by slot. Fallen party members are queued too: if they
+            // are revived before their slot comes up, they act this round.
+            _turnQueue.Clear();
+            foreach (var slot in _turnOrder)
             {
-                if (_defendingEntities.ContainsKey(entity))
+                foreach (var member in slot.Members)
                 {
-                    _defendingEntities[entity] = false;
+                    _turnQueue.Enqueue(member);
                 }
             }
 
-            // Fill the turn queue in speed order (dead entities are queued too, matching
-            // the old behavior of skipping them at the point their turn comes up - this
-            // preserves "revived mid-round" semantics: an entity gets to act this round
-            // only if their queue position hasn't been reached yet)
-            _turnQueue.Clear();
-            foreach (var entity in _allCombatants)
-            {
-                _turnQueue.Enqueue(entity);
-            }
+            Raise(CombatEventType.RoundStarted);
         }
 
         /// <summary>
-        /// Resolve entities' turns automatically (AI-controlled) until the queue is
-        /// empty (round ends, next round begins), combat ends, or it's the player's
-        /// turn - at which point this returns and waits for SubmitPlayerAction().
+        /// Build this round's 8 turn slots (decided 2026-10-12):
+        /// - The party has 4 slots, one per member (player + up to 3 companions).
+        /// - The opponents have 4 slots, however many enemies there are. With more than 4,
+        ///   enemies are sorted by speed and spread evenly; the fastest keep a slot to
+        ///   themselves and the extras go to the slowest slots first (5 enemies: 1,1,1,2;
+        ///   8: 2,2,2,2). A shared slot acts at its members' average speed, rounded up.
+        /// - Slots act fastest first. Ties are broken at random (my default - not decided).
+        /// - Unused slots are empty, placed last, and skipped.
+        /// </summary>
+        private List<TurnSlot> BuildTurnOrder()
+        {
+            var slots = new List<TurnSlot>();
+
+            foreach (var member in _party)
+            {
+                slots.Add(new TurnSlot(true, new List<Entity> { member }, GetEntityEffectiveSpeed(member)));
+            }
+
+            var activeEnemies = GetActiveEnemies().Cast<Entity>().ToList();
+            var enemyTieBreak = activeEnemies.ToDictionary(e => e, e => _rngManager.Roll(1, 1000000));
+            var sortedEnemies = activeEnemies
+                .OrderByDescending(e => GetEntityEffectiveSpeed(e))
+                .ThenBy(e => enemyTieBreak[e])
+                .ToList();
+
+            int enemyCount = sortedEnemies.Count;
+            int baseSize = enemyCount / SlotsPerSide;
+            int extras = enemyCount % SlotsPerSide;
+            int enemySlotCount = 0;
+            int index = 0;
+
+            for (int i = 0; i < SlotsPerSide && index < enemyCount; i++)
+            {
+                int size = enemyCount <= SlotsPerSide
+                    ? 1
+                    : baseSize + (i >= SlotsPerSide - extras ? 1 : 0);
+
+                var members = sortedEnemies.GetRange(index, size);
+                index += size;
+
+                int speed = (int)Math.Ceiling(members.Average(m => (double)GetEntityEffectiveSpeed(m)));
+                slots.Add(new TurnSlot(false, members, speed));
+                enemySlotCount++;
+            }
+
+            var slotTieBreak = slots.ToDictionary(s => s, s => _rngManager.Roll(1, 1000000));
+            var ordered = slots
+                .OrderByDescending(s => s.Speed)
+                .ThenBy(s => slotTieBreak[s])
+                .ToList();
+
+            for (int i = _party.Count; i < SlotsPerSide; i++)
+            {
+                ordered.Add(new TurnSlot(true, new List<Entity>(), 0));
+            }
+            for (int i = enemySlotCount; i < SlotsPerSide; i++)
+            {
+                ordered.Add(new TurnSlot(false, new List<Entity>(), 0));
+            }
+
+            return ordered;
+        }
+
+        /// <summary>
+        /// Resolve turns until a player-controlled party member is up (returns and waits for
+        /// SubmitPlayerAction()) or the fight ends. Starts the next round when this one is done.
         /// </summary>
         private void AdvanceTurns()
         {
-            while (true)
+            while (_combatActive)
             {
                 if (_turnQueue.Count == 0)
                 {
                     EndRound();
-                    if (!_combatActive)
-                    {
-                        CombatEnded?.Invoke(false);
-                        return;
-                    }
+                    if (CheckForCombatEnd()) return;
 
                     _currentRound++;
                     BeginRound();
@@ -326,18 +707,31 @@ namespace GameLogic.Combat
 
                 var entity = _turnQueue.Dequeue();
 
-                if (!entity.IsAlive() || _entitiesActedThisRound.Contains(entity))
+                // Defend lasts until the defender's next turn - it ends when that turn comes,
+                // even if they can't act on it (decided 2026-10-12, skip rule 2026-10-14)
+                EndDefend(entity);
+
+                if (IsOutOfFight(entity))
                 {
+                    if (IsPartyMember(entity))
+                    {
+                        Log($"\n{entity.Name} is down and can't act.");
+                        Raise(CombatEventType.TurnSkipped, entity);
+                    }
                     continue;
                 }
 
-                if (entity == _player)
+                CurrentActor = entity;
+                Raise(CombatEventType.TurnStarted, entity);
+
+                if (entity == _player || _directlyControlled.Contains(entity))
                 {
                     Log($"\n{entity.Name}'s Turn!");
-                    Log($"Your HP: {_player.Health}/{_player.MaxHealth}");
-                    Log($"Enemies: {string.Join(", ", _enemies.Where(e => e.IsAlive()).Select(e => $"{e.Name} ({e.Health}/{e.MaxHealth})"))}");
+                    Log($"{entity.Name}'s HP: {entity.Health}/{entity.MaxHealth}");
+                    Log($"Enemies: {string.Join(", ", GetActiveEnemies().Select(e => $"{e.Name} ({e.Health}/{e.MaxHealth})"))}");
 
                     IsWaitingForPlayerAction = true;
+                    Raise(CombatEventType.WaitingForInput, entity);
                     return;
                 }
 
@@ -347,48 +741,62 @@ namespace GameLogic.Combat
             }
         }
 
+        private void EndDefend(Entity entity)
+        {
+            if (_defendingEntities.Remove(entity))
+            {
+                Raise(CombatEventType.DefendEnded, entity);
+            }
+        }
+
         /// <summary>
-        /// Apply an entity's end-of-turn status effects (poison/bleed/etc. tick here now,
-        /// not at turn start), mark them as having acted, and check whether combat ended
-        /// as a result. Returns true if combat ended (caller should stop advancing turns).
+        /// Apply an entity's end-of-turn status effects (poison/bleed/etc. tick here),
+        /// then check whether combat ended. Returns true if it did (stop advancing turns).
         /// </summary>
         private bool FinishTurn(Entity entity)
         {
-            _entitiesActedThisRound.Add(entity);
+            CurrentActor = null;
 
-            entity.ProcessEffects(_rngManager);
-
-            if (!entity.IsAlive())
+            if (entity.IsAlive() && !HasFled(entity))
             {
-                Log($"{entity.Name} succumbed to a status effect!");
+                var before = TakeSnapshot();
+                entity.ProcessEffects(_rngManager);
+                ReportChanges(before);
+
+                if (!entity.IsAlive())
+                {
+                    Log($"{entity.Name} succumbed to a status effect!");
+                }
             }
 
             return CheckForCombatEnd();
         }
 
         /// <summary>
-        /// Check whether combat has ended (victory/defeat/fled) and, if so, resolve
-        /// rewards/cleanup and fire CombatEnded.
+        /// End the fight if one side is out: every enemy down or fled (won / opponent fled),
+        /// the whole party down (lost), or the party escaped. Returns true if the fight ended.
+        /// The fight goes on while anyone in the party is standing (decided 2026-10-14).
         /// </summary>
         private bool CheckForCombatEnd()
         {
-            if (_enemies.All(e => !e.IsAlive()))
+            if (!_combatActive) return true;
+
+            if (_partyFled)
             {
-                HandleVictory();
-                CombatEnded?.Invoke(true);
+                EndCombat(CombatOutcome.PartyFled);
                 return true;
             }
 
-            if (_player.Health <= 0)
+            if (GetActiveEnemies().Count == 0)
             {
-                HandleDefeat();
-                CombatEnded?.Invoke(false);
+                bool anyDefeated = _enemies.Count == 0 || _enemies.Any(e => !_fledEnemies.Contains(e));
+                EndCombat(anyDefeated ? CombatOutcome.Won : CombatOutcome.OpponentFled);
                 return true;
             }
 
-            if (!_combatActive)
+            if (_party.All(member => !member.IsAlive()))
             {
-                CombatEnded?.Invoke(false);
+                EndCombat(CombatOutcome.Lost);
                 return true;
             }
 
@@ -396,20 +804,20 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Execute a turn for the given (non-player) entity
+        /// Execute a turn for a computer-controlled entity (an enemy, or a companion on auto)
         /// </summary>
         private void ExecuteEntityTurn(Entity entity)
         {
             Log($"\n{entity.Name}'s Turn!");
 
-            if (entity is Enemy enemy)
+            CombatAction action = entity switch
             {
-                EnemyTurn(enemy);
-            }
-            else if (entity is Entities.NPCs.Companions.CompanionBase companion)
-            {
-                CompanionTurn(companion);
-            }
+                Enemy enemy => DetermineEnemyAction(enemy),
+                CompanionBase companion => DetermineCompanionAction(companion),
+                _ => CombatAction.None(entity)
+            };
+
+            RunAction(action);
         }
 
         /// <summary>
@@ -425,7 +833,7 @@ namespace GameLogic.Combat
 
             foreach (var entity in _allCombatants)
             {
-                if (!entity.IsAlive())
+                if (IsOutOfFight(entity))
                     continue;
 
                 int modifier = 0;
@@ -486,8 +894,9 @@ namespace GameLogic.Combat
             // Calculate speed modifiers for next round based on actions taken
             CalculateSpeedModifiers();
 
-            // Tick down effect durations for all entities (duration only - effects were
-            // already applied at each entity's own end-of-turn this round)
+            // Tick down effect durations (duration only - effects were already applied at
+            // each entity's own end-of-turn this round)
+            var before = TakeSnapshot();
             foreach (var entity in _allCombatants)
             {
                 if (entity.IsAlive())
@@ -497,7 +906,7 @@ namespace GameLogic.Combat
             }
 
             // Check for Iron Will passive ability cleanse (after effects tick, before next round)
-            if (_player.IsAlive() && _player.SelectedAbility is Abilities.IronWillAbility ironWill)
+            if (_player.IsAlive() && _player.SelectedAbility is IronWillAbility ironWill)
             {
                 // Check if player has any negative effects to cleanse
                 if (_player.ActiveEffects.Any(e =>
@@ -512,105 +921,58 @@ namespace GameLogic.Combat
                     }
                 }
             }
+            ReportChanges(before);
 
-            // Reduce ability cooldowns for all entities at end of round
-            if (_player.SelectedAbility != null && _player.SelectedAbility.CurrentCooldown > 0)
+            // Reduce ability cooldowns for everyone at end of round
+            foreach (var combatant in _allCombatants)
             {
-                _player.SelectedAbility.CurrentCooldown--;
-            }
-
-            foreach (var enemy in _enemies)
-            {
-                if (enemy.SpecialAbility != null && enemy.SpecialAbility.CurrentCooldown > 0)
+                var ability = GetAbility(combatant);
+                if (ability != null && ability.CurrentCooldown > 0)
                 {
-                    enemy.SpecialAbility.CurrentCooldown--;
-                }
-            }
-
-            // Reduce companion ability cooldowns
-            foreach (var entity in _allCombatants)
-            {
-                if (entity is Entities.NPCs.Companions.CompanionBase companion)
-                {
-                    if (companion.UniqueAbility != null && companion.UniqueAbility.CurrentCooldown > 0)
-                    {
-                        companion.UniqueAbility.CurrentCooldown--;
-                    }
+                    ability.CurrentCooldown--;
                 }
             }
         }
 
-        /// <summary>
-        /// Handle a specific enemy's turn
-        /// Uses AI to decide action based on that enemy's behavior and situation
-        /// </summary>
-        private void EnemyTurn(Enemy enemy)
-        {
-            // Determine action based on enemy behavior and situation
-            CombatAction action = DetermineEnemyAction(enemy);
-
-            ProcessAction(action);
-        }
+        // ------------------------------------------------------------------
+        // Computer-controlled decisions
+        // ------------------------------------------------------------------
 
         /// <summary>
-        /// Handle a companion's turn
-        /// Uses companion AI to decide action
+        /// Decide a computer-controlled companion's action. Companions on auto never flee -
+        /// they fight until the party wins or they go down (decided 2026-10-14). Only a
+        /// companion under the player's direct control can choose Flee.
         /// </summary>
-        private void CompanionTurn(Entity companion)
+        private CombatAction DetermineCompanionAction(CompanionBase companion)
         {
             Log($"{companion.Name}'s HP: {companion.Health}/{companion.MaxHealth}");
-
-            // Cast to CompanionBase to access companion-specific methods
-            var companionBase = companion as CompanionBase;
-            if (companionBase == null)
-            {
-                // Fallback: basic attack if not a proper companion
-                Log($"{companion.Name} attacks!");
-                companion.LastAction = Entities.CombatAction.Attack;
-                return;
-            }
 
             // Pick which enemy this companion engages (lowest-HP living enemy)
             Enemy target = SelectCompanionAttackTarget();
             if (target == null)
             {
-                // No living enemies to act against (shouldn't happen if combat is still active)
-                return;
+                return CombatAction.None(companion);
             }
 
             // Use companion AI to decide action: 0 = Attack, 1 = Ability, 2 = Defend
-            int actionDecision = companionBase.DecideCombatAction(target, _rngManager);
+            int actionDecision = companion.DecideCombatAction(target, _rngManager);
 
             switch (actionDecision)
             {
-                case 1: // Use Ability
-                    if (companionBase.UniqueAbility != null && !companionBase.UniqueAbility.IsOnCooldown())
+                case 1: // Use Ability (falls back to attacking if it can't be used)
+                    var ability = companion.UniqueAbility;
+                    if (ability != null && !ability.IsPassive && !ability.IsOnCooldown())
                     {
-                        Log($"{companionBase.Name} uses {companionBase.UniqueAbility.Name}!");
-                        companionBase.UniqueAbility.Execute(companionBase, target, _rngManager);
-                        companion.LastAction = Entities.CombatAction.UseAbility;
+                        return CombatAction.UseAbility(companion, ability, ResolveAbilityTarget(companion, ability, target));
                     }
-                    else
-                    {
-                        // Fallback to attack if ability not available
-                        Log($"{companionBase.Name} attacks!");
-                        companionBase.AttackEnemy(target, _damageCalculator, _rngManager, _player);
-                        companion.LastAction = Entities.CombatAction.Attack;
-                    }
-                    break;
+                    return CombatAction.Attack(companion, target);
 
                 case 2: // Defend
-                    Log($"{companionBase.Name} takes a defensive stance!");
-                    _defendingEntities[companion] = true;
-                    companion.LastAction = Entities.CombatAction.Defend;
-                    break;
+                    return CombatAction.Defend(companion);
 
                 case 0: // Attack
                 default:
-                    Log($"{companionBase.Name} attacks!");
-                    companionBase.AttackEnemy(target, _damageCalculator, _rngManager, _player);
-                    companion.LastAction = Entities.CombatAction.Attack;
-                    break;
+                    return CombatAction.Attack(companion, target);
             }
         }
 
@@ -620,22 +982,27 @@ namespace GameLogic.Combat
         /// </summary>
         private Enemy SelectCompanionAttackTarget()
         {
-            Enemy target = null;
-            float lowestHealthPercent = float.MaxValue;
+            return MostWounded(GetActiveEnemies().Cast<Entity>().ToList()) as Enemy;
+        }
 
-            foreach (var enemy in _enemies)
+        /// <summary>
+        /// Who an ability is aimed at: the user for self abilities, the most wounded ally for
+        /// support abilities (e.g. Divine Light heals the party, not the enemy), otherwise the
+        /// chosen opponent.
+        /// </summary>
+        private Entity ResolveAbilityTarget(Entity user, Ability ability, Entity opponentTarget)
+        {
+            switch (ability.TargetType)
             {
-                if (!enemy.IsAlive()) continue;
-
-                float healthPercent = (float)enemy.Health / enemy.MaxHealth;
-                if (target == null || healthPercent < lowestHealthPercent)
-                {
-                    lowestHealthPercent = healthPercent;
-                    target = enemy;
-                }
+                case AbilityTarget.Self:
+                    return user;
+                case AbilityTarget.SingleAlly:
+                case AbilityTarget.Ally:
+                case AbilityTarget.AllAllies:
+                    return MostWounded(GetAllies(user)) ?? user;
+                default:
+                    return opponentTarget;
             }
-
-            return target;
         }
 
         /// <summary>
@@ -650,8 +1017,12 @@ namespace GameLogic.Combat
             bool canUseAbility = enemy.SpecialAbility != null &&
                                  enemy.SpecialAbility.CurrentCooldown <= 0;
 
-            // Select target - enemies can target player or companions
+            // Select target - enemies can target the player or companions
             Entity target = SelectEnemyTarget();
+            if (target == null)
+            {
+                return CombatAction.None(enemy);
+            }
 
             // A boss's own unique mechanic (if any) gets first say - falls back to the
             // generic Behavior-based logic below if it returns null.
@@ -671,15 +1042,15 @@ namespace GameLogic.Combat
             // Decision logic based on behavior type
             switch (enemy.Behavior)
             {
-                case Entities.Enemies.EnemyBehavior.Aggressive:
+                case EnemyBehavior.Aggressive:
                     // Always attack, use ability when available
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 70)
                     {
-                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
+                        return EnemyAbilityAction(enemy, target);
                     }
                     return CombatAction.Attack(enemy, target);
 
-                case Entities.Enemies.EnemyBehavior.Defensive:
+                case EnemyBehavior.Defensive:
                     // Defend when low on health
                     if (healthPercent < 0.3f && _rngManager.Roll(1, 100) <= 60)
                     {
@@ -687,15 +1058,15 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 40)
                     {
-                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
+                        return EnemyAbilityAction(enemy, target);
                     }
                     return CombatAction.Attack(enemy, target);
 
-                case Entities.Enemies.EnemyBehavior.Tactical:
+                case EnemyBehavior.Tactical:
                     // Use abilities strategically
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 80)
                     {
-                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
+                        return EnemyAbilityAction(enemy, target);
                     }
                     if (healthPercent < 0.25f && _rngManager.Roll(1, 100) <= 50)
                     {
@@ -703,15 +1074,15 @@ namespace GameLogic.Combat
                     }
                     return CombatAction.Attack(enemy, target);
 
-                case Entities.Enemies.EnemyBehavior.Berserker:
+                case EnemyBehavior.Berserker:
                     // Always attack, rarely defend, use abilities aggressively
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 90)
                     {
-                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
+                        return EnemyAbilityAction(enemy, target);
                     }
                     return CombatAction.Attack(enemy, target);
 
-                case Entities.Enemies.EnemyBehavior.Cautious:
+                case EnemyBehavior.Cautious:
                     // Defend frequently when low health, flee if very low
                     if (healthPercent < 0.15f && _rngManager.Roll(1, 100) <= 30)
                     {
@@ -723,11 +1094,11 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 50)
                     {
-                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
+                        return EnemyAbilityAction(enemy, target);
                     }
                     return CombatAction.Attack(enemy, target);
 
-                case Entities.Enemies.EnemyBehavior.Balanced:
+                case EnemyBehavior.Balanced:
                 default:
                     // Mix of all actions
                     if (healthPercent < 0.3f && _rngManager.Roll(1, 100) <= 40)
@@ -736,59 +1107,50 @@ namespace GameLogic.Combat
                     }
                     if (canUseAbility && _rngManager.Roll(1, 100) <= 60)
                     {
-                        return CombatAction.UseAbility(enemy, enemy.SpecialAbility, target);
+                        return EnemyAbilityAction(enemy, target);
                     }
                     return CombatAction.Attack(enemy, target);
             }
         }
 
+        private CombatAction EnemyAbilityAction(Enemy enemy, Entity target)
+        {
+            return CombatAction.UseAbility(enemy, enemy.SpecialAbility, ResolveAbilityTarget(enemy, enemy.SpecialAbility, target));
+        }
+
         /// <summary>
-        /// Select a target for an attacking enemy
-        /// Prioritizes low health targets and wounded allies
+        /// Select a target for an enemy - 70% the most wounded standing party member,
+        /// 30% a random standing party member.
         /// </summary>
         private Entity SelectEnemyTarget()
         {
-            // Get all alive allies (player + companions)
-            var aliveAllies = new List<Entity> { _player };
-            foreach (var entity in _allCombatants)
-            {
-                if (entity is Entities.NPCs.Companions.CompanionBase companion && companion.IsAlive())
-                {
-                    aliveAllies.Add(companion);
-                }
-            }
+            var livingParty = GetLivingParty();
 
-            if (aliveAllies.Count == 1)
-            {
-                // Only player alive, target them
-                return _player;
-            }
+            if (livingParty.Count == 0) return null;
+            if (livingParty.Count == 1) return livingParty[0];
 
-            // Tactical enemy behavior - 70% chance to target wounded allies
             if (_rngManager.Roll(1, 100) <= 70)
             {
-                // Find the most wounded ally
-                Entity mostWounded = _player;
-                float lowestHealthPercent = (float)_player.Health / _player.MaxHealth;
-
-                foreach (var ally in aliveAllies)
-                {
-                    float healthPercent = (float)ally.Health / ally.MaxHealth;
-                    if (healthPercent < lowestHealthPercent)
-                    {
-                        lowestHealthPercent = healthPercent;
-                        mostWounded = ally;
-                    }
-                }
-
-                return mostWounded;
+                return MostWounded(livingParty);
             }
-            else
-            {
-                // 30% chance to target randomly
-                int randomIndex = _rngManager.Roll(0, aliveAllies.Count - 1);
-                return aliveAllies[randomIndex];
-            }
+
+            int randomIndex = _rngManager.Roll(0, livingParty.Count - 1);
+            return livingParty[randomIndex];
+        }
+
+        // ------------------------------------------------------------------
+        // Resolving actions
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Resolve an action and report every change it caused (damage, healing, effects,
+        /// defeats, revives) as combat events.
+        /// </summary>
+        private void RunAction(CombatAction action)
+        {
+            var before = TakeSnapshot();
+            ProcessAction(action);
+            ReportChanges(before);
         }
 
         /// <summary>
@@ -822,141 +1184,98 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Process an attack action
+        /// Process an attack - the same rules for every attacker and target (DamageCalculator
+        /// .CalculateAttack): hit roll, damage, crit, the target's defense, then defending and
+        /// the Evasion ability.
         /// </summary>
         private void ProcessAttack(CombatAction action)
         {
-            Log($"\n{action.Actor.Name} attacks {action.Target.Name}!");
+            var attacker = action.Actor;
+            var target = action.Target;
 
             // Track action for speed modifier calculation
-            action.Actor.LastAction = Entities.CombatAction.Attack;
+            attacker.LastAction = Entities.CombatAction.Attack;
 
-            DamageResult result;
-
-            // Calculate damage based on attacker and target types
-            if (action.Actor == _player)
+            if (target == null || IsOutOfFight(target))
             {
-                // Player attacking a specific enemy (action.Target, not a shared field - there
-                // can be several enemies now)
-                var targetEnemy = (Enemy)action.Target;
-                result = _damageCalculator.CalculatePlayerAttackDamage(_player, targetEnemy);
-
-                // Check if player is unarmed
-                if (_player.EquippedWeapon == null)
-                {
-                    Log("(Fighting unarmed - find a weapon!)");
-                }
-
-                // Apply defense reduction if the targeted enemy is defending
-                if (_defendingEntities.ContainsKey(targetEnemy) && _defendingEntities[targetEnemy])
-                {
-                    int damageReduction = result.FinalDamage / 2;
-                    result.FinalDamage -= damageReduction;
-                    Log($"{targetEnemy.Name}'s defensive stance reduced damage by {damageReduction}!");
-                }
-            }
-            else if (action.Actor is Entities.NPCs.Companions.CompanionBase)
-            {
-                // Companion already handles their own attack in CompanionTurn
-                // This shouldn't be reached, but handle it anyway
+                Log($"\n{attacker.Name} has no one to attack!");
                 return;
             }
-            else
+
+            Log($"\n{attacker.Name} attacks {target.Name}!");
+
+            if (attacker == _player && _player.EquippedWeapon == null)
             {
-                // A specific enemy (action.Actor) attacking the player or a companion
-                var attackingEnemy = (Enemy)action.Actor;
+                Log("(Fighting unarmed - find a weapon!)");
+            }
 
-                if (action.Target == _player)
-                {
-                    result = _damageCalculator.CalculateEnemyAttackDamage(attackingEnemy, _player);
-                }
-                else if (action.Target is Entities.NPCs.Companions.CompanionBase companion)
-                {
-                    // Calculate enemy damage to companion
-                    int baseDamage = _rngManager.Roll(attackingEnemy.MinDamage, attackingEnemy.MaxDamage);
-                    int companionDefense = companion.EquippedArmor != null ? companion.EquippedArmor.Defense : 0;
-                    int finalDamage = Math.Max(1, baseDamage - companionDefense);
+            DamageResult result = _damageCalculator.CalculateAttack(attacker, target, _player);
 
-                    result = new DamageResult
-                    {
-                        RawDamage = baseDamage,
-                        DamageReduced = baseDamage - finalDamage,
-                        FinalDamage = finalDamage,
-                        Missed = false,
-                        IsCritical = false
-                    };
-                }
-                else
-                {
-                    result = _damageCalculator.CalculateEnemyAttackDamage(attackingEnemy, _player);
-                }
+            if (result.Missed)
+            {
+                Log("The attack missed!");
+                Raise(CombatEventType.AttackMissed, attacker, target);
+                return;
+            }
 
-                // Check if target is defending (for evasion purposes)
-                bool isDefending = _defendingEntities.ContainsKey(action.Target) && _defendingEntities[action.Target];
+            // Defending halves every hit until the defender's next turn
+            bool isDefending = IsDefending(target);
+            if (isDefending)
+            {
+                int damageReduction = result.FinalDamage / 2;
+                result.FinalDamage -= damageReduction;
+                Log($"{target.Name}'s defensive stance reduced damage by {damageReduction}!");
+            }
 
-                // Apply defense reduction if target is defending
-                if (isDefending)
+            // Evasion (the player's passive ability) - only when not defending
+            if (target == _player && !isDefending && _player.SelectedAbility is EvasionAbility evasion)
+            {
+                if (evasion.ShouldEvade(_rngManager, isDefending))
                 {
-                    int damageReduction = result.FinalDamage / 2;
-                    result.FinalDamage -= damageReduction;
-                    Log($"{action.Target.Name}'s defensive stance reduced damage by {damageReduction}!");
-                }
-
-                // Check for Evasion passive ability (only for player, only when not defending)
-                if (action.Target == _player && !isDefending && _player.SelectedAbility is Abilities.EvasionAbility evasion)
-                {
-                    if (evasion.ShouldEvade(_rngManager, isDefending))
-                    {
-                        Log($"{_player.Name} evaded the attack! No damage taken!");
-                        result.FinalDamage = 0;
-                    }
+                    Log($"{_player.Name} evaded the attack! No damage taken!");
+                    Raise(CombatEventType.AttackEvaded, attacker, target);
+                    return;
                 }
             }
 
             // Boss mechanics (e.g. a charge/stoop attack) can boost the damage of this
             // specific hit. A flat multiplier commutes with the defend-reduction already
             // applied above, so applying it here (after) is equivalent to applying it before.
-            if (!result.Missed && action.DamageMultiplier != 1.0)
+            if (action.DamageMultiplier != 1.0)
             {
                 result.FinalDamage = (int)(result.FinalDamage * action.DamageMultiplier);
             }
 
-            // Display result
-            if (result.Missed)
+            if (result.IsCritical)
             {
-                Log("The attack missed!");
+                Log("CRITICAL HIT!");
             }
-            else
+
+            if (result.DamageReduced > 0)
             {
-                if (result.IsCritical)
-                {
-                    Log("CRITICAL HIT!");
-                }
+                Log(target is Enemy
+                    ? $"Defense blocked {result.DamageReduced} damage!"
+                    : $"Armor blocked {result.DamageReduced} damage!");
+            }
 
-                if (result.DamageReduced > 0)
-                {
-                    // Display appropriate message based on who was attacked
-                    if (action.Target == _player)
-                    {
-                        Log($"Armor blocked {result.DamageReduced} damage!");
-                    }
-                    else
-                    {
-                        Log($"Defense blocked {result.DamageReduced} damage!");
-                    }
-                }
+            Raise(new CombatEvent
+            {
+                Type = CombatEventType.AttackLanded,
+                Actor = attacker,
+                Target = target,
+                Amount = result.FinalDamage,
+                IsCritical = result.IsCritical
+            });
 
-                // Apply damage (will be 0 if evaded)
-                if (result.FinalDamage > 0)
-                {
-                    action.Target.TakeDamage(result.FinalDamage);
-                    Log($"{action.Target.Name} took {result.FinalDamage} damage!");
+            if (result.FinalDamage > 0)
+            {
+                target.TakeDamage(result.FinalDamage);
+                Log($"{target.Name} took {result.FinalDamage} damage!");
 
-                    // Some attacks also inflict a status effect on a successful hit (e.g. a grapple's slow)
-                    if (action.AppliesEffect != null)
-                    {
-                        action.Target.AddEffect(action.AppliesEffect);
-                    }
+                // Some attacks also inflict a status effect on a successful hit (e.g. a grapple's slow)
+                if (action.AppliesEffect != null)
+                {
+                    target.AddEffect(action.AppliesEffect);
                 }
             }
         }
@@ -969,99 +1288,83 @@ namespace GameLogic.Combat
             // Track action for speed modifier calculation
             action.Actor.LastAction = Entities.CombatAction.UseAbility;
 
-            if (action.Ability != null)
-            {
-                // Execute the ability
-                action.Ability.Execute(action.Actor, action.Target, _rngManager);
-            }
-            else
+            if (action.Ability == null)
             {
                 Log("Error: No ability provided!");
+                return;
             }
+
+            var target = action.Target ?? action.Actor;
+            Log(target == action.Actor
+                ? $"\n{action.Actor.Name} uses {action.Ability.Name}!"
+                : $"\n{action.Actor.Name} uses {action.Ability.Name} on {target.Name}!");
+
+            Raise(new CombatEvent
+            {
+                Type = CombatEventType.AbilityUsed,
+                Actor = action.Actor,
+                Target = target,
+                Ability = action.Ability
+            });
+
+            action.Ability.Execute(action.Actor, target, _rngManager);
         }
 
         /// <summary>
-        /// Process an item action
+        /// Process an item action - items come from the shared party bag and can be used by
+        /// any party member on any valid target in the party.
         /// </summary>
         private void ProcessItem(CombatAction action)
         {
             // Track action for speed modifier calculation
             action.Actor.LastAction = Entities.CombatAction.UseItem;
 
-            if (action.Item != null)
+            if (action.Item is not Items.Consumable consumable || !IsUsableInCombat(consumable))
             {
-                // Check if it's a consumable (most combat items)
-                if (action.Item is Items.Consumable consumable)
+                Log(action.Item == null ? "Error: No item provided!" : $"{action.Item.Name} can't be used in a fight.");
+                return;
+            }
+
+            var target = action.Target ?? action.Actor;
+
+            Raise(new CombatEvent
+            {
+                Type = CombatEventType.ItemUsed,
+                Actor = action.Actor,
+                Target = target,
+                Item = consumable
+            });
+
+            if (consumable.Type == Items.ConsumableType.RevivePotion)
+            {
+                Log($"\n{action.Actor.Name} uses {consumable.Name} on {target.Name}!");
+                if (consumable.UseRevivePotion(action.Actor, target))
                 {
-                    // Special handling for combat consumables
-                    if (consumable.Type == Items.ConsumableType.Bomb)
-                    {
-                        // Bombs need a specific enemy target now that there can be several
-                        var targetEnemy = action.Target as Enemy;
-                        if (targetEnemy == null)
-                        {
-                            Log("Error: Bomb requires a target enemy!");
-                            return;
-                        }
+                    Log($"{target.Name} is back on their feet with {target.Health}/{target.MaxHealth} HP!");
 
-                        Log($"\n{action.Actor.Name} throws a {consumable.Name}!");
-                        targetEnemy.TakeDamage(consumable.EffectPower);
-                        Log($"The explosion dealt {consumable.EffectPower} damage to {targetEnemy.Name}!");
-                        consumable.RemoveFromStack(1);
-                    }
-                    else if (consumable.Type == Items.ConsumableType.RevivePotion)
-                    {
-                        // Revival potion requires a target
-                        if (action.Target == null)
-                        {
-                            Log($"\nError: Revival potion requires a target!");
-                            return;
-                        }
-
-                        // Use the revival potion on the target
-                        bool success = consumable.UseRevivePotion(action.Actor, action.Target);
-
-                        if (success)
-                        {
-                            // Apply revival penalty: revived entities are disoriented and slower
-                            int speedPenalty = _rngManager.Roll(2, 4);
-                            action.Target.SpeedModifier = -speedPenalty;
-                            Log($"{action.Target.Name} is disoriented from revival! Speed -{speedPenalty} for this round.");
-
-                            // Add revived entity back to combat tracking if they were removed
-                            if (!_entitiesActedThisRound.Contains(action.Target))
-                            {
-                                // Entity was revived - they haven't acted this round yet
-                                Log($"{action.Target.Name} can act again this round!");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // Use consumable normally (healing, etc.)
-                        consumable.Use(_player);
-                    }
-
-                    // Remove from inventory if stack is empty
-                    if (consumable.Quantity <= 0)
-                    {
-                        _player.Inventory.RemoveItem(consumable);
-                    }
-                }
-                else
-                {
-                    // For non-consumable items, just use them
-                    action.Item.Use(_player);
+                    // Revival penalty: revived entities are disoriented and slower
+                    int speedPenalty = _rngManager.Roll(2, 4);
+                    target.SpeedModifier = -speedPenalty;
+                    Log($"{target.Name} is disoriented from revival! Speed -{speedPenalty} for this round.");
                 }
             }
             else
             {
-                Log("Error: No item provided!");
+                Log(target == action.Actor
+                    ? $"\n{action.Actor.Name} uses {consumable.Name}!"
+                    : $"\n{action.Actor.Name} uses {consumable.Name} on {target.Name}!");
+                consumable.UseOn(target, action.Actor);
+            }
+
+            // Remove from the party bag if the stack is used up
+            if (consumable.Quantity <= 0)
+            {
+                _player.Inventory.RemoveItem(consumable);
             }
         }
 
         /// <summary>
-        /// Process a defend action
+        /// Process a defend action - halves every hit on the defender until their next turn
         /// </summary>
         private void ProcessDefend(CombatAction action)
         {
@@ -1070,86 +1373,240 @@ namespace GameLogic.Combat
             // Track action for speed modifier calculation
             action.Actor.LastAction = Entities.CombatAction.Defend;
 
-            // Set defending flag for any entity
-            _defendingEntities[action.Actor] = true;
+            _defendingEntities.Add(action.Actor);
+            Raise(CombatEventType.DefendStarted, action.Actor);
 
-            if (action.Actor == _player)
-            {
-                Log("Next incoming attack will deal reduced damage!");
-            }
-            else
-            {
-                Log($"{action.Actor.Name} braces for impact!");
-            }
+            Log(IsPartyMember(action.Actor)
+                ? "Incoming attacks deal half damage until their next turn!"
+                : $"{action.Actor.Name} braces for impact!");
         }
 
         /// <summary>
-        /// Process a flee action
+        /// Process a flee action (decided 2026-10-14). Every enemy type has one flee chance:
+        /// - An enemy fleeing uses its own flee chance and leaves the fight on its own.
+        /// - A party member fleeing takes the whole party; the chance is the lowest flee chance
+        ///   among the enemies still standing (the hardest one to get away from decides).
+        /// The party can't flee from boss fights (refused in ValidateAction).
         /// </summary>
         private void ProcessFlee(CombatAction action)
         {
-            int fleeChance = 30; // Base 30% chance
-            int fleeRoll = _rngManager.Roll(1, 100);
+            var actor = action.Actor;
+            actor.LastAction = Entities.CombatAction.None;
 
-            if (fleeRoll <= fleeChance)
+            if (actor is Enemy enemy)
             {
-                Log($"\n{action.Actor.Name} successfully fled from combat!");
-                Log("You escaped, but gained no rewards...");
-                Log($"Remaining HP: {_player.Health}/{_player.MaxHealth}");
-
-                // Reset combat usage for abilities
-                if (_player.SelectedAbility != null)
+                if (_rngManager.Roll(1, 100) <= enemy.FleeChance)
                 {
-                    _player.SelectedAbility.ResetCombatUsage();
+                    _fledEnemies.Add(enemy);
+                    _defendingEntities.Remove(enemy);
+                    Log($"\n{enemy.Name} fled from the fight!");
+                    Raise(CombatEventType.FleeSucceeded, enemy);
                 }
+                else
+                {
+                    Log($"\n{enemy.Name} tried to flee but couldn't get away!");
+                    Raise(CombatEventType.FleeFailed, enemy);
+                }
+                return;
+            }
 
-                // Notify all shops about flee (may apply penalties for consecutive flees)
-                Entities.NPCs.ShopKeeper.NotifyAllShopsOfFlee();
-
-                _combatActive = false;
+            if (_rngManager.Roll(1, 100) <= GetPartyFleeChance())
+            {
+                Log($"\n{actor.Name} leads the party away - you escaped!");
+                _partyFled = true;
+                Raise(CombatEventType.FleeSucceeded, actor);
             }
             else
             {
-                Log($"\n{action.Actor.Name} failed to escape!");
+                Log($"\n{actor.Name} failed to escape!");
                 Log("Turn wasted!");
+                Raise(CombatEventType.FleeFailed, actor);
             }
         }
 
-        /// <summary>
-        /// Show current combat status
-        /// </summary>
-        private void ShowCombatStatus()
-        {
-            Log("\n" + "-".PadRight(50, '-'));
-            Log($"Player HP: {_player.Health}/{_player.MaxHealth}");
+        // ------------------------------------------------------------------
+        // Reporting changes as events
+        // ------------------------------------------------------------------
 
-            // Show companion HP if any are in combat
+        private class EntitySnapshot
+        {
+            public int Health;
+            public bool Alive;
+            public List<AbilityEffect> Effects;
+        }
+
+        private Dictionary<Entity, EntitySnapshot> TakeSnapshot()
+        {
+            var snapshot = new Dictionary<Entity, EntitySnapshot>();
             foreach (var entity in _allCombatants)
             {
-                if (entity is Entities.NPCs.Companions.CompanionBase companion && entity != _player)
+                snapshot[entity] = new EntitySnapshot
                 {
-                    string status = companion.IsAlive() ? $"{companion.Health}/{companion.MaxHealth}" : "DEFEATED";
-                    Log($"{companion.Name} HP: {status}");
+                    Health = entity.Health,
+                    Alive = entity.IsAlive(),
+                    Effects = new List<AbilityEffect>(entity.ActiveEffects)
+                };
+            }
+            return snapshot;
+        }
+
+        /// <summary>
+        /// Compare everyone against a snapshot and raise an event for each change - this
+        /// catches damage, healing and effects from any source (attacks, abilities, items,
+        /// poison ticks) without each of those needing to report itself.
+        /// </summary>
+        private void ReportChanges(Dictionary<Entity, EntitySnapshot> before)
+        {
+            foreach (var pair in before)
+            {
+                var entity = pair.Key;
+                var old = pair.Value;
+
+                if (!old.Alive && entity.IsAlive())
+                {
+                    Raise(CombatEventType.Revived, target: entity, amount: entity.Health);
+                }
+                else if (entity.Health < old.Health)
+                {
+                    Raise(CombatEventType.Damaged, target: entity, amount: old.Health - entity.Health);
+                }
+                else if (entity.Health > old.Health)
+                {
+                    Raise(CombatEventType.Healed, target: entity, amount: entity.Health - old.Health);
+                }
+
+                foreach (var effect in entity.ActiveEffects)
+                {
+                    if (!old.Effects.Contains(effect))
+                    {
+                        Raise(new CombatEvent { Type = CombatEventType.EffectApplied, Target = entity, EffectName = effect.Name });
+                    }
+                }
+                foreach (var effect in old.Effects)
+                {
+                    if (!entity.ActiveEffects.Contains(effect))
+                    {
+                        Raise(new CombatEvent { Type = CombatEventType.EffectRemoved, Target = entity, EffectName = effect.Name });
+                    }
+                }
+
+                if (old.Alive && !entity.IsAlive())
+                {
+                    _defendingEntities.Remove(entity);
+                    Log($"{entity.Name} is down!");
+                    Raise(CombatEventType.Defeated, target: entity);
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // Who is where
+        // ------------------------------------------------------------------
+
+        private List<Enemy> GetActiveEnemies()
+        {
+            return _enemies.Where(e => e.IsAlive() && !_fledEnemies.Contains(e)).ToList();
+        }
+
+        private List<Entity> GetLivingParty()
+        {
+            return _party.Where(member => member.IsAlive()).ToList();
+        }
+
+        private List<Entity> GetOpponents(Entity actor)
+        {
+            return IsPartyMember(actor)
+                ? GetActiveEnemies().Cast<Entity>().ToList()
+                : GetLivingParty();
+        }
+
+        private List<Entity> GetAllies(Entity actor)
+        {
+            return IsPartyMember(actor)
+                ? GetLivingParty()
+                : GetActiveEnemies().Cast<Entity>().ToList();
+        }
+
+        private List<Entity> GetFallenAllies(Entity actor)
+        {
+            return IsPartyMember(actor)
+                ? _party.Where(member => !member.IsAlive()).ToList()
+                : new List<Entity>();
+        }
+
+        /// <summary>
+        /// The combatant with the lowest health percentage (the first one on a tie), or null.
+        /// </summary>
+        private static Entity MostWounded(List<Entity> candidates)
+        {
+            Entity mostWounded = null;
+            float lowestHealthPercent = float.MaxValue;
+
+            foreach (var candidate in candidates)
+            {
+                float healthPercent = (float)candidate.Health / candidate.MaxHealth;
+                if (healthPercent < lowestHealthPercent)
+                {
+                    lowestHealthPercent = healthPercent;
+                    mostWounded = candidate;
                 }
             }
 
-            foreach (var enemy in _enemies)
+            return mostWounded;
+        }
+
+        // ------------------------------------------------------------------
+        // End of the fight
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Finish the fight: hand out rewards for the outcome, then fire CombatFinished and
+        /// CombatEnded (once each).
+        /// </summary>
+        private void EndCombat(CombatOutcome outcome)
+        {
+            _combatActive = false;
+            IsWaitingForPlayerAction = false;
+            CurrentActor = null;
+            _turnQueue.Clear();
+            _defendingEntities.Clear();
+
+            var result = new CombatResult
             {
-                string status = enemy.IsAlive() ? $"{enemy.Health}/{enemy.MaxHealth}" : "DEFEATED";
-                Log($"{enemy.Name} HP: {status}");
+                Outcome = outcome,
+                RoundsFought = _currentRound
+            };
+
+            switch (outcome)
+            {
+                case CombatOutcome.Won:
+                case CombatOutcome.OpponentFled:
+                    HandleVictory(result);
+                    break;
+                case CombatOutcome.Lost:
+                    HandleDefeat();
+                    break;
+                case CombatOutcome.PartyFled:
+                    HandlePartyFled();
+                    break;
             }
 
-            Log("-".PadRight(50, '-'));
+            ResetAbilityCombatUsage();
+            LastResult = result;
+
+            Raise(new CombatEvent { Type = CombatEventType.CombatEnded, Message = outcome.ToString() });
+            CombatFinished?.Invoke(result);
+            CombatEnded?.Invoke(outcome == CombatOutcome.Won || outcome == CombatOutcome.OpponentFled);
         }
 
         /// <summary>
-        /// Handle player victory - rewards aggregate across every defeated enemy
+        /// Rewards for a won fight or one the opponents fled from: full XP and loot for each
+        /// defeated enemy, 50% for each enemy that fled (decided 2026-10-12, per-enemy 2026-10-14).
         /// </summary>
-        private void HandleVictory()
+        private void HandleVictory(CombatResult result)
         {
-            Console.Clear();
             Log("\n" + "=".PadRight(50, '='));
-            Log("           VICTORY!");
+            Log(result.Outcome == CombatOutcome.Won ? "           VICTORY!" : "           THE ENEMY FLED!");
             Log("=".PadRight(50, '='));
 
             int totalXP = 0;
@@ -1159,32 +1616,70 @@ namespace GameLogic.Combat
 
             foreach (var enemy in _enemies)
             {
-                Log($"\n{enemy.Name} has been defeated!");
+                bool fled = _fledEnemies.Contains(enemy);
+                if (!fled && enemy.IsAlive()) continue; // Still standing - can't happen once the fight is won
 
-                totalXP += CalculateXPReward(enemy);
+                int xp = CalculateXPReward(enemy);
 
                 // Roll for loot (gold + items) from the unified loot table system
                 var lootTable = Progression.LootTableTemplates.CreateForEnemyType(enemy.Type);
                 var loot = lootGenerator.GenerateLoot(lootTable, _player.Level, areaLevel: enemy.Level);
-                totalGold += loot.Gold;
-                allLootItems.AddRange(loot.Items);
 
-                // Handle boss defeats
-                if (enemy is BossEnemy defeatedBoss && _bossManager != null)
+                if (fled)
                 {
-                    _bossManager.DefeatBoss(defeatedBoss.BossId);
+                    // Half the XP and gold; each item has a 50% chance of being dropped while fleeing
+                    Log($"\n{enemy.Name} got away - half rewards.");
+                    totalXP += xp / 2;
+                    totalGold += loot.Gold / 2;
+                    foreach (var item in loot.Items)
+                    {
+                        if (_rngManager.Roll(1, 100) <= 50)
+                        {
+                            allLootItems.Add(item);
+                        }
+                    }
+                    result.FledEnemies.Add(enemy);
+                }
+                else
+                {
+                    Log($"\n{enemy.Name} has been defeated!");
+                    totalXP += xp;
+                    totalGold += loot.Gold;
+                    allLootItems.AddRange(loot.Items);
+                    result.DefeatedEnemies.Add(enemy);
+
+                    // Handle boss defeats
+                    if (enemy is BossEnemy defeatedBoss && _bossManager != null)
+                    {
+                        _bossManager.DefeatBoss(defeatedBoss.BossId);
+                    }
                 }
             }
 
+            // The party won while the player was down - the player gets back up with 1 HP
+            // (my default, not decided - see the TODO)
+            if (!_player.IsAlive())
+            {
+                _player.Health = 1;
+                Log($"\n{_player.Name} gets back on their feet.");
+            }
+
+            int playerLevelBefore = _player.Level;
             Log($"\nYou gained {totalXP} XP!");
             _player.AddExperience(totalXP);
+            result.PlayerLevelsGained = _player.Level - playerLevelBefore;
 
-            // Share XP with companions
-            foreach (var entity in _allCombatants)
+            // Share XP with companions who are still standing
+            foreach (var member in _party)
             {
-                if (entity is Entities.NPCs.Companions.CompanionBase companion && companion.IsAlive())
+                if (member is CompanionBase companion && companion.IsAlive())
                 {
+                    int companionLevelBefore = companion.Level;
                     companion.GainExperience(totalXP);
+                    if (companion.Level > companionLevelBefore)
+                    {
+                        result.CompanionLevelsGained[companion] = companion.Level - companionLevelBefore;
+                    }
                 }
             }
 
@@ -1205,45 +1700,48 @@ namespace GameLogic.Combat
                 Log("\nNo items dropped.");
             }
 
-            // Reset combat usage for abilities
-            if (_player.SelectedAbility != null)
-            {
-                _player.SelectedAbility.ResetCombatUsage();
-            }
-
-            // Reset companion abilities
-            foreach (var entity in _allCombatants)
-            {
-                if (entity is Entities.NPCs.Companions.CompanionBase companion)
-                {
-                    if (companion.UniqueAbility != null)
-                    {
-                        companion.UniqueAbility.ResetCombatUsage();
-                    }
-                }
-            }
+            result.ExperienceGained = totalXP;
+            result.GoldGained = totalGold;
+            result.ItemsGained.AddRange(allLootItems);
 
             // Notify all shops that a combat encounter occurred (for restock tracking)
             Entities.NPCs.ShopKeeper.NotifyAllShopsOfCombat();
         }
 
         /// <summary>
-        /// Handle player defeat
+        /// The whole party is down
         /// </summary>
         private void HandleDefeat()
         {
-            Console.Clear();
             Log("\n" + "=".PadRight(50, '='));
             Log("           DEFEAT");
             Log("=".PadRight(50, '='));
 
-            Log($"\n{_player.Name} has been defeated...");
+            Log($"\nThe whole party has fallen...");
             Log("\nGAME OVER");
+        }
 
-            // Reset combat usage for abilities
-            if (_player.SelectedAbility != null)
+        /// <summary>
+        /// The party escaped - no rewards (decided 2026-10-14)
+        /// </summary>
+        private void HandlePartyFled()
+        {
+            Log("You escaped, but gained no rewards...");
+            Log($"Remaining HP: {_player.Health}/{_player.MaxHealth}");
+
+            // Notify all shops about flee (may apply penalties for consecutive flees)
+            Entities.NPCs.ShopKeeper.NotifyAllShopsOfFlee();
+        }
+
+        /// <summary>
+        /// Reset every party member's per-fight ability use count (ability XP scales with
+        /// uses within one fight)
+        /// </summary>
+        private void ResetAbilityCombatUsage()
+        {
+            foreach (var member in _party)
             {
-                _player.SelectedAbility.ResetCombatUsage();
+                GetAbility(member)?.ResetCombatUsage();
             }
         }
 

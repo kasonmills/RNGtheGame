@@ -53,6 +53,7 @@ RNGtheGame/
 │   ├── combat/
 │   │   ├── combat_manager.cs            # Runs a fight (non-blocking, event-driven, multi-enemy)
 │   │   ├── combat_action.cs             # One combat action (attack, ability, item, defend, flee)
+│   │   ├── combat_event.cs              # What a combat screen reads: events, outcome, result, turn slots
 │   │   ├── damage_calculator.cs         # Damage, defense, accuracy, crits
 │   │   └── turn_manager.cs              # Older turn-order code (not used by combat_manager)
 │   │

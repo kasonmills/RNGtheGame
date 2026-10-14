@@ -79,10 +79,13 @@ namespace GameLogic.Core
         }
 
         /// <summary>
-        /// Submit a player action during the tutorial fight. Rejects repeating an
-        /// already-used action type until every required type has been tried once;
-        /// otherwise forwards to CombatManager.SubmitPlayerAction(). Once the checklist
-        /// is complete, every submission just passes through unblocked.
+        /// Submit an action during the tutorial fight. Rejects repeating an already-used
+        /// action type until every required type has been tried once; otherwise forwards to
+        /// CombatManager.SubmitPlayerAction(). Once the checklist is complete, every submission
+        /// just passes through unblocked. Only the player's own actions count toward the
+        /// checklist - a directly controlled companion's actions pass straight through
+        /// (decided 2026-10-13). Returns false if the action was refused (by the tutorial or
+        /// by combat's own checks).
         /// </summary>
         public bool TrySubmitAction(CombatManager combatManager, GameLogic.Combat.CombatAction action)
         {
@@ -92,15 +95,25 @@ namespace GameLogic.Core
                 return false;
             }
 
-            if (IsTeachingActions && _usedActionTypes.Contains(action.Type))
+            bool isPlayersAction = action.Actor is Entities.Player.Player;
+
+            if (isPlayersAction && IsTeachingActions && _usedActionTypes.Contains(action.Type))
             {
                 TutorialMessage?.Invoke($"Try a different action first - you haven't tested everything yet!");
                 return false;
             }
 
             bool wasTeaching = IsTeachingActions;
-            _usedActionTypes.Add(action.Type);
-            combatManager.SubmitPlayerAction(action);
+
+            if (!combatManager.SubmitPlayerAction(action))
+            {
+                return false;
+            }
+
+            if (isPlayersAction)
+            {
+                _usedActionTypes.Add(action.Type);
+            }
 
             if (wasTeaching && !IsTeachingActions)
             {

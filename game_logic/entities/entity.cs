@@ -21,6 +21,7 @@ namespace GameLogic.Entities
         // Combat Stats
         public int Speed { get; set; }  // Base speed - determines turn order (higher = acts first)
         public int SpeedModifier { get; set; }  // Temporary speed adjustment from last action (resets each round)
+        public double CritMultiplier { get; set; } = 1.5;  // Damage multiplier on a critical hit - change only for attackers with a reason to differ
 
         // Action Tracking
         public CombatAction LastAction { get; set; }  // Track what entity did last turn

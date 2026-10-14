@@ -169,21 +169,15 @@ namespace GameLogic.Core
 
             ChangeState(GameState.Combat);
 
-            void OnCombatEnded(bool victory)
+            void OnCombatFinished(CombatResult result)
             {
-                _combatManager.CombatEnded -= OnCombatEnded;
+                _combatManager.CombatFinished -= OnCombatFinished;
 
-                if (victory)
-                {
-                    ChangeState(GameState.Playing); // Tutorial complete - the player is free to roam
-                }
-                else if (_player.Health <= 0)
-                {
-                    ChangeState(GameState.GameOver);
-                }
+                // Tutorial complete (or lost) - the tutorial refuses Flee, so only win/lose happen
+                ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
             }
 
-            _combatManager.CombatEnded += OnCombatEnded;
+            _combatManager.CombatFinished += OnCombatFinished;
 
             _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { eagleBear }, _partyManager.ActiveCompanions, _bossManager);
         }
@@ -461,22 +455,16 @@ namespace GameLogic.Core
 
             ChangeState(GameState.Combat); // Combat always enters from Playing and returns to Playing/GameOver
 
-            void OnCombatEnded(bool victory)
+            void OnCombatFinished(CombatResult result)
             {
-                _combatManager.CombatEnded -= OnCombatEnded;
+                _combatManager.CombatFinished -= OnCombatFinished;
 
-                if (victory)
-                {
-                    ChangeState(GameState.Playing); // Return to Playing
-                }
-                else
-                {
-                    Console.WriteLine("\nYou have been defeated...");
-                    ChangeState(GameState.GameOver); // One-way to game over
-                }
+                // Won, party fled or the enemy fled - back to the overworld. Only a loss
+                // (the whole party down) is Game Over.
+                ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
             }
 
-            _combatManager.CombatEnded += OnCombatEnded;
+            _combatManager.CombatFinished += OnCombatFinished;
 
             // CombatManager handles the actual combat (including XP and loot rewards)
             _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { enemy }, _partyManager.ActiveCompanions);
@@ -763,24 +751,29 @@ namespace GameLogic.Core
         /// </summary>
         public void ChallengeBoss(Entities.Enemies.Bosses.BossEnemy boss)
         {
-            void OnCombatEnded(bool victory)
+            if (!World.BossEncounter.CanStartBossEncounter(boss, _bossManager, out string reason))
             {
-                _combatManager.CombatEnded -= OnCombatEnded;
-
-                if (!victory && _player.Health <= 0)
-                {
-                    ChangeState(GameState.GameOver);
-                }
+                // TODO-GODOT: show the reason (locked / already beaten) as a message
+                Console.WriteLine(reason);
+                return;
             }
 
-            _combatManager.CombatEnded += OnCombatEnded;
+            ChangeState(GameState.Combat);
+
+            void OnCombatFinished(CombatResult result)
+            {
+                _combatManager.CombatFinished -= OnCombatFinished;
+                ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
+            }
+
+            _combatManager.CombatFinished += OnCombatFinished;
 
             World.BossEncounter.StartBossEncounter(
                 _player,
                 boss,
                 _bossManager,
                 _combatManager,
-                null); // TODO: Add companion support when implemented
+                _partyManager.ActiveCompanions);
         }
 
         /// <summary>
@@ -790,28 +783,41 @@ namespace GameLogic.Core
         /// </summary>
         public void ChallengeFinalBoss()
         {
-            void OnCombatEnded(bool victory)
+            if (!World.BossEncounter.CanStartBossEncounter(_bossManager.GetFinalBoss(), _bossManager, out string reason))
             {
-                _combatManager.CombatEnded -= OnCombatEnded;
-
-                if (victory)
-                {
-                    Console.WriteLine("\n🎉 YOU HAVE COMPLETED THE GAME! 🎉");
-                    Console.WriteLine("You may continue playing to explore or challenge bosses again.");
-                }
-                else if (_player.Health <= 0)
-                {
-                    ChangeState(GameState.GameOver);
-                }
+                // TODO-GODOT: show the reason as a message
+                Console.WriteLine(reason);
+                return;
             }
 
-            _combatManager.CombatEnded += OnCombatEnded;
+            ChangeState(GameState.Combat);
+
+            void OnCombatFinished(CombatResult result)
+            {
+                _combatManager.CombatFinished -= OnCombatFinished;
+
+                if (result.Outcome == CombatOutcome.Lost)
+                {
+                    ChangeState(GameState.GameOver);
+                    return;
+                }
+
+                // TODO-GODOT: a win goes to the ending cutscene/credits state once it exists
+                // (to-do 16 under core/) - back to Playing until then
+                if (result.Outcome == CombatOutcome.Won)
+                {
+                    Console.WriteLine("\n🎉 YOU HAVE COMPLETED THE GAME! 🎉");
+                }
+                ChangeState(GameState.Playing);
+            }
+
+            _combatManager.CombatFinished += OnCombatFinished;
 
             World.BossEncounter.StartFinalBossEncounter(
                 _player,
                 _bossManager,
                 _combatManager,
-                null); // TODO: Add companion support when implemented
+                _partyManager.ActiveCompanions);
         }
 
         /// <summary>

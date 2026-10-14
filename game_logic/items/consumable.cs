@@ -227,42 +227,56 @@ namespace GameLogic.Items
         /// </summary>
         public override void Use(Entities.Player.Player player)
         {
+            UseOn(player);
+        }
+
+        /// <summary>
+        /// Apply the consumable's effect to any party member (the player or a companion) -
+        /// combat uses this so items from the shared party bag can target anyone in the party.
+        /// </summary>
+        public void UseOn(Entities.Entity target, Entities.Entity user = null)
+        {
             if (Quantity <= 0)
             {
                 Console.WriteLine($"No {Name} remaining!");
                 return;
             }
 
+            // Who used it, for the messages - "Hero used Health Potion" when used on themselves,
+            // "Mira used Health Potion on Hero" when a party member uses it on someone else
+            user ??= target;
+            string usedText = user == target ? $"{user.Name} used {Name}" : $"{user.Name} used {Name} on {target.Name}";
+
             // Apply effect based on consumable type
             switch (Type)
             {
                 case ConsumableType.HealthPotion:
-                    player.Heal(EffectPower);
-                    Console.WriteLine($"{player.Name} used {Name} and restored {EffectPower} HP!");
+                    target.Heal(EffectPower);
+                    Console.WriteLine($"{usedText} and restored {EffectPower} HP!");
                     break;
 
                 case ConsumableType.BuffPotion:
-                    Console.WriteLine($"{player.Name} used {Name}!");
+                    Console.WriteLine($"{usedText}!");
                     // Apply appropriate buff based on effect power
                     // Higher power = stronger buff, 3 turn duration
                     if (EffectPower <= 5)
                     {
-                        player.AddEffect(new Abilities.StrengthBoostEffect(EffectPower, 3));
+                        target.AddEffect(new Abilities.StrengthBoostEffect(EffectPower, 3));
                     }
                     else if (EffectPower <= 10)
                     {
-                        player.AddEffect(new Abilities.ResistanceEffect(EffectPower / 2, 3));
+                        target.AddEffect(new Abilities.ResistanceEffect(EffectPower / 2, 3));
                     }
                     else
                     {
                         // Strong potions give regeneration
-                        player.AddEffect(new Abilities.RegenerationEffect(EffectPower / 3, 3));
+                        target.AddEffect(new Abilities.RegenerationEffect(EffectPower / 3, 3));
                     }
                     break;
 
                 case ConsumableType.Food:
-                    player.Heal(EffectPower / 2);
-                    Console.WriteLine($"{player.Name} ate {Name} and restored {EffectPower / 2} HP!");
+                    target.Heal(EffectPower / 2);
+                    Console.WriteLine($"{usedText} and restored {EffectPower / 2} HP!");
                     break;
 
                 case ConsumableType.Elixir:
@@ -270,7 +284,7 @@ namespace GameLogic.Items
                     // Currently implemented: Combat Elixir (attack + defense boost)
                     // Future: Healing elixirs, specialty elixirs, etc.
 
-                    Console.WriteLine($"{player.Name} used {Name} - a powerful combat elixir!");
+                    Console.WriteLine($"{usedText} - a powerful combat elixir!");
 
                     // Combat elixirs provide dual benefits at reduced power
                     // Level 1 = 10% of Lv100 ability power, Level 10 = 60% of Lv100 ability power
@@ -286,36 +300,36 @@ namespace GameLogic.Items
                         duration: elixirDuration,
                         potency: (int)elixirAttackBoost
                     );
-                    player.AddEffect(elixirAttackEffect);
+                    target.AddEffect(elixirAttackEffect);
 
                     // Apply defense boost
                     var elixirDefenseEffect = new Abilities.PlayerAbilities.DefenseBoostEffect(
                         duration: elixirDuration,
                         potency: (int)elixirDefenseBoost
                     );
-                    player.AddEffect(elixirDefenseEffect);
+                    target.AddEffect(elixirDefenseEffect);
 
                     Console.WriteLine($"Attack increased by {elixirAttackBoost:F0}% and defense increased by {elixirDefenseBoost:F0}% for 1 turn!");
                     break;
 
                 case ConsumableType.Bomb:
-                    Console.WriteLine($"{player.Name} used {Name} - it will deal {EffectPower} damage!");
+                    Console.WriteLine($"{user.Name} used {Name} - it will deal {EffectPower} damage!");
                     // Bomb damage should be applied in combat
                     break;
 
                 case ConsumableType.Antidote:
-                    Console.WriteLine($"{player.Name} used {Name}!");
-                    player.RemoveNegativeEffects();
+                    Console.WriteLine($"{usedText}!");
+                    target.RemoveNegativeEffects();
                     break;
 
                 case ConsumableType.RevivePotion:
-                    Console.WriteLine($"{player.Name} has a {Name}!");
+                    Console.WriteLine($"{user.Name} has a {Name}!");
                     Console.WriteLine("Revival potions must be used on a specific target during combat.");
                     Console.WriteLine("(Use the item targeting system in combat to revive fallen allies)");
                     break;
 
                 case ConsumableType.AttackPotion:
-                    Console.WriteLine($"{player.Name} used {Name}!");
+                    Console.WriteLine($"{usedText}!");
                     // Calculate attack boost based on level (scales like AttackBoost ability)
                     // Level 1: ~10%, Level 10: ~70%
                     double attackBoost = 10 + (Level - 1) * 6.67; // Roughly 10% to 70%
@@ -324,12 +338,12 @@ namespace GameLogic.Items
                         duration: duration,
                         potency: (int)attackBoost
                     );
-                    player.AddEffect(attackEffect);
+                    target.AddEffect(attackEffect);
                     Console.WriteLine($"Attack damage increased by {attackBoost:F0}% for {duration} turn{(duration > 1 ? "s" : "")}!");
                     break;
 
                 case ConsumableType.DefensePotion:
-                    Console.WriteLine($"{player.Name} used {Name}!");
+                    Console.WriteLine($"{usedText}!");
                     // Calculate defense boost based on level (scales like DefenseBoost ability)
                     // Level 1: ~10%, Level 10: ~60%
                     double defenseBoost = 10 + (Level - 1) * 5.56; // Roughly 10% to 60%
@@ -338,12 +352,12 @@ namespace GameLogic.Items
                         duration: defenseDuration,
                         potency: (int)defenseBoost
                     );
-                    player.AddEffect(defenseEffect);
+                    target.AddEffect(defenseEffect);
                     Console.WriteLine($"Damage taken reduced by {defenseBoost:F0}% for {defenseDuration} turn{(defenseDuration > 1 ? "s" : "")}!");
                     break;
 
                 case ConsumableType.CriticalPotion:
-                    Console.WriteLine($"{player.Name} used {Name}!");
+                    Console.WriteLine($"{usedText}!");
                     // Calculate crit chance boost based on level (scales like CriticalStrike ability)
                     // Level 1: ~5%, Level 10: ~50%
                     double critBoost = 5 + (Level - 1) * 5.0; // Roughly 5% to 50%
@@ -352,19 +366,19 @@ namespace GameLogic.Items
                         duration: critDuration,
                         potency: (int)critBoost
                     );
-                    player.AddEffect(critEffect);
+                    target.AddEffect(critEffect);
                     Console.WriteLine($"Critical hit chance increased by {critBoost:F0}% for {critDuration} turn{(critDuration > 1 ? "s" : "")}!");
                     break;
 
                 case ConsumableType.HealingPotion:
-                    Console.WriteLine($"{player.Name} used {Name}!");
+                    Console.WriteLine($"{usedText}!");
                     // Healing scales with effect power (which scales with level)
-                    player.Heal(EffectPower);
-                    Console.WriteLine($"Restored {EffectPower} HP! (Current: {player.Health}/{player.MaxHealth})");
+                    target.Heal(EffectPower);
+                    Console.WriteLine($"Restored {EffectPower} HP! (Current: {target.Health}/{target.MaxHealth})");
                     break;
 
                 default:
-                    Console.WriteLine($"{player.Name} used {Name}.");
+                    Console.WriteLine($"{usedText}.");
                     break;
             }
 

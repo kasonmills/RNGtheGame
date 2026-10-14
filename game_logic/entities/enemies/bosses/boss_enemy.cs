@@ -61,6 +61,11 @@ namespace GameLogic.Entities.Enemies.Bosses
 
             // Set unique ability description based on mechanic type
             UniqueAbilityDescription = GetMechanicDescription(mechanicType);
+
+            // Stopgap so bosses have real stats (they were all 0 before - nothing called this).
+            // Uses the generic formula at the boss's fixed level until each boss gets hand-set
+            // level-1 stats and party-level scaling (Bucket A #11).
+            InitializeStats(level);
         }
 
         /// <summary>

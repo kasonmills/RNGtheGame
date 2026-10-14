@@ -15,59 +15,78 @@ namespace GameLogic.World
     public static class BossEncounter
     {
         /// <summary>
-        /// Start a boss encounter with a specific boss
+        /// Check whether a boss fight can start: the boss exists, is unlocked (every earlier
+        /// boss beaten), and hasn't been beaten already (no rematches in the MVP - decided
+        /// 2026-10-14). Returns false with the reason to show the player.
         /// </summary>
-        /// <param name="player">The player character</param>
-        /// <param name="boss">The boss to fight</param>
-        /// <param name="bossManager">The boss manager tracking progression</param>
-        /// <param name="combatManager">The combat manager</param>
-        /// <param name="companions">List of active companions</param>
-        /// <returns>True if player won, False if player lost or fled</returns>
-        /// <summary>
-        /// TODO-GODOT: no longer blocks on a Yes/No confirmation - a Godot confirmation
-        /// dialog (if any) should happen before this is called at all.
-        /// </summary>
-        public static void StartBossEncounter(
-            Player player,
-            BossEnemy boss,
-            BossManager bossManager,
-            CombatManager combatManager,
-            List<Entities.NPCs.Companions.CompanionBase> companions = null)
+        public static bool CanStartBossEncounter(BossEnemy boss, BossManager bossManager, out string reason)
         {
+            reason = null;
+
             if (boss == null)
             {
-                Console.WriteLine("Error: Boss not found!");
-                return;
+                reason = "Error: Boss not found!";
+                return false;
             }
 
             if (!bossManager.IsBossUnlocked(boss.BossId))
             {
                 var nextBoss = bossManager.GetNextBoss();
-                Console.WriteLine($"This boss is not accessible yet. Defeat {(nextBoss != null ? nextBoss.Name : "the previous boss")} first.");
-                return;
+                reason = $"This boss is not accessible yet. Defeat {(nextBoss != null ? nextBoss.Name : "the previous boss")} first.";
+                return false;
             }
 
-            // Display boss encounter screen
-            Console.Clear();
-            Console.WriteLine(boss.GetBossInfo());
-
-            // Check if boss has been defeated before
+            // MVP: no rematches against a beaten boss (decided 2026-10-14 - rematches and their
+            // strength multipliers are kept in the code for a possible update/DLC)
             if (bossManager.IsBossDefeated(boss.BossId))
             {
-                Console.WriteLine("\n⚠️  WARNING: You have already defeated this boss!");
-                Console.WriteLine("Repeat fights are MUCH harder!");
-                Console.WriteLine($"This boss has been defeated {boss.TimesDefeated} time{(boss.TimesDefeated > 1 ? "s" : "")} before.");
+                reason = $"{boss.Name} has already been defeated.";
+                return false;
             }
-            else
+
+            return true;
+        }
+
+        /// <summary>
+        /// Start a boss encounter with a specific boss. Returns false (and starts nothing) if
+        /// CanStartBossEncounter() says the fight can't happen.
+        /// TODO-GODOT: no longer blocks on a Yes/No confirmation - a Godot confirmation
+        /// dialog (if any) should happen before this is called at all.
+        /// </summary>
+        /// <param name="player">The player character</param>
+        /// <param name="boss">The boss to fight</param>
+        /// <param name="bossManager">The boss manager tracking progression</param>
+        /// <param name="combatManager">The combat manager</param>
+        /// <param name="companions">The party's companions</param>
+        public static bool StartBossEncounter(
+            Player player,
+            BossEnemy boss,
+            BossManager bossManager,
+            CombatManager combatManager,
+            List<Entities.Entity> companions = null)
+        {
+            if (!CanStartBossEncounter(boss, bossManager, out string reason))
             {
-                Console.WriteLine("\n🏆 First-time encounter!");
+                Console.WriteLine(reason);
+                return false;
             }
+
+            // TODO-GODOT: boss intro (name, title, description) -> boss intro screen
+            Console.WriteLine(boss.GetBossInfo());
+
+            // MVP: the repeat-fight warning is switched off along with rematches. Kept for a
+            // possible update/DLC:
+            // if (bossManager.IsBossDefeated(boss.BossId))
+            // {
+            //     Console.WriteLine("\n⚠️  WARNING: You have already defeated this boss!");
+            //     Console.WriteLine("Repeat fights are MUCH harder!");
+            //     Console.WriteLine($"This boss has been defeated {boss.TimesDefeated} time{(boss.TimesDefeated > 1 ? "s" : "")} before.");
+            // }
 
             Console.WriteLine("\n⚔️  THE BATTLE BEGINS! ⚔️");
 
-            // Convert companions to Entity list for combat manager
-            var companionEntities = companions?.Cast<Entities.Entity>().ToList();
-            combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { boss }, companionEntities, bossManager);
+            combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { boss }, companions, bossManager);
+            return true;
         }
 
         /// <summary>
@@ -81,30 +100,24 @@ namespace GameLogic.World
         /// <summary>
         /// TODO-GODOT: no longer blocks on a Yes/No confirmation - a Godot confirmation
         /// dialog (if any) should happen before this is called at all.
+        /// Returns false (and starts nothing) if the final battle isn't available.
         /// </summary>
-        public static void StartFinalBossEncounter(
+        public static bool StartFinalBossEncounter(
             Player player,
             BossManager bossManager,
             CombatManager combatManager,
-            List<Entities.NPCs.Companions.CompanionBase> companions = null)
+            List<Entities.Entity> companions = null)
         {
             var finalBoss = bossManager.GetFinalBoss();
 
-            if (finalBoss == null)
+            if (!CanStartBossEncounter(finalBoss, bossManager, out string reason))
             {
-                Console.WriteLine("Error: Final boss not found!");
-                return;
-            }
-
-            if (!bossManager.IsBossUnlocked(finalBoss.BossId))
-            {
-                var nextBoss = bossManager.GetNextBoss();
-                Console.WriteLine($"The final battle is not accessible yet. Defeat {(nextBoss != null ? nextBoss.Name : "the remaining bosses")} first.");
-                return;
+                Console.WriteLine(reason);
+                return false;
             }
 
             // Display epic final boss screen
-            Console.Clear();
+            // TODO-GODOT: final battle intro -> its own scene/cutscene
             Console.WriteLine("═══════════════════════════════════════════════════");
             Console.WriteLine("           🔥 THE FINAL BATTLE 🔥");
             Console.WriteLine("═══════════════════════════════════════════════════");
@@ -124,21 +137,20 @@ namespace GameLogic.World
             // Start final combat
             Console.WriteLine("\n⚔️  THE ULTIMATE BATTLE BEGINS! ⚔️");
 
-            void OnCombatEnded(bool victory)
+            void OnCombatFinished(CombatResult result)
             {
-                combatManager.CombatEnded -= OnCombatEnded;
+                combatManager.CombatFinished -= OnCombatFinished;
 
-                if (victory)
+                if (result.Outcome == CombatOutcome.Won)
                 {
                     DisplayFinalVictoryScreen(finalBoss);
                 }
             }
 
-            combatManager.CombatEnded += OnCombatEnded;
+            combatManager.CombatFinished += OnCombatFinished;
 
-            // Convert companions to Entity list for combat manager
-            var companionEntities = companions?.Cast<Entities.Entity>().ToList();
-            combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { finalBoss }, companionEntities, bossManager);
+            combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { finalBoss }, companions, bossManager);
+            return true;
         }
 
         /// <summary>
@@ -146,7 +158,7 @@ namespace GameLogic.World
         /// </summary>
         private static void DisplayFinalVictoryScreen(BossEnemy finalBoss)
         {
-            Console.Clear();
+            // TODO-GODOT: final victory -> ending cutscene/credits state (to-do 16 under core/)
             Console.WriteLine("\n\n");
             Console.WriteLine("═══════════════════════════════════════════════════");
             Console.WriteLine("═══════════════════════════════════════════════════");
@@ -165,8 +177,6 @@ namespace GameLogic.World
             Console.WriteLine("           🎉 CONGRATULATIONS! 🎉");
             Console.WriteLine("═══════════════════════════════════════════════════");
             Console.WriteLine();
-            Console.WriteLine("Press any key to continue your journey...");
-            Console.ReadKey();
         }
 
         /// <summary>
