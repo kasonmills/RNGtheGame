@@ -10,6 +10,8 @@
 - 🔵 = Future/GUI Phase
 - 💼 = Business/Legal
 
+**Finished work lives in `done.md` (rule added 2026-10-13).** When an entry here is completed - built and working in the game - it is moved out of this file into `docs/done.md`. This file holds only what is still to do. An entry with several parts moves when all of them are done; until then, finished parts stay ticked (✅) inside the entry. Item numbers are not reused, so gaps in the numbering (2, 4, 7) are entries that have moved.
+
 ---
 
 ## ⭐ ACTIVE FOCUS: STORY-DRIVEN FEATURE ROADMAP (added 2026-09-28)
@@ -119,20 +121,6 @@ _This is the living plan for turning the current codebase into what the story ne
   - ❌ The Blacksmith is never created or placed anywhere in the game, so the payment/upgrade-choice step cannot be reached
   - ❌ Level cap and XP curve are under review (Bucket A #12)
 
-### 🔴 2. RevivePotion System
-- **File**: `game_logic/items/item_database.cs`, `consumable.cs`, `combat_manager.cs`
-- **Status**: ✅ FULLY COMPLETED
-- **Description**: Complete revival potion system with logic and items
-- **Features**:
-  - ✅ UseRevivePotion() method with level-scaled revival (1 HP at Lv1, full HP at Lv10)
-  - ✅ Combat manager integration with target selection for dead allies
-  - ✅ Revival speed penalty (-2 to -4 speed on revival)
-  - ✅ Clears negative effects on revival
-  - ✅ Three revival potion tiers:
-    - Minor Revival Potion (Lv1-4): 10%-40% HP restoration (Uncommon)
-    - Revival Potion (Lv5-8): 50%-80% HP restoration (Rare)
-    - Greater Revival Potion (Lv9-10): 90%-100% HP restoration (Epic)
-
 ### 🔴 3. Shop Keeper Functionality
 - **File**: `game_logic/entities/NPCs/shop_keeper.cs`
 - **Status**: 🚧 Built, NOT reachable in the game (status corrected 2026-10-09 - previously "FULLY COMPLETED")
@@ -168,17 +156,6 @@ _This is the living plan for turning the current codebase into what the story ne
     - First flee counts as 1 encounter (no penalty)
     - Consecutive flees add +5 min and +1 encounter to requirements
     - Prevents shop scumming via flee spam
-
-### 🔴 4. Enemy Defense Application
-- **File**: `game_logic/combat/damage_calculator.cs:87-317`
-- **Status**: ✅ COMPLETED
-- **Description**: Enemy defense reduces incoming damage using flat reduction system
-- **Implementation**:
-  - ✅ ApplyEnemyDefenseReduction() method exists (lines 303-317)
-  - ✅ Called in CalculatePlayerAttackDamage() at line 87
-  - ✅ Works as flat damage reduction (never below 1 damage minimum)
-  - ✅ All enemy types have Defense values defined
-  - ✅ Fully functional and integrated into combat flow
 
 ---
 
@@ -235,17 +212,6 @@ _This is the living plan for turning the current codebase into what the story ne
     - ReconstructQuests() rebuilds quests with original RNG values
     - No re-randomization on load - quests stay consistent per save
   - ❌ GameManager menu access (the old console menu options 8, 9, 10 are commented out)
-
-### 🟡 7. Turn Order with Speed Stats
-- **File**: `game_logic/combat/combat_manager.cs:168`
-- **Status**: ✅ COMPLETED
-- **Description**: Dynamic turn order based on speed stats with action-based modifiers
-- **Current**:
-  - ✅ Speed-based turn order (highest speed acts first)
-  - ✅ Action modifiers (Attack: -1 to -3, Defend: +1 to +3, Ability/Item: -1 to +1)
-  - ✅ Revival speed penalty (revived entities get -2 to -4 speed)
-  - ✅ Modifiers reset each round
-  - ✅ Turn order displayed at start of each round
 
 ### 🟡 8. Settings Menu
 - **File**: `game_logic/systems/game_settings.cs`, `game_logic/menus/settings_menu.cs`
@@ -314,7 +280,7 @@ _Tracking spots found while going through the codebase to build a better underst
 ### 🟡 Folder-by-folder code review (started 2026-10-09)
 _Big-picture pass over every folder to see where the code is at before the Godot frontend. Findings are logged here only - no code is changed during the review. Fixing/wiring happens in later sessions._
 
-**Progress**: ✅ `systems/` · ✅ `world/` · ✅ `data/` · ✅ `progression/` · ✅ `quests/` · ✅ `menus/` · 🚧 `items/` (first pass logged, not discussed) · 🚧 `abilities/` (first pass logged; redesign idea noted under Bucket A #12) · ✅ `entities/` (to-dos logged) · ✅ `combat/` (to-dos logged) · 🚧 `core/` (first pass logged, not discussed) · ⬜ `godot_project/` (was `godot_integration/`) and root files
+**Progress**: ✅ `systems/` · ✅ `world/` · ✅ `data/` · ✅ `progression/` · ✅ `quests/` · ✅ `menus/` · 🚧 `items/` (first pass logged, not discussed) · 🚧 `abilities/` (first pass logged; redesign idea noted under Bucket A #12) · ✅ `entities/` (to-dos logged) · ✅ `combat/` (to-dos logged) · ✅ `core/` (to-dos logged) · 🚧 `godot_project/` (was `godot_integration/`), root files and `tests/` (first pass logged, not discussed)
 
 #### `game_logic/systems/`
 - `RNG_manager.cs` - in use everywhere, healthy. **Decided 2026-10-09: the built-in system RNG algorithm is enough for the MVP.** Post-MVP idea: a system that uses several RNG algorithms at once (see Low Priority #9). Notes for then:
@@ -598,6 +564,7 @@ _Found by reading the code only - nothing was built or run._
      - **How the grouping works (decided 2026-10-12)**: the **fastest enemies keep a slot to themselves; the slowest are the ones paired up**. A shared slot takes its place in the turn order at the **average speed of its members**. Example: 5 enemies with speeds 14, 14, 14, 10 and 6 - the three at 14 each get their own slot, and the 10 and the 6 share the fourth slot with an effective speed of 8.
      - **Larger groups (decided 2026-10-12)**: spread the enemies **evenly across the 4 slots, and give any extras to the slowest slots first**. 8 enemies: two in each slot. 9 enemies: the slowest slot has three, the three faster slots keep two each. 10 enemies: the two slowest slots have three each. The 5-enemy example above is the same rule (one each, the extra goes to the slowest slot). Enemies are sorted by speed first, so the fastest fill the fastest slots - confirmed 2026-10-12, unless a different way of separating them is designed later.
      - **Rounding (decided 2026-10-12)**: when a slot's average speed is not a whole number, always round **up**.
+     - **Planned maximum of 8 enemies per encounter (2026-10-13)**, so in practice no slot holds more than two; the 9 and 10 examples above only apply if that maximum is raised. See to-do 13 under `core/`.
      - To work out in the code: ties in speed (enemies with equal speed, and a shared slot tying with a party member).
      - Touches: the round and turn-queue code in `CombatManager` (`BeginRound`, `AdvanceTurns`), the party size (fixed at 4 for the MVP, which matches; the dormant Leadership ability raises it above 4 and would not fit), the combat decision-maker (to-do 5 under `entities/`), and the screen's turn-order display, which shows 8 slots including the skipped ones (item 7 in "Combat scene - what the screen has to show").
 - **Ideas noted, not decided (2026-10-12)**:
@@ -614,7 +581,7 @@ _Found by reading the code only - nothing was built or run._
 **Tutorial (`tutorial_manager.cs`)**
 - **The tutorial can get stuck - confirm on a build.** The Skarn fight makes the player try Attack, Ability, Item and Defend once each before any can be repeated. A new player starts with **no items** (`CreateNewGame` gives a weapon and an ability only), so the Item step cannot be done properly, and after one Attack, one Ability and one Defend every further action is refused. The only way through today is submitting "use item" with no item, which combat accepts and logs as an error. Fix: give the player a starting item (a health potion fits the lesson), and/or drop a step when it is not possible.
 - **The Ability step teaches nothing for most choices.** 15 of the 19 abilities are passive; "using" one prints a message and wastes the turn. Goes with the ability redesign idea (Bucket A #12) - if every ability is activated in battle, this step works for all of them.
-- The tutorial rule only looks at what kind of action was submitted, not who it was for. With directly controlled companions (Tier 1), decide whether the companion's actions count toward the lesson.
+- The tutorial rule only looks at what kind of action was submitted, not who it was for. With directly controlled companions (Tier 1), the companion's actions do **not** count toward the lesson (decided 2026-10-13, to-do 3 below).
 - Flee is refused during the tutorial with a story line - a good pattern. Under the whole-party flee rule the same refusal must apply to a companion choosing Flee.
 - Otherwise this file is the cleanest in the folder: no console calls, messages go out through an event (`TutorialMessage`). It is the model for how the rest should report things to the frontend.
 
@@ -643,7 +610,51 @@ _Found by reading the code only - nothing was built or run._
 **Across the folder**
 - 96 console calls, counting the ones inside the commented-out menus.
 - **Tests**: none for this folder. `GameStartup` was written to be testable on its own (it takes everything it needs as inputs) and has no tests yet.
-- **The session of 2026-10-12 stopped here.** `core/` has been presented but not discussed. Remaining: `godot_project/` and the root files, then the folder-by-folder review is complete.
+
+**To-dos and decisions from discussing `core/` (2026-10-13)**
+  1. **Give the player a healing item for the tutorial fight.** Add it to the inventory when the tutorial fight is set up (`GameManager.BeginEagleBearEncounter`), so the Item step has something real to use. Use the existing "Minor Health Potion" (decided 2026-10-13; potion names may be reworked later, not decided). To settle when building: if the player is at full health when the Item step comes up, the potion does nothing visible, so the lesson may need Skarn to land a hit first.
+  2. **The tutorial must not be losable.** Likely form: the first companion revives the player once. Depends on two things that are not true today: the fight has to continue when the player falls while a companion is standing (it ends at once - open question under `combat/`), and companions carry no items (shared party bag), so this is either the companion using a "Minor Revival Potion" from the shared bag or a one-off scripted revive that needs no item. Also removes the "Load Last Save" problem at Game Over, because the tutorial never reaches Game Over.
+  3. **A companion's actions do not count toward the "try each action" lesson (decided 2026-10-13).** Only the player's own actions tick the list. `TrySubmitAction` has to check who the action is for.
+  4. **Ability step** - no separate to-do; handled by the ability redesign (Bucket A #12).
+  5. **Starting a new game wipes everything from the previous game.** Player stats, inventory, the party (every companion gone until recruited again), statistics, quests, boss progress, the spawned overworld enemies and the paused-state stack. Loading a save does the same wipe first and then fills in from the file. Today the party and (on a new game) the statistics survive.
+  6. **Statistics start fresh for every new save file.** Part of to-do 5, listed separately so it is checked on its own: a new file shows a clean statistics page.
+  7. **Recruited versus active party members.** Today there is one list (`PartyManager.ActiveCompanions`) and everyone in it fights. Needed: a roster of everyone recruited, each marked as **in the fighting party** (appears in combat and takes a party slot, max 3 companions) or **recruited but not fighting**. The party menu moves companions between the two. The roster and the marks must be saved - companions are not saved at all today.
+  8. **Keeping things up to date between saves.** No new system should be needed for this: the game already holds the live player, party and statistics in memory the whole time it is running, and a save is only a copy of that written to disk. What is missing is (a) the game actually recording into the statistics as things happen (logged under "Quests, statistics and settings are built but not connected"), (b) the roster from to-do 7, and (c) the wipe from to-do 5. With those three the statistics screen and the party are always current, saved or not. Revisit only if "return to just before the fight" is chosen in to-do 11 - that one does need a snapshot taken when a fight starts.
+  9. **Save that the tutorial is complete.** Add it to the save file so loading never sends the player back through the tutorial. If saving is impossible until the tutorial is over (to-do 10), the flag is simply always true in a save - still worth storing so the rule is not hidden.
+  10. **Saving is only allowed in certain places (reminder 2026-10-13 - already the design).** The player has to go out of their way to save. Nothing in the code enforces it: `SaveGame()` works at any moment, including mid-combat and mid-tutorial. **Decided 2026-10-13: save points are the only way to save. A save point is an inn or one of a set of specific campsites, clearly marked for the player.** Needed: a "can the player save here?" check tied to the map (inns and the marked campsites - the campsites have to be placed when the fixed map is designed), and the Godot save option only offered there. **Auto-save is out of the MVP** (possible post-MVP feature): the auto-save and quick-save code and the auto-save setting stay dormant and must not be offered in the settings screen.
+  11. **Open - where a defeat sends the player (not decided 2026-10-13):** back to the last save point, or back to just before the fight began. The second needs a snapshot taken at the start of every fight (see to-do 8) and makes save points matter much less.
+  12. **Rewrite the difficulty descriptions to fit the current names** (Normal / Hard / Difficult / Unfair, renamed 2026-09-10). The text in `game_startup.cs` lines 208-211 was written for the old names and promises stat and reward percentages that are not applied. Goes with "Difficulty selection has zero mechanical effect" and Bucket A #15.
+  13. **Review how encounters are sized, then add an encounter-size roll if needed.** Checked 2026-10-13: the overworld spawn work randomises **how many enemies are walking around an area** (`SpawnOverworldEncounters`, a range per location type such as 1 to 3) and each one's aggression and detection range. Each of those walking enemies is exactly **one** enemy when the fight starts (`OnOverworldEnemyHitboxCollision` passes the single enemy to `TriggerCombatEncounter`). Nothing randomises the number of enemies inside a fight, so the roll does need adding. **Planned maximum: 8 enemies in any encounter** (may change with difficulty or other things not yet decided). With 4 opponent slots that is at most two enemies per slot; the 9- and 10-enemy grouping examples under `combat/` only matter if the maximum is raised. **Decided 2026-10-13**: the two numbers are separate on purpose. The enemies walking around an area and the enemies in a fight are not directly related; the model is *Mario & Luigi: Dream Team* - touch one enemy on the map, the scene changes to combat, and the combat scene shows however many enemies that encounter has. **Encounter size depends on three things, all of which affect it: the enemy type, the player's level and the difficulty.** To design: the actual numbers per enemy type and how level and difficulty shift them; and whether the group is all one enemy type or the touched enemy plus other types from the area's spawn list (ties to "Add more enemy types").
+  14. **Godot picks its scene from the game state.** Two parts. First the missing piece: Godot cannot read the current state today - there is a `StateChanged` event only - so add a public "current state" value on `GameManager`. Then one place on the Godot side (a scene switcher) that holds the list "this state shows this scene" and changes scene whenever the state changes, including on start-up and after a load.
+  15. **Chests hand their contents to Godot and put them in the inventory, with no console.** `TriggerLootEvent()` returns what was found (items and gold), adds it to the inventory, and neither prints nor waits for a key. Decide what happens when the inventory is full.
+  16. **Ending cutscene and credits.** Beating the final boss moves the game into an ending state that plays the ending and then the credits, then returns to the main menu. Needs an ending state (none exists) and the story content.
+  17. **Properly implement the five unused game states** - `Shopping`, `Dialogue`, `Cutscene`, `Settings`, `Loading`. For each: what enters it, what leaves it, whether it is an overlay that resumes the previous state or a fixed state, and which Godot scene it shows (to-do 14). `Cutscene` is needed by to-do 16. Add the missing ones at the same time (party menu, statistics, quest log / job board, blacksmith, ending).
+  18. **New combat action: reposition / formation change (decided 2026-10-13).** The player can swap battle positions with a companion, and a companion can swap places with another party member. Combat has no idea of position today, so this needs the position system first (the coordinate-grid layout still to be specified under "Combat scene MVP"). **Decided 2026-10-13: swapping uses up the turn of whoever chose it. Position changes how enemies treat a party member: closer to the enemy side means more likely to be attacked; farther away means harder to hit - enemies get reduced accuracy against them.** This plugs into two existing to-dos: the "who do I attack" choice is the combat decision-maker's targeting (to-do 5 under `entities/`), which now has to weigh position, and the accuracy penalty goes into the generalised hit roll (to-do 5 under `combat/`). To settle: how many positions there are (a front and a back row, or a line of four), the actual numbers (how much more likely, how much less accurate), whether position also affects the party's own attacks or enemy positions, and the starting formation and whether it is set in the party menu. **Also decided 2026-10-13: the partner who is swapped with does not lose their turn - they just move. Reposition is a regular combat action (a fifth button beside Attack, Ability, Item and Defend) and a fifth action in the tutorial's "try each action" lesson** - add it to `RequiredActionTypes` in `tutorial_manager.cs` and to the action buttons in "Combat scene - what the screen has to show". The tutorial fight has one companion, so there is always someone to swap with.
+- `core/` has been presented and discussed.
+
+#### `godot_project/` (first pass 2026-10-13 - 2 scenes, 3 scripts with code, 9 empty scripts)
+_Found by reading the files only - nothing was built or opened in Godot._
+- **What this folder is**: the real Godot project. Only the combat test scene has anything in it.
+- **Nine script files are completely empty** (0 lines): `UI/UIManager.cs`, `UI/HUD/CombatHUD.cs`, `HealthBar.cs`, `InventoryHUD.cs`, `UI/menus/MainMenu.cs`, `PauseMenu.cs`, `SettingsMenu.cs`, `scripts/EnemyController.cs`, `PlayerController.cs`. They are name placeholders carried over from `godot_integration/`. Their names already disagree with decisions made since (one party menu instead of an inventory screen; the health bar lives inside `EntitySlot`). **Decided 2026-10-13: leave everything in `godot_project/` as it is.** A full planning session for the Godot frontend comes first ("Plan the Godot frontend file structure and file contents" under FUTURE PHASE); what stays and what goes is decided once that design is final.
+- **The project has no starting scene.** `project.godot` sets no main scene, so pressing Play (F5) asks which scene to run; only "run this scene" (F6) works. Fine while there is one test scene; set it when a main menu exists.
+- **Nothing connects Godot to `GameManager`.** There is no single shared game object (Godot calls this an autoload) that creates the `GameManager` and keeps it alive between scenes. Every screen needs it; it is the first building block, and the home for the scene switcher (to-do 14 under `core/`).
+- **The combat scene builds its own fight and bypasses `GameManager`.** `CombatSceneController` creates its own player ("Hero" with a Rusty Sword), two goblins and its own `CombatManager`. Right for a first test; it means the scene knows nothing about the real party, inventory, game state, tutorial rules or what happens after the fight. When the shared game object exists, the scene should receive the fight from `GameManager` and submit actions through the tutorial check during the tutorial.
+- **The dead Attack button - probable cause (logged under `combat/`, not confirmed).** `CombatManager.StartCombat` calls `Console.Clear()` before its first message (`combat_manager.cs` line 182). Without a console window that call fails, which would stop the fight before it starts and leave the log empty - both symptoms from one cause. Check Godot's Output panel for the error.
+- **The scene has Attack, Defend and Flee only** - no Ability or Item button, no way to start another fight when one ends, and nothing from the "what the screen has to show" list. It redraws health only after the whole chain of computer turns has finished (the timing issue already logged).
+- **Combat text is shown as formatted text.** The log treats square brackets as formatting codes, so any message containing them (boss labels such as "[BOSS]") may lose that part. Goes away when combat sends structured events instead of finished sentences.
+- **`MapController.cs` is out of date.** It starts a fight when the player steps on a map square marked as having an enemy - the old chance-per-square model that the overworld spawn work replaced (enemies walk around and a fight starts on touch, `OnOverworldEnemyHitboxCollision`). It is also never given a `GameManager`, so it does nothing. Rewrite with the map scene.
+- `EntitySlot` is a reasonable reusable piece (name, health bar, hover details, select). Its comment says a fight can have "1-8 allies"; the party is 4.
+
+#### Root files and `tests/` (first pass 2026-10-13)
+_Found by reading the files only._
+- **The console program can no longer run the game.** `Program.cs` calls `GameManager.Run()`, the old console loop, which now spins forever because the menus it calls are empty (logged under `core/`). `Program.cs` and the root `RNGTheGame.csproj` exist only for that. **Decided 2026-10-13: keep `Program.cs`, but cut it down** - it is no longer the main way into the game. To do: stop it calling `Run()`, and settle what the small version does (for example start a new game and run one test fight, or just print that the game is played through Godot). The root `RNGTheGame.csproj` stays with it. Update the README's "dotnet run" instructions to say what it now does.
+- **Five of the eleven test files are switched off** in `tests/GameLogicTests.csproj` because they no longer compile against the current code: `DamageCalculatorTests`, `PlayerTests`, `QuestManagerTests`, `TurnManagerTests`, `SaveManagerTests`. The note beside them says "see conversation/memory" for the reasons, which is not a place anyone else can read - the reasons should be written down here as each is repaired. A sixth, `CombatManagerTests`, compiles but is known-broken. So only five files really test anything today: RNG, leveling, difficulty scaler, game settings, statistics tracker. Two of those five cover systems the game does not use yet (difficulty scaler) or barely feeds (statistics). "Unit tests still missing" above lists 11 files without saying this.
+- `TurnManagerTests` tests `turn_manager.cs`, which combat does not use (logged under `combat/`). Delete both together or revive both with the 8-slot turn order.
+- **`README.md` is out of date** - it marks whole systems as implemented (difficulty scaling, "comprehensive testing") that this review found unconnected or switched off, and its folder listing predates the Godot project and the `GameLogic.csproj` split. `SRS.md` is the original 2025 requirements document and describes a different game in places (weapon toggle key, gameplay speed keys). Neither was part of the docs clean-up of 2026-10-08. **SRS decided 2026-10-13: keep it, leave it alone for now, and rewrite it once the game is finished so it describes the final product** - a properly documented SRS for this project's history and a detailed reference for the second game. Logged as its own to-do under BUSINESS & LEGAL. **README decided 2026-10-13: its "Project Structure" listing is kept in line with the real file structure** - brought up to date the same day, and to be updated whenever files are added, moved or removed. The rest of the README (the "Key Features Implemented" and "Current Status" sections, the "411 unit tests" figure, "dotnet run") was left as it was and still overstates what works; rewrite those when the game is closer to done.
+- **Combat positions** (how many there are, front/back row or a line of four) - put off by the user on 2026-10-13, to be addressed later (to-do 18 under `core/`).
+- The three projects and the solution file are set up correctly as far as reading can tell: `GameLogic` is a library with no Godot dependency, and the console program, the tests and the Godot project each reference it. Small naming inconsistency: `RNGTheGame.csproj` versus `RNGtheGame.sln`.
+- `game_logic` has strict "may be empty" checking switched on while most of the code was written without it, so a build probably prints a large number of warnings that bury real ones. Confirm on a build; if so, either switch the check off for that project or clean the warnings up folder by folder.
+- **The folder-by-folder review is complete (2026-10-13).** `items/` and `abilities/` were presented but never discussed in detail.
 
 ### 🔴 Quests, statistics and settings are built but not connected to the game (found 2026-10-09)
 - **Status**: ❌ Not Started
@@ -862,10 +873,6 @@ _Found by reading the code only - nothing was built or run._
 - **Godot side**: a sprite and an overworld/combat appearance for each enemy type, and showing the random name with the enemy type in the combat scene.
 - **Note**: the Dragon being a 5% random encounter is known and accepted for now; it gets sorted out when the per-area lists exist.
 
-### 🔵 3. Get Godot
-- **Status**: ✅ Done (installed, Godot 4.7.2 mono build)
-- **Phase**: GUI Development
-
 ### 🔵 4. Figure Out Sprites
 - **Status**: ❌ Not Started
 - **Phase**: GUI Development
@@ -903,6 +910,12 @@ _Found by reading the code only - nothing was built or run._
   - World lore
   - Quest narratives
 
+### 💼 Rewrite the SRS to match the finished game (added 2026-10-13)
+- **File**: `SRS.md`
+- **Status**: ⏸ Waiting until the game is complete
+- **Description**: the SRS is the original 2025 requirements document and no longer matches the game. Do not edit it piecemeal. When the game is finished, rewrite it from the final product so the project has a properly documented, well-made SRS - for the record, and as a detailed reference when starting the second game.
+- **Helps later**: decisions are already dated in this file; keeping that habit gives the rewrite its source material.
+
 ### 💼 7. Marketing Strategy
 - **Status**: ❌ Not Started
 - **Phase**: Pre-Launch
@@ -938,11 +951,7 @@ _Found by reading the code only - nothing was built or run._
 
 _Corrected 2026-10-09 after checking each item against the code. "Built, not connected" means the classes exist but the game never uses them - these are NOT done._
 
-**Completed and working in combat**: 4
-- Turn order with speed-based initiative
-- RevivePotion system with three tiers and combat integration
-- Enemy defense application (flat damage reduction)
-- Weapon/Armor save system with custom stats
+**Completed**: see `docs/done.md` (turn order, RevivePotion system, enemy defense application, Godot installed - moved 2026-10-13). The weapon/armor save system with custom stats also works; it is one part of item 15, which is not finished, so it stays here.
 
 **Built, not connected** (do not skip these): 5
 - Equipment leveling - gear never gains XP, Blacksmith never placed in the game (item 1)

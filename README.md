@@ -7,131 +7,178 @@ A turn-based RPG where RNG (Random Number Generation) is a core mechanic, built 
 ```
 RNGtheGame/
 │
-├── game_logic/                          # Pure C# game logic (no Godot dependencies)
-│   ├── core/
-│   │   ├── game_manager.cs              # Main game coordinator
-│   │   └── game_state.cs                # Enum: MainMenu, Playing, Combat, Paused, GameOver
+├── game_logic/                          # Pure C# game rules (no Godot dependencies)
+│   ├── GameLogic.csproj                 # Library project - referenced by the console app, tests and Godot
 │   │
-│   ├── entities/                        # All game entities
-│   │   ├── entity.cs                    # Base class (Entity) - shared by Player/Enemy/NPC
-│   │   │                                # Provides: Health, ActiveEffects, HasEffect<T>(), etc.
+│   ├── core/
+│   │   ├── game_manager.cs              # Hub: owns every system and the current game state
+│   │   ├── game_startup.cs              # Builds a new game or loads a save
+│   │   ├── game_state.cs                # Enum of game states
+│   │   └── tutorial_manager.cs          # Opening tutorial (story text, first boss fight rules)
+│   │
+│   ├── entities/
+│   │   ├── entity.cs                    # Base class shared by Player/Enemy/NPC
 │   │   ├── player/
-│   │   │   ├── player.cs                # Player class (inherits Entity)
-│   │   │   │                            # Adds: Experience, Gold, Inventory, Equipment
-│   │   │   └── player_inventory.cs      # Inventory management helper
+│   │   │   ├── player.cs                # Player (stats, gold, equipment, ability)
+│   │   │   ├── player_class.cs          # Player classes (post-MVP, dormant)
+│   │   │   └── player_inventory.cs      # Inventory
 │   │   │
 │   │   ├── enemies/
-│   │   │   ├── enemy_base.cs            # EnemyBase class (inherits Entity)
-│   │   │   │                            # Adds: Combat stats, AI, loot tables
-│   │   │   ├── enemy_ai.cs              # Enemy AI behavior logic
-│   │   │   └── enemy_types/
-│   │   │       ├── goblin.cs            # Goblin enemy
-│   │   │       ├── dragon.cs            # Dragon enemy
-│   │   │       └── bandit.cs            # Bandit enemy
+│   │   │   ├── enemy_base.cs            # Base enemy
+│   │   │   ├── enemy_ai.cs              # Enemy decision-making
+│   │   │   ├── enemy_types/
+│   │   │   │   ├── goblin.cs
+│   │   │   │   ├── bandit.cs
+│   │   │   │   └── dragon.cs
+│   │   │   └── bosses/
+│   │   │       ├── boss_definitions.cs  # Boss roster
+│   │   │       ├── boss_enemy.cs        # One shared boss class
+│   │   │       ├── boss_manager.cs      # Boss order and defeat tracking
+│   │   │       └── boss_mechanic.cs     # Per-boss unique combat mechanics
 │   │   │
 │   │   └── NPCs/
-│   │       ├── npc_base.cs              # Base NPC class
-│   │       ├── shop_keeper.cs           # Shopkeeper NPC
+│   │       ├── NPC_base.cs              # Base NPC
+│   │       ├── shop_keeper.cs
+│   │       ├── blacksmith.cs
+│   │       ├── quest_giver.cs
 │   │       └── companions/
-│   │           ├── companion_base.cs    # Base companion class
+│   │           ├── companion_base.cs
 │   │           ├── companion_warrior.cs
 │   │           ├── companion_mage.cs
 │   │           ├── companion_rogue.cs
 │   │           ├── companion_healer.cs
-│   │           └── companion_ranger.cs
+│   │           ├── companion_ranger.cs
+│   │           └── party_manager.cs     # Party roster and size rules
 │   │
 │   ├── combat/
-│   │   ├── combat_manager.cs            # Orchestrates combat flow
-│   │   ├── turn_manager.cs              # Handles turn order
-│   │   ├── damage_calculator.cs         # Calculates damage/defense/crits
-│   │   └── combat_action.cs             # Combat action data structure
+│   │   ├── combat_manager.cs            # Runs a fight (non-blocking, event-driven, multi-enemy)
+│   │   ├── combat_action.cs             # One combat action (attack, ability, item, defend, flee)
+│   │   ├── damage_calculator.cs         # Damage, defense, accuracy, crits
+│   │   └── turn_manager.cs              # Older turn-order code (not used by combat_manager)
 │   │
 │   ├── abilities/
-│   │   ├── ability.cs                   # Base ability class
-│   │   ├── ability_effect.cs            # Base effect class (buffs/debuffs/DoT)
+│   │   ├── ability.cs                   # Base ability
+│   │   ├── ability_effect.cs            # Base effect (buffs/debuffs/damage over time)
+│   │   ├── consumable_effects.cs
+│   │   ├── evasion_ability.cs
+│   │   ├── executioner_ability.cs
+│   │   ├── iron_will_ability.cs
+│   │   ├── leadership_ability.cs        # Disabled for the MVP
+│   │   ├── precision_training_ability.cs
+│   │   ├── rallying_cry_ability.cs
+│   │   ├── swift_tactics_ability.cs
 │   │   ├── player_abilities/
-│   │   │   ├── attack_boost.cs          # Attack power buff
-│   │   │   ├── healing_ability.cs       # Healing ability
-│   │   │   ├── critical_strike.cs       # Crit chance buff
-│   │   │   └── defence_boost.cs         # Defense buff
+│   │   │   ├── attack_boost.cs
+│   │   │   ├── critical_strike.cs
+│   │   │   ├── defence_boost.cs
+│   │   │   └── healing_ability.cs
+│   │   ├── weapon_masteries/            # One file per weapon type (axe, bow, crossbow, dagger,
+│   │   │                                # mace, spear, staff, sword, wand)
 │   │   └── enemy_abilities/
-│   │       ├── poison_attack.cs         # Poison DoT effect
-│   │       └── rage.cs                  # Rage buff (damage up, defense down)
+│   │       ├── grapple.cs
+│   │       ├── poison_attack.cs
+│   │       └── rage.cs
 │   │
 │   ├── items/
-│   │   ├── item.cs                      # Base item class
-│   │   ├── weapon.cs                    # Weapon with damage/accuracy/crit
-│   │   ├── armor.cs                     # Armor with defense
-│   │   ├── consumable.cs                # Potions, food, etc.
-│   │   ├── quest_item.cs                # Special quest items
-│   │   └── item_database.cs            # Item factory/database
+│   │   ├── item.cs                      # Base item
+│   │   ├── weapon.cs
+│   │   ├── armor.cs
+│   │   ├── consumable.cs                # Potions and other usable items
+│   │   ├── quest_item.cs
+│   │   └── item_database.cs             # Every item definition
 │   │
 │   ├── world/
-│   │   ├── map_manager.cs               # Handles map generation/navigation
-│   │   ├── map_node.cs                  # Individual map locations
-│   │   ├── location_type.cs             # Enum: City, Dungeon, Wilderness, Boss
-│   │   └── city.cs                      # City data and shops
+│   │   ├── map_manager.cs               # Map generation and navigation
+│   │   ├── map_node.cs                  # One map location
+│   │   ├── city.cs
+│   │   ├── boss_encounter.cs
+│   │   └── overworld_enemy_spawn.cs     # Enemies that roam an area and start a fight on contact
 │   │
 │   ├── progression/
 │   │   ├── leveling_system.cs           # XP curves, level requirements, stat scaling
-│   │   │                                # Also: Enemy scaling, item costs, rewards
-│   │   ├── loot_table.cs                # Loot drop rate logic
-│   │   └── quest_system.cs              # Quest tracking and completion
+│   │   ├── loot_table.cs                # Loot tables and loot generation
+│   │   └── quest_system.cs              # Second, unused quest system (kept for now)
+│   │
+│   ├── quests/
+│   │   ├── quest.cs                     # Base quest
+│   │   ├── quest_manager.cs
+│   │   ├── quest_objective.cs
+│   │   ├── quest_reward.cs
+│   │   └── *_quest.cs                   # Quest types: boss_defeat, final_boss, enemy_kill,
+│   │                                    # gold_collection, level, equipment, weapon_upgrade, challenge
+│   │
+│   ├── menus/                           # Old console menus, kept as reference only
+│   │   ├── job_board.cs
+│   │   ├── settings_menu.cs
+│   │   └── statistics_menu.cs
 │   │
 │   ├── systems/
-│   │   ├── RNG_manager.cs               # All randomness: rolls, dice, weighted selection
-│   │   │                                # Provides reproducible RNG with seeds
-│   │   ├── difficulty_scaler.cs         # Scales difficulty based on party level
-│   │   │                                # Handles party composition and enemy scaling
-│   │   └── event_system.cs              # Event/messaging system
+│   │   ├── RNG_manager.cs               # All randomness (seeded, reproducible)
+│   │   ├── difficulty_scaler.cs
+│   │   ├── event_system.cs
+│   │   ├── game_settings.cs
+│   │   └── statistics_tracker.cs
 │   │
-│   └── data/                            # Data containers and persistence
-│       ├── save_data.cs                 # Player save file structure (JSON)
-│       └── save_manager.cs              # Save/load system (static class)
+│   └── data/
+│       ├── save_data.cs                 # Save file structure (JSON)
+│       └── save_manager.cs              # Save/load
 │
-├── tests/                               # Unit tests (xUnit framework)
-│   ├── RNGManagerTests.cs               # 40+ tests for RNG system
-│   ├── LevelingSystemTests.cs           # 78 tests for leveling/XP/scaling
-│   ├── DifficultyScalerTests.cs         # 93 tests for difficulty scaling
-│   ├── DamageCalculatorTests.cs         # 27 tests for damage calculations
-│   ├── TurnManagerTests.cs              # 43 tests for turn management
-│   ├── CombatManagerTests.cs            # 22 tests for combat orchestration
-│   ├── SaveManagerTests.cs              # 38 tests for save/load system
-│   └── PlayerTests.cs                   # 48 tests for player functionality
-│   │
-│   └── Total: 411 comprehensive unit tests
-│
-├── GodotIntegration/                    # Godot-specific code (future)
-│   ├── Scenes/
-│   │   ├── Main.tscn
-│   │   ├── Combat.tscn
-│   │   ├── Map.tscn
-│   │   └── UI.tscn
-│   │
-│   ├── Scripts/                         # Godot C# scripts that use game_logic
-│   │   ├── PlayerController.cs          # Links Player.cs to Godot node
-│   │   ├── EnemyController.cs
+├── godot_project/                       # The Godot frontend (early - one test scene so far)
+│   ├── project.godot
+│   ├── RNGtheGameGodot.csproj           # References game_logic/GameLogic.csproj
+│   ├── scenes/
+│   │   ├── combat_scene.tscn            # First combat test scene
+│   │   └── entity_slot.tscn             # One combatant (name, health bar, select)
+│   ├── scripts/
 │   │   ├── CombatSceneController.cs
-│   │   └── MapController.cs
-│   │
-│   ├── UI/
-│   │   ├── UIManager.cs
-│   │   ├── MainMenu.cs
-│   │   ├── CombatHUD.cs
-│   │   ├── InventoryUI.cs
-│   │   └── HealthBar.cs
-│   │
-│   └── Resources/
-│       ├── Sprites/
-│       ├── Audio/
-│       ├── Fonts/
-│       └── Prefabs/
+│   │   ├── EntitySlot.cs
+│   │   ├── MapController.cs
+│   │   ├── EnemyController.cs           # Empty placeholder
+│   │   └── PlayerController.cs          # Empty placeholder
+│   └── UI/                              # Empty placeholders until the frontend is planned
+│       ├── UIManager.cs
+│       ├── HUD/
+│       │   ├── CombatHUD.cs
+│       │   ├── HealthBar.cs
+│       │   └── InventoryHUD.cs
+│       └── menus/
+│           ├── MainMenu.cs
+│           ├── PauseMenu.cs
+│           └── SettingsMenu.cs
 │
-├── Program.cs                           # Console app entry point (for testing)
+├── tests/                               # Unit tests (xUnit)
+│   ├── GameLogicTests.csproj            # Lists the test files currently switched off
+│   ├── xunit.runner.json
+│   ├── RNGManagerTests.cs
+│   ├── LevelingSystemTests.cs
+│   ├── DifficultyScalerTests.cs
+│   ├── GameSettingsTests.cs
+│   ├── StatisticsTrackerTests.cs
+│   ├── CombatManagerTests.cs            # Needs rewriting for the current combat engine
+│   ├── DamageCalculatorTests.cs         # Switched off - no longer compiles
+│   ├── PlayerTests.cs                   # Switched off - no longer compiles
+│   ├── QuestManagerTests.cs             # Switched off - no longer compiles
+│   ├── SaveManagerTests.cs              # Switched off - no longer compiles
+│   └── TurnManagerTests.cs              # Switched off - no longer compiles
+│
+├── docs/
+│   ├── to_do_list.md                    # What is still to do, and the decision log
+│   ├── done.md                          # What is finished (entries move here from to_do_list.md)
+│   ├── abilities.md
+│   ├── boss_ideas_archive.md
+│   └── player_class_system.md
+│
+├── tools/
+│   └── git_time_tracker.py              # Development hours estimate from git history
+│
+├── .githooks/                           # Shared git hooks (post-merge, pre-push)
+├── .vscode/
+├── Program.cs                           # Console entry point (to be cut down - Godot is the way in)
+├── RNGTheGame.csproj                    # Console project
+├── RNGtheGame.sln                       # Solution: console app, game_logic, tests, Godot project
+├── SRS.md                               # Original requirements document (to be rewritten at the end)
 ├── .gitignore
-├── RNGtheGame.csproj                    # C# project file
 └── README.md
-
 ```
 
 ## Key Features Implemented
