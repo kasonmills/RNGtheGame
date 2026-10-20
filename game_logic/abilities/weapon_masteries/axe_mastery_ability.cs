@@ -40,7 +40,7 @@ namespace GameLogic.Abilities.WeaponMasteries
         {
             if (Level % 10 == 0)
             {
-                Console.WriteLine($"Your axe mastery improves! Now: +{GetAccuracyBonus()}% accuracy, +{GetAttackDamageBonus()}% damage, +{GetCritChanceBonus()}% crit chance!");
+                GameLog.Write($"Your axe mastery improves! Now: +{GetAccuracyBonus()}% accuracy, +{GetAttackDamageBonus()}% damage, +{GetCritChanceBonus()}% crit chance!");
             }
         }
 
@@ -76,9 +76,9 @@ namespace GameLogic.Abilities.WeaponMasteries
 
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"{Name} is a passive ability providing bonuses when wielding an axe.");
-            Console.WriteLine($"Current bonuses: +{GetAccuracyBonus()}% accuracy, +{GetAttackDamageBonus()}% damage, +{GetCritChanceBonus()}% crit chance");
-            Console.WriteLine("It is always active and cannot be manually used.");
+            GameLog.Write($"{Name} is a passive ability providing bonuses when wielding an axe.");
+            GameLog.Write($"Current bonuses: +{GetAccuracyBonus()}% accuracy, +{GetAttackDamageBonus()}% damage, +{GetCritChanceBonus()}% crit chance");
+            GameLog.Write("It is always active and cannot be manually used.");
         }
     }
 }

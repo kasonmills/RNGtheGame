@@ -33,7 +33,6 @@ namespace GameLogic.Abilities.EnemyAbilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{user.Name} uses {Name}!");
 
             // Calculate damage increase based on enemy level
             // Level 1: +20% damage
@@ -57,7 +56,7 @@ namespace GameLogic.Abilities.EnemyAbilities
 
             user.AddEffect(rageEffect);
 
-            Console.WriteLine($"{user.Name} enters a furious rage! (+{damageBonus}% damage, -{defenseReduction}% defense for {duration} turns)");
+            GameLog.Write($"{user.Name} enters a furious rage! (+{damageBonus}% damage, -{defenseReduction}% defense for {duration} turns)");
 
             // Set cooldown (uses level-based reduction)
             CurrentCooldown = GetEffectiveCooldown();
@@ -105,7 +104,7 @@ namespace GameLogic.Abilities.EnemyAbilities
         {
             // This effect is passive - the modifiers are checked during damage calculation
             // No per-turn action needed
-            Console.WriteLine($"  💢 {Name}: +{_damageBonus}% damage, -{_defenseReduction}% defense ({Duration} turns left)");
+            GameLog.Write($"  💢 {Name}: +{_damageBonus}% damage, -{_defenseReduction}% defense ({Duration} turns left)");
         }
 
         /// <summary>
@@ -127,12 +126,12 @@ namespace GameLogic.Abilities.EnemyAbilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"💢 {target.Name} is consumed by rage!");
+            GameLog.Write($"💢 {target.Name} is consumed by rage!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"💢 {target.Name}'s rage subsided.");
+            GameLog.Write($"💢 {target.Name}'s rage subsided.");
         }
 
         public override string GetDisplayInfo()

@@ -50,7 +50,7 @@ namespace GameLogic.Abilities
             // Notify on milestone levels
             if (Level == 25 || Level == 50 || Level == 75 || Level == 100)
             {
-                Console.WriteLine($"Your leadership has grown! Max party size increased to {totalSize}!");
+                GameLog.Write($"Your leadership has grown! Max party size increased to {totalSize}!");
             }
         }
 
@@ -95,8 +95,8 @@ namespace GameLogic.Abilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"{Name} is a passive ability providing a permanent +{GetPassiveBonusValue()} party size bonus.");
-            Console.WriteLine("It is always active and cannot be used in combat.");
+            GameLog.Write($"{Name} is a passive ability providing a permanent +{GetPassiveBonusValue()} party size bonus.");
+            GameLog.Write("It is always active and cannot be used in combat.");
         }
     }
 }

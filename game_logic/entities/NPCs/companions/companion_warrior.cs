@@ -39,7 +39,7 @@ namespace GameLogic.Entities.NPCs.Companions
 
             // Equip starting weapon
             EquippedWeapon = Items.ItemDatabase.GetWeapon("rusty sword");
-            EquippedArmor = Items.ItemDatabase.GetArmor("rusty chainmail");
+            EquippedArmor = Items.ItemDatabase.GetArmor("rusty chainmail set");
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace GameLogic.Entities.NPCs.Companions
             player.MaxHealth += _playerMaxHealthBonus;
             player.Health += _playerMaxHealthBonus; // Also heal the amount
 
-            Console.WriteLine($"{Name}'s presence bolsters you! (+{_playerMaxHealthBonus} Max HP)");
+            GameLog.Write($"{Name}'s presence bolsters you! (+{_playerMaxHealthBonus} Max HP)");
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace GameLogic.Entities.NPCs.Companions
                 player.Health = player.MaxHealth;
             }
 
-            Console.WriteLine($"{Name}'s bonus fades. (-{_playerMaxHealthBonus} Max HP)");
+            GameLog.Write($"{Name}'s bonus fades. (-{_playerMaxHealthBonus} Max HP)");
             _playerMaxHealthBonus = 0;
         }
 
@@ -82,7 +82,7 @@ namespace GameLogic.Entities.NPCs.Companions
             if (Level % 5 == 0)
             {
                 Speed++;
-                Console.WriteLine($"{Name}'s heavy armor training improved agility! Speed increased to {Speed}!");
+                GameLog.Write($"{Name}'s heavy armor training improved agility! Speed increased to {Speed}!");
             }
         }
     }
@@ -109,14 +109,13 @@ namespace GameLogic.Entities.NPCs.Companions
 
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{_warrior.Name} uses {Name}!");
 
             // Deal damage based on warrior's level
             int baseDamage = 5 + (_warrior.Level * 2);  // Scales with level
             int damage = rng.Roll(baseDamage, baseDamage + 5);
 
             target.TakeDamage(damage);
-            Console.WriteLine($"{target.Name} takes {damage} damage from the shield bash!");
+            GameLog.Write($"{target.Name} takes {damage} damage from the shield bash!");
 
             // Apply Stunned effect
             int duration = 2;  // 2 turns
@@ -125,7 +124,7 @@ namespace GameLogic.Entities.NPCs.Companions
             var stunnedEffect = new ShieldBashEffect(duration, damageReduction);
             target.AddEffect(stunnedEffect);
 
-            Console.WriteLine($"{target.Name} is stunned! Damage reduced by {damageReduction}% for {duration} turns!");
+            GameLog.Write($"{target.Name} is stunned! Damage reduced by {damageReduction}% for {duration} turns!");
 
             // Set cooldown (uses level-based reduction)
             CurrentCooldown = GetEffectiveCooldown();
@@ -148,7 +147,7 @@ namespace GameLogic.Entities.NPCs.Companions
 
         protected override void OnLevelUp()
         {
-            Console.WriteLine($"{Name} is now more powerful!");
+            GameLog.Write($"{Name} is now more powerful!");
         }
     }
 
@@ -172,7 +171,7 @@ namespace GameLogic.Entities.NPCs.Companions
         public override void ApplyEffect(Entity target, RNGManager rng)
         {
             // Passive effect - damage reduction is checked during damage calculation
-            Console.WriteLine($"  💫 {Name}: {target.Name}'s attacks are weakened! ({Duration} turns left)");
+            GameLog.Write($"  💫 {Name}: {target.Name}'s attacks are weakened! ({Duration} turns left)");
         }
 
         /// <summary>
@@ -186,12 +185,12 @@ namespace GameLogic.Entities.NPCs.Companions
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"💫 {target.Name} is stunned by the shield bash!");
+            GameLog.Write($"💫 {target.Name} is stunned by the shield bash!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"💫 {target.Name} recovers from the stun.");
+            GameLog.Write($"💫 {target.Name} recovers from the stun.");
         }
 
         public override string GetDisplayInfo()

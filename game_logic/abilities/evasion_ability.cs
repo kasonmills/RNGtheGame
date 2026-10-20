@@ -64,7 +64,7 @@ namespace GameLogic.Abilities
             // Notify at milestone levels
             if (Level % 10 == 0)
             {
-                Console.WriteLine($"Your evasion has improved! Evasion chance is now {newChance}%!");
+                GameLog.Write($"Your evasion has improved! Evasion chance is now {newChance}%!");
             }
         }
 
@@ -114,9 +114,9 @@ namespace GameLogic.Abilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"{Name} is a passive ability providing a {GetPassiveBonusValue()}% chance to evade incoming damage.");
-            Console.WriteLine("It is always active and cannot be used manually.");
-            Console.WriteLine("Note: Evasion does not work while defending.");
+            GameLog.Write($"{Name} is a passive ability providing a {GetPassiveBonusValue()}% chance to evade incoming damage.");
+            GameLog.Write("It is always active and cannot be used manually.");
+            GameLog.Write("Note: Evasion does not work while defending.");
         }
     }
 }

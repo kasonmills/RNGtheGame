@@ -1,7 +1,8 @@
 # RNGtheGame - TODO List
 
 ## Legend
-- ✅ = Completed
+- ✅ = Completed (built and tested) - or a decision made / review step finished
+- 🧪 = Implemented, needs testing (written, but not yet built and tested in play)
 - 🚧 = In Progress / Partially Complete
 - ❌ = Not Started
 - 🔴 = High Priority
@@ -10,7 +11,7 @@
 - 🔵 = Future/GUI Phase
 - 💼 = Business/Legal
 
-**Finished work lives in `done.md` (rule added 2026-10-13, widened 2026-10-15).** When an entry here is completed - built and working in the game - it is moved out of this file into `docs/done.md`. The same goes for anything **resolved with nothing left to do**: a settled decision or question whose follow-up work (if any) is logged elsewhere, a deleted file, a finished cleanup. This file holds only what is still to do. Code that is written but not yet built and tested still counts as something to do. An entry with several parts moves when all of them are done; until then, finished parts stay ticked (✅) inside the entry. Item numbers are not reused, so gaps in the numbering (2, 4, 7) are entries that have moved.
+**Finished work lives in `done.md` (rule added 2026-10-13, widened 2026-10-15).** When an entry here is completed - built and working in the game - it is moved out of this file into `docs/done.md`. The same goes for anything **resolved with nothing left to do**: a settled decision or question whose follow-up work (if any) is logged elsewhere, a deleted file, a finished cleanup. This file holds only what is still to do. Code that is written but not yet built and tested still counts as something to do: it is marked 🧪 "needs testing", never ✅ or "done", and moves only once it has been tested (confirmed by the user 2026-10-19). An entry with several parts moves when all of them are done; until then, finished parts stay ticked (✅) inside the entry. Item numbers are not reused, so gaps in the numbering are entries that have moved.
 
 ---
 
@@ -58,7 +59,7 @@ _This is the living plan for turning the current codebase into what the story ne
       - **Companion ability:** while he is wearing armor, every attack that hits him has a percent chance to do **no damage at all**, even when he is not defending. The chance goes **up** while he is defending.
       - **Boss ability:** a really high critical hit chance (about 55%, possibly higher on harder difficulties) and a really high critical hit damage multiplier.
       - **Rework or new:** the existing Warrior (armor-focused, defensive) is the natural starting point - it was already marked as the companion that becomes the Captain.
-      - **What the code has already** (checked 2026-10-15): enemies carry their own `CritChance`, and the combat pass added `Entity.CritMultiplier` (default 1.5, not built yet), so the boss side needs only numbers plus the difficulty bonus. The companion side is new: a "no damage" check after the hit roll in `DamageCalculator.CalculateAttack()`. It differs from the existing Evasion ability, which makes the attack miss; here the attack lands and does nothing.
+      - **What the code has already** (checked 2026-10-15): enemies carry their own `CritChance`, and the combat pass added `Entity.CritMultiplier` (default 1.5, needs testing), so the boss side needs only numbers plus the difficulty bonus. The companion side is new: a "no damage" check after the hit roll in `DamageCalculator.CalculateAttack()`. It differs from the existing Evasion ability, which makes the attack miss; here the attack lands and does nothing.
       - **Still open (2026-10-15):**
         - The numbers: the base chance, how much defending adds, and whether either grows with his level.
         - Whether the armor matters beyond "wearing some" (heavier or better armor = higher chance?).
@@ -84,10 +85,12 @@ _This is the living plan for turning the current codebase into what the story ne
       - **Idea, not decided:** her healing could also raise the party's speed. The user is not set on it.
       - **Rework or new:** the existing Healer is the natural starting point - same role. A staff weapon type already exists.
       - **What the code does today** (checked 2026-10-15, `companion_healer.cs`, `companion_base.cs`): the Healer is "Aria the Pure". Her ability, Divine Light, heals and removes debuffs and adds a regeneration effect, with a **4-turn cooldown**. Her passive gives the player +2 health per turn. On auto ("Supportive" style) she uses Divine Light **every time it is off cooldown**, whatever anyone's health, and otherwise attacks (or sometimes defends when she is below 50% herself). Since the combat pass, the heal goes to the most wounded ally. So "heal when anyone is below 50%" is a change to the auto rule.
-      - **Still open (2026-10-15):**
-        - The cooldown: with 4 turns between heals she cannot heal every time someone drops below 50%. Keep a cooldown, shorten it, or none?
-        - One target or the whole party? Does she keep the debuff removal and regeneration, and the +2 health per turn passive?
-        - What she does when nobody is below 50%: attack, or top people up anyway?
+      - **Decided 2026-10-20:** heal cooldown 2 turns (was 4). One target only until **level 20**, when she also learns a whole-party heal, so her healing keeps up as everyone's health grows; the single heal gets stronger every level. When nobody is below 50% she attacks with her quarterstaff. **No passive** (the old +2 health per turn, which nothing ever called, is gone).
+      - 🧪 **Implemented 2026-10-20, needs testing:** `companion_healer.cs` → `companion_felicity.cs` (`CompanionFelicity`). Divine Light (one ally, 2-turn cooldown) plus Healing Circle (level 20+, whole party, 60% of a Divine Light heal each, 4-turn cooldown). On auto: Healing Circle when 2+ allies are below 50% or Divine Light is on cooldown, otherwise Divine Light on the most wounded, otherwise attack. Engine: a companion can now have more than one ability (`GetCombatAbilities`), whole-party abilities hit every standing ally (`Ability.ExecuteOnGroup`), and companion passives are optional instead of required.
+        - What to test: she heals only when someone is under 50%; heals land on the most wounded (herself too); she heals every other round at most; at level 20 the party heal appears and hits everyone; cooldowns tick for both heals.
+      - **Still open:**
+        - Defaults I picked, to confirm: Healing Circle's 60% heal and 4-turn cooldown, the "2+ below 50%" rule, the names "Divine Light" / "Healing Circle", and keeping the debuff removal and regeneration on Divine Light.
+        - Under direct player control, the combat screen only shows her first ability; the screen needs to list `GetAbilities()` to offer the party heal.
         - The speed idea: decide yes or no; if yes, how much and for how long.
     - **Fluke, the luck wizard (2026-10-15).** Already known from earlier notes: a luck companion who needs a new team-wide "luck" buff/debuff (Tier 1), and the wizard whose luck spell for the kingdom's army backfired when Chance sabotaged it (see Chance above).
       - **Rework or new:** the existing Mage is the natural starting point (a spellcaster), though luck is a new kind of effect.
@@ -182,7 +185,7 @@ _This is the living plan for turning the current codebase into what the story ne
 - General companion recruitment UI (beyond the one scripted tutorial method) - already deferred; now clearly needed since Fluke and any roster changes need a real recruit flow, not just the tutorial's one-off `RecruitStarterCompanion()`.
 
 **Tier 2 - new bosses, in confirmed story order (corrected 2026-09-30, supersedes the earlier tentative order below this list used to describe):**
-- #1 Skarn the Eagle Bear - ✅ done (tutorial fight).
+- #1 Skarn the Eagle Bear - 🧪 implemented, needs testing (tutorial fight; stopgap stats from the generic boss formula, likely too strong - see Bucket A #11).
 - #2 Librarian-Monk (mechanic TBD)
 - #3 Giant House Centipede (mechanic TBD)
 - #4/#5 Cyclops Brothers - already fits the multi-enemy combat engine (two bosses, one fight) with no new architecture needed for that part.
@@ -214,7 +217,7 @@ _This is the living plan for turning the current codebase into what the story ne
     - **Combat only skips empty slots today** - a fight with two enemies already leaves the other two opponent slots empty and skipped, so the 6-slot round needs nothing new.
 - #6 Demon Prince (Chaos-magic themed, TBD)
 - #7 Slime Dragon - reactive "spawns draglings whenever hit" mechanic. Needs `IBossMechanic` to grow a new on-damage/reactive hook (today it only supports "decide my own turn"), and `CombatManager` to support enemies joining a fight already in progress - a real engine change, bigger than a typical new-boss addition.
-- #8 Captain of the Royal Guard (Risk) - signature is very high crit chance (about 55%, possibly higher on harder difficulties) + a really high crit multiplier. The crit multiplier is now a value on each attacker (`Entity.CritMultiplier`, combat code pass 2026-10-14, not built yet). Companion side and open points under Bucket A #10.
+- #8 Captain of the Royal Guard (Risk) - signature is very high crit chance (about 55%, possibly higher on harder difficulties) + a really high crit multiplier. The crit multiplier is now a value on each attacker (`Entity.CritMultiplier`, combat code pass 2026-10-14, needs testing). Companion side and open points under Bucket A #10.
 - #9 Princess (final boss) - Tier 0's order-based progression is already in place, so this boss needs no key/gate work - just registering her last in `BossDefinitions.GetAllBosses()`. She no longer borrows other bosses' mechanics, but her guard summon needs the same "enemies join mid-fight" engine change as the Slime Dragon (#7), so build that first.
   - **Unique mechanic - decided 2026-10-14:**
     1. **Two turns every round, taking two of the four opponent turn slots** (to-do 9 under `game_logic/combat/`). Her first turn happens at her normal speed. Her second turn comes later in the same round: its speed is her speed **minus a random amount**, set by **her level and the game's difficulty**.
@@ -268,19 +271,36 @@ _This is the living plan for turning the current codebase into what the story ne
 ## HIGH PRIORITY - Core Gameplay
 
 ### 🔴 1. Equipment Leveling System
-- ✅ Weapon/Armor XP tracking
-- ✅ Two-stage level up (XP + Blacksmith payment)
-- ✅ Blacksmith NPC implementation
-- ✅ Player-choice upgrade paths (3 options per level)
-- ✅ Weapon-specific upgrade ranges (data-driven)
-- ✅ All 9 weapon types defined with unique scaling
-- ✅ Safety checks (min damage can't exceed max)
-- ✅ Save system preserves custom-upgraded weapons
+- 🧪 Weapon/Armor XP tracking
+- 🧪 Two-stage level up (XP + Blacksmith payment)
+- 🧪 Blacksmith NPC implementation
+- 🧪 Player-choice upgrade paths (3 options per level)
+- 🧪 Weapon-specific upgrade ranges (data-driven)
+- 🧪 All 9 weapon types defined with unique scaling
+- 🧪 Safety checks (min damage can't exceed max)
+- 🧪 Save system preserves custom-upgraded weapons
 - **Status**: 🚧 Built, NOT working in the game (status corrected 2026-10-09 - previously "FULLY COMPLETED")
 - **Not done**:
   - ❌ Weapons and armor are never awarded XP - nothing in the game calls their XP methods, so gear never becomes ready for an upgrade
   - ❌ The Blacksmith is never created or placed anywhere in the game, so the payment/upgrade-choice step cannot be reached
   - ❌ Level cap and XP curve are under review (Bucket A #12)
+
+### 🔴 2. RevivePotion System
+- **Moved back from `done.md`**: 2026-10-19 - the code was rewritten by the combat passes (2026-10-14 and 2026-10-19) and the new version has not been tested.
+- **File**: `game_logic/items/item_database.cs`, `consumable.cs`, `combat_manager.cs`
+- **Status**: 🧪 Needs testing
+- **Description**: Revival potion system with logic and items
+- **Features**:
+  - 🧪 UseRevivePotion() method with level-scaled revival (1 HP at Lv1, full HP at Lv10)
+  - 🧪 Any party member can use one from the shared bag on any fallen party member - including the player, now that the fight goes on while anyone in the party stands (combat pass 2026-10-14)
+  - 🧪 Revival speed penalty (-2 to -4 speed) - never actually worked before (the penalty was wiped at the end of the round); fixed 2026-10-19 so it applies to the next round
+  - 🧪 Clears negative effects on revival
+  - 🧪 Revive messages go to the combat log through `GameLog` (2026-10-19)
+  - 🧪 Three revival potion tiers:
+    - Minor Revival Potion (Lv1-4): 10%-40% HP restoration (Uncommon)
+    - Revival Potion (Lv5-8): 50%-80% HP restoration (Rare)
+    - Greater Revival Potion (Lv9-10): 90%-100% HP restoration (Epic)
+- **What to test**: revive a fallen companion and a fallen player mid-fight; the revived member is slower the next round; a revive can't target someone still standing.
 
 ### 🔴 3. Shop Keeper Functionality
 - **File**: `game_logic/entities/NPCs/shop_keeper.cs`
@@ -290,9 +310,9 @@ _This is the living plan for turning the current codebase into what the story ne
   - ❌ Shop visits, purchases and sales are not recorded in statistics
 - **Description**: Shop system with dynamic pricing (the features below exist in the class)
 - **Features**:
-  - ✅ Full buy/sell menu system with item browsing
-  - ✅ Tier-based shops (1-5) with better prices at higher tiers
-  - ✅ Dynamic 3-layer price variability system:
+  - 🧪 Full buy/sell menu system with item browsing
+  - 🧪 Tier-based shops (1-5) with better prices at higher tiers
+  - 🧪 Dynamic 3-layer price variability system:
     - **Layer 1**: Shop personality (0.85-1.15x, permanent per shop)
       - Generous shops have cheaper buy prices, pay more when buying from player
       - Greedy shops have expensive buy prices, pay less when buying from player
@@ -301,22 +321,33 @@ _This is the living plan for turning the current codebase into what the story ne
       - Affects both buy and sell prices
     - **Layer 3**: Per-item variation (±3% for shop items, ±2% for player sales)
       - Tiny haggling/negotiation variation per transaction
-  - ✅ Personality-based dialogue (generous/fair/greedy merchants)
-  - ✅ RestockShop() generates level-appropriate inventory
-  - ✅ Can't sell quest items or equipped gear (with warnings)
-  - ✅ Full shop info display explaining pricing system
-  - ✅ Dual restock system (prevents shop scumming):
+  - 🧪 Personality-based dialogue (generous/fair/greedy merchants)
+  - 🧪 RestockShop() generates level-appropriate inventory
+  - 🧪 Can't sell quest items or equipped gear (with warnings)
+  - 🧪 Full shop info display explaining pricing system
+  - 🧪 Dual restock system (prevents shop scumming):
     - **Time-based**: 25±(1-5) minutes since last restock
     - **Combat-based**: 4±(1-2) combat encounters since last restock
     - Whichever condition is met first triggers restock
     - Requirements re-randomized after each restock
     - Initial stock provided at shop creation
-  - ✅ Restock tracking display shows time and combat remaining
-  - ✅ Combat integration complete:
+  - 🧪 Restock tracking display shows time and combat remaining
+  - 🧪 Combat integration complete:
     - Victory counts as 1 encounter, resets flee counter
     - First flee counts as 1 encounter (no penalty)
     - Consecutive flees add +5 min and +1 encounter to requirements
     - Prevents shop scumming via flee spam
+
+### 🔴 4. Enemy Defense Application
+- **Moved back from `done.md`**: 2026-10-19 - the damage code was rewritten by the combat pass of 2026-10-14 and the new version has not been tested.
+- **File**: `game_logic/combat/damage_calculator.cs`
+- **Status**: 🧪 Needs testing
+- **Description**: Defense reduces incoming damage using a flat reduction (never below 1 damage)
+- **Implementation**:
+  - 🧪 One shared attack calculation for every attacker and target, `DamageCalculator.CalculateAttack()` (combat pass 2026-10-14) - enemy defense applies to the player's **and** the companions' attacks (companions ignored it before)
+  - 🧪 Armor reduces damage taken by the player and by companions through the same step
+  - 🧪 All enemy types have Defense values defined
+- **What to test**: player and companion hits on an enemy are reduced by its defense; enemy hits on the player and on companions are reduced by armor; no hit does less than 1 damage.
 
 ---
 
@@ -346,10 +377,10 @@ _This is the living plan for turning the current codebase into what the story ne
   - ❌ Quest list is out of date: it was written for 14 champion bosses and the longer game; boss quests now follow the current roster, and the Job Board set needs resizing for the current scope
   - ❌ Final boss quest is revealed at game start, which would spoil the ending (see the note in `game_startup.cs`)
 - **Description**: Quest system with two quest hubs and RNG variety
-- **Features built** (the code exists; ✅ here means written, not working in play):
-  - ✅ Quest base classes (Quest, QuestObjective, QuestReward)
-  - ✅ QuestManager for centralized tracking and active quest management
-  - ✅ 8 quest types:
+- **Features built** (the code exists; 🧪 here means written, not working in play):
+  - 🧪 Quest base classes (Quest, QuestObjective, QuestReward)
+  - 🧪 QuestManager for centralized tracking and active quest management
+  - 🧪 8 quest types:
     - BossDefeatQuest (14 quests - one per champion boss)
     - FinalBossQuest (1 quest - requires acceptance before completion)
     - LevelQuest (5 quests - reach level milestones)
@@ -358,21 +389,34 @@ _This is the living plan for turning the current codebase into what the story ne
     - WeaponUpgradeQuest (2 quests - upgrade weapon to level X with RNG variance)
     - EquipmentQuest (2 quests - equip full gear set with RNG variance)
     - ChallengeQuest (4 quests - flawless victory, crit master, survivor, win streak)
-  - ✅ **Quest Giver NPC** for boss-related quests (fixed rewards: 100g + 50 XP)
-  - ✅ **Job Board menu** for all other quests (randomized requirements & rewards)
-  - ✅ Quest states: NotDiscovered → Available → Accepted → Completed → Claimed
-  - ✅ **Retroactive completion**: Progress tracks even if quest not accepted (except final boss)
-  - ✅ **Active quest tracking**: Focus on one quest with ★ marker
-  - ✅ Quest log display with progress tracking
-  - ✅ **RNG quest generation** (once per save file):
+  - 🧪 **Quest Giver NPC** for boss-related quests (fixed rewards: 100g + 50 XP)
+  - 🧪 **Job Board menu** for all other quests (randomized requirements & rewards)
+  - 🧪 Quest states: NotDiscovered → Available → Accepted → Completed → Claimed
+  - 🧪 **Retroactive completion**: Progress tracks even if quest not accepted (except final boss)
+  - 🧪 **Active quest tracking**: Focus on one quest with ★ marker
+  - 🧪 Quest log display with progress tracking
+  - 🧪 **RNG quest generation** (once per save file):
     - Job board quest requirements randomized (±1-6 variance)
     - Job board quest rewards randomized (±20-30% variance)
     - Rewards scale with difficulty naturally
-  - ✅ **Complete save/load support**:
+  - 🧪 **Complete save/load support**:
     - Quest data serialized with requirements and rewards
     - ReconstructQuests() rebuilds quests with original RNG values
     - No re-randomization on load - quests stay consistent per save
   - ❌ GameManager menu access (the old console menu options 8, 9, 10 are commented out)
+
+### 🟡 7. Turn Order with Speed Stats
+- **Moved back from `done.md`**: 2026-10-19 - the turn order was replaced by the 8-slot round in the combat pass of 2026-10-14 and the new version has not been tested.
+- **File**: `game_logic/combat/combat_manager.cs` (`BeginRound`, `BuildTurnOrder`, `CalculateSpeedModifiers`)
+- **Status**: 🧪 Needs testing
+- **Description**: Turn order based on speed, with action-based speed changes
+- **Current**:
+  - 🧪 8 turn slots per round: 4 for the party, 4 for the opponents; enemies grouped by speed when there are more than 4 (extras to the slowest slots, a shared slot's speed is the average rounded up); empty slots skipped
+  - 🧪 Slots act in speed order (highest first), ties broken at random (my default - to confirm)
+  - 🧪 Action modifiers for the next round (Attack: -1 to -3, Defend: +1 to +3, Ability/Item: -1 to +1)
+  - 🧪 Revival speed penalty (revived members get -2 to -4 speed the next round) - fixed 2026-10-19
+  - 🧪 `CombatManager.TurnOrder` exposes the slots for the combat screen
+- **What to test**: fights with 1, 2, 4, 5 and 8 enemies give the expected slots; speeds change between rounds after attacking or defending.
 
 ### 🟡 8. Settings Menu
 - **File**: `game_logic/systems/game_settings.cs`, `game_logic/menus/settings_menu.cs`
@@ -382,16 +426,16 @@ _This is the living plan for turning the current codebase into what the story ne
   - ❌ Difficulty selection has no effect on gameplay (see "Difficulty selection has zero mechanical effect" under Code Cleanup)
   - ❌ The settings menu is console-only and needs a Godot UI
 - **Description**: Settings system with multiple categories
-- **Features built** (✅ here means the setting exists and is saved, not that it does anything):
-  - ✅ Display settings (turn order, combat log detail, damage calculations, enemy stats)
-  - ✅ Gameplay settings (auto-save, confirmations)
-  - ✅ RNG settings (algorithm selection, statistics tracking)
-  - ✅ Accessibility settings (colored text, emojis, text speed)
-  - ✅ Audio settings (placeholder for GUI version)
-  - ✅ Difficulty selection (Normal/Hard/Difficult/Unfair - immutable after save creation)
-  - ✅ Full save/load support
-  - ✅ Reset to defaults option
-  - ✅ Accessible from pause menu
+- **Features built** (🧪 here means the setting exists and is saved, not that it does anything):
+  - 🧪 Display settings (turn order, combat log detail, damage calculations, enemy stats)
+  - 🧪 Gameplay settings (auto-save, confirmations)
+  - 🧪 RNG settings (algorithm selection, statistics tracking)
+  - 🧪 Accessibility settings (colored text, emojis, text speed)
+  - 🧪 Audio settings (placeholder for GUI version)
+  - 🧪 Difficulty selection (Normal/Hard/Difficult/Unfair - immutable after save creation)
+  - 🧪 Full save/load support
+  - 🧪 Reset to defaults option
+  - 🧪 Accessible from pause menu
 
 ### 🟡 9. Statistics/Records Page
 - **Files**: `game_logic/systems/statistics_tracker.cs`, `game_logic/menus/statistics_menu.cs`
@@ -400,29 +444,29 @@ _This is the living plan for turning the current codebase into what the story ne
   - ❌ Almost nothing is recorded. The only calls are at save time (play time, current gold, current level, save count). Battles, damage, kills, bosses, purchases, upgrades, item and ability use, quests and NPC visits are never recorded, so the pages below show zeros
   - ❌ The statistics menu is console-only and needs a Godot UI
 - **Description**: Statistics tracking system for gameplay metrics
-- **Features built** (✅ here means the tracker can store and display it, not that the game records it):
-  - ✅ Combat statistics (battles, damage, kills, bosses, streaks)
-  - ✅ Economic statistics (gold flow, purchases, sales)
-  - ✅ Equipment statistics (upgrades, levels, weapon usage)
-  - ✅ Item usage statistics (consumables, abilities)
-  - ✅ Exploration statistics (shops, NPCs, quests)
-  - ✅ Progression statistics (level, XP)
-  - ✅ Achievement statistics (flawless victories, close calls, perfect crits)
-  - ✅ 8 categorized viewing menus
-  - ✅ Summary overview page
-  - ✅ Calculated statistics (win rate, averages, favorites)
-  - ✅ Full save/load support with dictionaries
-  - ✅ Accessible from main menu (option 11)
+- **Features built** (🧪 here means the tracker can store and display it, not that the game records it):
+  - 🧪 Combat statistics (battles, damage, kills, bosses, streaks)
+  - 🧪 Economic statistics (gold flow, purchases, sales)
+  - 🧪 Equipment statistics (upgrades, levels, weapon usage)
+  - 🧪 Item usage statistics (consumables, abilities)
+  - 🧪 Exploration statistics (shops, NPCs, quests)
+  - 🧪 Progression statistics (level, XP)
+  - 🧪 Achievement statistics (flawless victories, close calls, perfect crits)
+  - 🧪 8 categorized viewing menus
+  - 🧪 Summary overview page
+  - 🧪 Calculated statistics (win rate, averages, favorites)
+  - 🧪 Full save/load support with dictionaries
+  - 🧪 Accessible from main menu (option 11)
 
 ### 🟡 9. Companion/Party System Integration
 - **Status**: 🚧 Mostly complete (entry corrected 2026-10-09 - it previously said companions were not in combat)
 - **Description**: Companions fight alongside the player
 - **Current**:
-  - ✅ Companion base classes exist
-  - ✅ Companion abilities implemented
-  - ✅ Party management (`PartyManager`, owned by `GameManager`; fixed party of 4 for the MVP)
-  - ✅ Companions in combat: own turns in the speed-based turn order, AI picks attack / ability / defend by AI style (Aggressive, Defensive, Balanced, Supportive, Strategic - `CompanionBase.DecideCombatAction`), enemies can target them
-  - ✅ Companion XP from combat (every living companion gets the full fight XP)
+  - 🧪 Companion base classes exist
+  - 🧪 Companion abilities implemented
+  - 🧪 Party management (`PartyManager`, owned by `GameManager`; fixed party of 4 for the MVP)
+  - 🧪 Companions in combat: own turns in the speed-based turn order, AI picks attack / ability / defend by AI style (Aggressive, Defensive, Balanced, Supportive, Strategic - `CompanionBase.DecideCombatAction`), enemies can target them
+  - 🧪 Companion XP from combat (every living companion gets the full fight XP)
   - ❌ Recruiting: only the tutorial's starter companion is ever recruited (`GameManager.RecruitStarterCompanion`) - no way to gain the others yet
   - ❌ Never play-tested end to end (companion death, revive mid-combat, boss fights with companions, all companions down)
 - **Depends on**: Bucket A #10 (which companions survive into the story)
@@ -564,7 +608,7 @@ _Big-picture pass over every folder to see where the code is at before the Godot
 _Found by reading the code only - nothing was built or run._
 - `item.cs` - base class, in use. Never used: `IsTradeable` (nothing reads it), `ModifyStat()` (every item type has to implement it, all four leave it empty, nothing calls it), the `Material` and `Treasure` item categories (no class, nothing creates them), and the `Mythic` rarity (no item in the database is Mythic).
 - `weapon.cs`, `armor.cs` - in use for damage and defense. The XP/upgrade half is the "built, not connected" system already logged in item 1. New points:
-  - **The three-way weapon upgrade choice cannot be reached, even through the Blacksmith.** `Weapon.GetPlayerUpgradeChoice()` has no callers. `blacksmith.cs` calls `weapon.CompleteUpgrade()` with no arguments, which always applies the default "Balanced" path (+1 min, +1 max). Item 1 lists "Player-choice upgrade paths" as ✅ - it is written but not wired.
+  - **The three-way weapon upgrade choice cannot be reached, even through the Blacksmith.** `Weapon.GetPlayerUpgradeChoice()` has no callers. `blacksmith.cs` calls `weapon.CompleteUpgrade()` with no arguments, which always applies the default "Balanced" path (+1 min, +1 max). Item 1 lists "Player-choice upgrade paths" as 🧪 - it is written but not wired.
   - **A weapon's level does not change its stats; an armor's does.** A weapon created at level 20 has level-1 damage, shows as "+20", and asks for level-20 XP and gold to upgrade. Armor gains 1% defense per level. Random loot creates gear at the player's/area's level, so this shows up as soon as loot drops. Decide which behaviour is wanted (goes with Bucket A #12).
   - The XP-needed and upgrade-cost code is written twice (once in each file), and the rarity-prefix code (`[U]`, `[R]`...) four times across the item classes. Both files have an `[Obsolete] LevelUp()` that nothing calls. Both set `MaxLevel = 100` (Bucket A #12).
   - Weapons and armor stack up to 99. The inventory matches on name, level and stats but not on XP, so two copies with different XP merge into one.
@@ -572,7 +616,7 @@ _Found by reading the code only - nothing was built or run._
   - **"Elixir of Vitality" does not heal.** Its text says it greatly restores health, but every Elixir runs the Combat Elixir code (attack and defense boost for 1 turn).
   - Five consumable types have working code but no item: Attack Potion, Defense Potion, Critical Potion, Healing Potion, Buff Potion.
   - Food restores half its listed power, at once (the comment says "over time"). Bread is listed at 20 and heals 10.
-  - **Item use will not show in the Godot combat log.** `Use()` and `UseRevivePotion()` print straight to the console instead of going through the combat log, so healing, buffs and revives would happen silently in the combat scene.
+  - **Item use will not show in the Godot combat log.** `Use()` and `UseRevivePotion()` print straight to the console instead of going through the combat log, so healing, buffs and revives would happen silently in the combat scene. 🧪 **Needs testing (written 2026-10-19)** - they now go through `GameLog` into the combat log ("Combat code pass, part 2" under `combat/`).
   - `LevelUp()` is never called - a consumable's level only comes from how it was created.
 - `quest_item.cs` - nothing in the game gives the player a quest item; the only caller of `GetQuestItem()` is save loading. `Use()` ends in a TODO.
 - `item_database.cs` - in use (starting weapons, loot, shop stock, save loading). 207 weapons, 180 armor sets, 12 consumables, 20 quest items.
@@ -600,7 +644,7 @@ _Found by reading the code only - nothing was built or run._
 - `weapon_masteries/` - nine files that are the same file with the weapon name changed (same numbers: up to +40% accuracy, +70% damage, +25% crit). `damage_calculator.cs` has a nine-way type check to find which one the player has. Could be one class that takes a weapon type. **All nine have a typo in their description text** (`\\n` instead of `\n`), so the info block would show the characters "\n" instead of line breaks. How many masteries are needed depends on how many weapon types survive (Bucket A #14).
 - `player_abilities/` - the 4 active abilities, in use. All four only ever target the user. Their boost effects are read by `damage_calculator.cs`.
 - Passive abilities (`evasion`, `executioner`, `iron_will`, `precision_training`, `rallying_cry`, `swift_tactics`) - in use, each wired by a "does the player have this ability" check spread across `damage_calculator.cs`, `combat_manager.cs` and `companion_base.cs`. Rallying Cry and Swift Tactics only do something for companions, so they are worthless until the player has one.
-- `enemy_abilities/` - **no enemy has an ability.** `poison_attack.cs` and `rage.cs` are complete, and combat checks whether an enemy has a special ability, but nothing ever gives one to an enemy (`EnemyBase.SpecialAbility` is never set). "2 Enemy abilities ✅" under Content Creation means written, not used. `grapple.cs` is only the Grappled slow effect, used by the Eagle Bear boss - in use.
+- `enemy_abilities/` - **no enemy has an ability.** `poison_attack.cs` and `rage.cs` are complete, and combat checks whether an enemy has a special ability, but nothing ever gives one to an enemy (`EnemyBase.SpecialAbility` is never set). "2 Enemy abilities 🧪" under Content Creation means written, not used. `grapple.cs` is only the Grappled slow effect, used by the Eagle Bear boss - in use.
 - `consumable_effects.cs` - **nothing in this file can happen in the game today.** Strength Boost, Resistance and Regeneration are only created by the Buff Potion type, which has no item (see `items/`). Haste, Burn and Bleed are never created by anything, and Haste has no effect even if applied.
 - **Same effect written twice**: Regeneration exists here and again in `companion_healer.cs`; Bleed exists here and as "Bleeding" in `companion_rogue.cs`. The base class `AbilityEffect` has two ways to create an effect that take duration and strength in opposite order, which is how the two Regeneration copies ended up with their numbers the other way round from each other.
 - **For the companion control decision (Tier 1)**: active abilities are written for "whoever uses it", so a directly controlled companion using its ability should work. Passive abilities are all tied to the player's one chosen ability.
@@ -656,7 +700,7 @@ _Found by reading the code only - nothing was built or run. The three items mark
   4. **Wire companion attacks into the real damage rules.** Companion attacks must use their equipped weapon's damage through `DamageCalculator` like the player's do - weapon damage, accuracy and crit, enemy defense, and effects on the attacker and the target. Today `CompanionBase.AttackEnemy()` rolls the weapon's damage and applies it directly. Needed regardless of which companions survive the roster rework (Bucket A #10); the individual companion abilities that do nothing today (Shield Bash's stun, the Ranger's mark) are **not** a priority, since those companions are likely to be reworked.
   5. **One combat decision-maker ("AI") for everything the computer controls.** Enemies and companions both need their actions chosen by the computer; companions can have it switched off per companion (the control toggle, Tier 1), enemies cannot. Today it is in three disconnected places: `CombatManager.DetermineEnemyAction()` decides for enemies from a general behaviour setting; each enemy type's own `DecideAction()` is written and never used; and `CompanionBase.DecideCombatAction()` returns a bare number (0/1/2) that `CombatManager` then acts on. Build one decision step that combat asks for any computer-controlled combatant, returning the same kind of action the player submits, with the per-enemy and per-companion behaviour plugged into it. `enemy_ai.cs` is an empty class today and is the obvious home. Do this together with the control toggle work, since both change the same part of `CombatManager`.
      - **Targeting is part of the decision (added 2026-10-12).** Who a combatant attacks is governed by a targeting behaviour inside the decision-maker, not by a random pick. Each enemy type (and each companion on auto) gets a targeting pattern alongside its action pattern - for example: go for the most wounded, go for the weakest defense, focus whoever hit it last, protect or avoid a particular party member, spread attacks out. Randomness can be one ingredient of a pattern, not the rule. Today there are two fixed rules that apply to everyone: enemies go for the most wounded party member 70% of the time and pick at random otherwise (`CombatManager.SelectEnemyTarget()`), and companions always go for the lowest-health enemy (`SelectCompanionAttackTarget()`). Both move into the decision-maker and become per-type behaviours. Enemies sharing a turn slot each choose their own target this way (to-do 9 under `game_logic/combat/`). The patterns themselves still need designing.
-  6. **Companions that fail to create** (gear names missing from the item database - see `items/`): fix the names so a companion can exist at all. Small, and it blocks testing to-dos 4 and 5.
+  6. **Companions that fail to create** (gear names missing from the item database - see `items/`): fix the names so a companion can exist at all. Small, and it blocks testing to-dos 4 and 5. 🧪 **Needs testing (written 2026-10-19)** - see "Combat code pass, part 2" under `combat/`.
 - Godot-side to-dos from this review are logged under "FUTURE PHASE - GUI & Game Engine": more enemy types, replacing the console output, and rebuilding the shop keeper / blacksmith / quest giver screens.
 - `entities/` has been presented and discussed.
 
@@ -723,13 +767,13 @@ _Found by reading the code only - nothing was built or run._
      - **Planned maximum of 8 enemies per encounter (2026-10-13)**, so in practice no slot holds more than two; the 9 and 10 examples above only apply if that maximum is raised. See to-do 13 under `core/`.
      - To work out in the code: ties in speed (enemies with equal speed, and a shared slot tying with a party member).
      - Touches: the round and turn-queue code in `CombatManager` (`BeginRound`, `AdvanceTurns`), the party size (fixed at 4 for the MVP, which matches; the dormant Leadership ability raises it above 4 and would not fit), the combat decision-maker (to-do 5 under `entities/`), and the screen's turn-order display, which shows 8 slots including the skipped ones (item 7 in "Combat scene - what the screen has to show").
-- **Combat code pass (2026-10-14) - written, NOT built or run yet (no local build; build and test on the other machine).** Getting combat ready for the Godot test scene and in line with the decisions above:
+- 🧪 **Combat code pass (2026-10-14) - needs testing** (written, not yet built or run - no local build; build and test on the other machine). Getting combat ready for the Godot test scene and in line with the decisions above:
   - **New decisions this session:**
     - **The fight goes on while anyone in the party is standing.** Lost = the whole party is down. A fallen player's turn is skipped until revived.
     - **Party flee: no rewards. No draw in the MVP. Mixed endings pay per enemy** (defeated 100%, fled 50%, the fight counts as won). Only "every enemy fled" is the 50% "opponent fled" ending.
     - **Flee chance is per enemy type** (`EnemyBase.FleeChance`, 30 until each enemy is tuned). One number per enemy, used both ways: an enemy fleeing rolls its own chance; the party fleeing a group rolls the **lowest** chance among the enemies still standing (the hardest one to escape decides). **No fleeing from boss fights.** A party member fleeing takes the whole party.
     - **Companions on auto never flee** - they fight until the party wins or they go down. Only a directly controlled companion can choose Flee.
-    - **Bombs are no longer consumable items.** Combat refuses them. **To do:** remove the bomb items from `item_database.cs` and the `Bomb` consumable type (kept for now so nothing else breaks).
+    - **Bombs are no longer consumable items.** Removed from the code 2026-10-19 (part 2 below).
     - `ShowCombatIntro` removed - the screen reads names, levels, health and effects from `CombatManager.Party` / `Enemies` at any time, so name labels and the bottom portrait panel can stay up all fight.
   - **Built in this pass:**
     - To-do 1 (endings): `CombatOutcome` Won / Lost / PartyFled / OpponentFled and a `CombatResult` (XP, gold, items, defeated and fled enemies, levels gained) through the new `CombatFinished` event. Fleeing no longer leads to Game Over. Enemies can flee on their own. The old `CombatEnded(bool)` still fires (true for won / opponent fled) so the current Godot scene keeps working.
@@ -750,6 +794,12 @@ _Found by reading the code only - nothing was built or run._
     - If the party wins while the player is down, the player gets back up with 1 HP. A companion who is down at the end stays down and gets no XP (as before).
     - An enemy that flees drops each of its loot items with a 50% chance (gold and XP are halved exactly).
   - **Still to do in combat:** reposition action (layout not decided); the Princess's skip-turn and two-turns-per-round; enemies joining mid-fight; buff/cooldown timing (with the magic system); enemy accuracy by difficulty (Bucket A #16); XP numbers and the `XPValue` base reward (to-do 3, with the XP rework); rewriting `CombatManagerTests.cs` for the new engine; saving the companion control toggle.
+- 🧪 **Combat code pass, part 2 (2026-10-19) - needs testing** (written, not yet built or run). Small decided fixes that block testing the first pass:
+  - **Companions can be created again** (to-do 6 under `entities/`): each companion's starting gear now names items that exist - Warrior "Rusty Chainmail Set"; Mage "Wooden Staff" + "Tattered Cloth Set"; Healer "Wooden Staff" + "Rough Linen Set"; Ranger "Hunting Bow" + "Worn Leather Armor"; Rogue "Rusty Dagger" + "Worn Leather Armor". Placeholders until the roster rework (Bucket A #10).
+  - **Tutorial potion** (to-do 1 under `core/`): `BeginEagleBearEncounter()` gives the player a Minor Health Potion. Still open from that to-do: the potion shows nothing if the player is at full health when the Item step comes up.
+  - **Bombs removed**: the "Fire Bomb" item, the `Bomb` consumable type and combat's bomb filter are gone. Saves store the consumable type as text, so removing the type does not shift other values.
+  - **Revive speed penalty works**: it was set mid-round and wiped at the end of the round before the next round's speeds were worked out. Now it is stored and added to the revived member's speed for the next round; what they did before falling no longer counts.
+  - **Fight-time text reaches the combat log**: new `systems/game_log.cs` (`GameLog.Write`) - items, abilities, effects, companions and `entity.cs` write to it instead of the console, and `CombatManager` passes every message into `CombatMessage` while a fight is running. With nothing listening (console program, tests) messages still print to the console. Duplicate "X uses Y!" lines removed (the ability's and the item's own lines, since `CombatManager` already writes one, or the item writes a fuller one). Still printing to the console only: `player.cs` and `NPC_base.cs` (damage taken, healing, levelling, equipping) - those lines repeat what combat already logs, and they belong to the outside-combat events pass.
 - **Ideas noted, not decided (2026-10-12)**:
   - **Percentage bonuses that do not always round down.** Instead of dropping the fraction, use it as a chance to round up: +10% on a 5-damage hit is 5.5, so the hit lands as 5 or 6. Adds a little randomness and keeps the ability's strength curve meaningful at low numbers. Applies wherever a percentage is applied to damage, defense or healing.
   - **Or (also) raise the whole numbers** - bigger health and damage values so the effect of an ability is easier for the player to see. Goes with the player starting-stats review (to-do 2 under `entities/`) and the ability redesign (Bucket A #12).
@@ -794,7 +844,7 @@ _Found by reading the code only - nothing was built or run._
 - **Tests**: none for this folder. `GameStartup` was written to be testable on its own (it takes everything it needs as inputs) and has no tests yet.
 
 **To-dos and decisions from discussing `core/` (2026-10-13)**
-  1. **Give the player a healing item for the tutorial fight.** Add it to the inventory when the tutorial fight is set up (`GameManager.BeginEagleBearEncounter`), so the Item step has something real to use. Use the existing "Minor Health Potion" (decided 2026-10-13; potion names may be reworked later, not decided). To settle when building: if the player is at full health when the Item step comes up, the potion does nothing visible, so the lesson may need Skarn to land a hit first.
+  1. **Give the player a healing item for the tutorial fight.** Add it to the inventory when the tutorial fight is set up (`GameManager.BeginEagleBearEncounter`), so the Item step has something real to use. Use the existing "Minor Health Potion" (decided 2026-10-13; potion names may be reworked later, not decided). To settle when building: if the player is at full health when the Item step comes up, the potion does nothing visible, so the lesson may need Skarn to land a hit first. 🧪 **Potion needs testing (written 2026-10-19)** (the full-health point is still open).
   2. **The tutorial must not be losable.** Likely form: the first companion revives the player once. Depends on two things that are not true today: the fight has to continue when the player falls while a companion is standing (it ends at once - open question under `combat/`), and companions carry no items (shared party bag), so this is either the companion using a "Minor Revival Potion" from the shared bag or a one-off scripted revive that needs no item. Also removes the "Load Last Save" problem at Game Over, because the tutorial never reaches Game Over.
   3. **A companion's actions do not count toward the "try each action" lesson (decided 2026-10-13).** Only the player's own actions tick the list. `TrySubmitAction` has to check who the action is for.
   4. **Ability step** - no separate to-do; handled by the ability redesign (Bucket A #12).
@@ -927,11 +977,11 @@ _Found by reading the files only._
 ### 12. Create More Abilities
 - **Status**: 🚧 Ongoing
 - **Current**:
-  - ✅ 4 Player abilities (Attack Boost, Critical Strike, Defense Boost, Healing)
-  - ✅ 2 Enemy abilities (Poison Attack, Rage)
-  - ✅ 5 Companion abilities (one per companion type)
+  - 🧪 4 Player abilities (Attack Boost, Critical Strike, Defense Boost, Healing)
+  - 🧪 2 Enemy abilities (Poison Attack, Rage)
+  - 🧪 5 Companion abilities (one per companion type)
 - **Needed**: More variety for players and enemies
-- **System**: ✅ Ability framework is complete and scalable
+- **System**: 🧪 Ability framework is complete and scalable
 
 ### 13. Update Logic for New Abilities
 - **Status**: 🚧 Ongoing
@@ -944,9 +994,9 @@ _Found by reading the files only._
 ### 14. Expand Loot Tables
 - **Status**: 🚧 Good Progress
 - **Current**:
-  - ✅ Item database exists with weapons, armor, consumables
-  - ✅ Basic loot drop system in enemies
-  - ✅ 19 weapons across 9 weapon types:
+  - 🧪 Item database exists with weapons, armor, consumables
+  - 🧪 Basic loot drop system in enemies
+  - 🧪 19 weapons across 9 weapon types:
     - Swords (3): Rusty, Iron, Steel
     - Axes (2): Rusty Axe, Battle Axe
     - Maces (2): Blunt Mace, Spiked Mace
@@ -956,8 +1006,8 @@ _Found by reading the files only._
     - Crossbows (2): Light Crossbow, Heavy Crossbow
     - Wands (2): Apprentice Wand, Arcane Wand
     - Daggers (2): Rusty Dagger, Assassin's Blade
-  - ✅ 9 armor pieces across slots/types
-  - ✅ 12 consumables (health potions, food, elixirs, bombs, antidotes, revival potions)
+  - 🧪 9 armor pieces across slots/types
+  - 🧪 11 consumables (health potions, food, elixirs, antidotes, revival potions - bombs removed 2026-10-19)
 - **Still Needed**:
   - More high-tier weapons (Epic/Legendary)
   - More armor variety
@@ -970,12 +1020,12 @@ _Found by reading the files only._
 ### 15. Save Data for Selections
 - **Status**: 🚧 Mostly Complete
 - **Current**:
-  - ✅ Player stats, inventory, equipped items saved
-  - ✅ Ability level/XP saved
-  - ✅ Map position saved
-  - ✅ Weapon/Armor XP progress and custom stats
-  - ✅ Weapon upgrade choices preserved across saves
-  - ✅ ReadyForUpgrade state restoration
+  - 🧪 Player stats, inventory, equipped items saved
+  - 🧪 Ability level/XP saved
+  - 🧪 Map position saved
+  - 🧪 Weapon/Armor XP progress and custom stats
+  - 🧪 Weapon upgrade choices preserved across saves
+  - 🧪 ReadyForUpgrade state restoration
   - ❌ Quest progress (when quest system implemented)
   - ❌ Companion data (when companions integrated)
   - ❌ World state (defeated enemies, looted chests, etc.)
@@ -1038,6 +1088,7 @@ _Found by reading the files only._
   - **Things that happen in a fight** (damage taken, healing, an ability used, an effect starting, ticking or ending, a companion attacking, an item used): send them through the combat log, the way `CombatManager.Log()` / `CombatMessage` already does for the lines `CombatManager` writes itself. This is the biggest group and the one the combat scene needs first.
   - **Things that happen outside a fight** (level up, item added to the inventory, gear equipped, quest progress, boss defeated): raise an event the frontend can show as a popup or message. The same events are what the statistics tracker and the quests need to listen to (see "Quests, statistics and settings are built but not connected").
   - **Whole console screens** (typed input, "press any key", menus): not converted line by line - rebuilt as Godot screens (see the entry below and `game_logic/menus/` in the code review).
+- 🧪 **Progress (2026-10-19, needs testing)**: the fight-time group is written except `player.cs` and `NPC_base.cs` - new `GameLog` channel, see "Combat code pass, part 2" under `game_logic/combat/`. Outside-fight messages from abilities (levelling up) also go through `GameLog` now, so they print to the console or to whoever listens.
 - **Also remove**: the three `Console.Clear()` calls in `combat_manager.cs`, the likely cause of the combat scene's dead Attack button (see "Combat scene MVP" above), and waits such as `Console.ReadKey()` and the blacksmith's one-second pause.
 - **Order**: combat first (it unblocks the combat scene), then the rest folder by folder.
 
@@ -1078,7 +1129,7 @@ _Found by reading the files only._
 
 ### 🔵 9. Make Game Maps
 - **Status**: 🚧 Partially Complete
-- **Current**: ✅ Procedural map generation functional
+- **Current**: 🧪 Procedural map generation functional
 - **Future**: Visual map design in Godot
 
 ---
@@ -1135,7 +1186,7 @@ _Found by reading the files only._
 
 _Corrected 2026-10-09 after checking each item against the code. "Built, not connected" means the classes exist but the game never uses them - these are NOT done._
 
-**Completed**: see `docs/done.md` (turn order, RevivePotion system, enemy defense application, Godot installed - moved 2026-10-13; resolved decisions, finished cleanups and the 2025-12-05 session history - moved 2026-10-15). The weapon/armor save system with custom stats also works; it is one part of item 15, which is not finished, so it stays here.
+**Completed**: see `docs/done.md` (Godot installed - moved 2026-10-13; resolved decisions, finished cleanups and the 2025-12-05 session history - moved 2026-10-15). Turn order, the RevivePotion system and enemy defense were moved back here 2026-10-19 as 🧪 needs testing (items 2, 4 and 7) - their code was rewritten by the combat passes. The weapon/armor save system with custom stats also works; it is one part of item 15, which is not finished, so it stays here.
 
 **Built, not connected** (do not skip these): 5
 - Equipment leveling - gear never gains XP, Blacksmith never placed in the game (item 1)

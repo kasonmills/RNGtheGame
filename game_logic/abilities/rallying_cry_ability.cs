@@ -54,7 +54,7 @@ namespace GameLogic.Abilities
             // Notify every 10 levels about progress
             if (Level % 10 == 0)
             {
-                Console.WriteLine($"Your rallying cry grows stronger! Companion attack bonus is now {newBonus}%!");
+                GameLog.Write($"Your rallying cry grows stronger! Companion attack bonus is now {newBonus}%!");
             }
         }
 
@@ -99,8 +99,8 @@ namespace GameLogic.Abilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"{Name} is a passive ability providing a permanent +{GetPassiveBonusValue()}% attack bonus to all companions.");
-            Console.WriteLine("It is always active and cannot be used in combat.");
+            GameLog.Write($"{Name} is a passive ability providing a permanent +{GetPassiveBonusValue()}% attack bonus to all companions.");
+            GameLog.Write("It is always active and cannot be used in combat.");
         }
     }
 }

@@ -26,7 +26,6 @@ namespace GameLogic.Abilities.PlayerAbilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{user.Name} uses {Name}!");
 
             // Get scaled boost percentage based on ability level
             double boostPercentage = GetScaledValue(1.0, 70.0);  // 1% to 70%
@@ -39,7 +38,7 @@ namespace GameLogic.Abilities.PlayerAbilities
 
             user.AddEffect(effect);
 
-            Console.WriteLine($"Attack damage increased by {boostPercentage:F1}% for 3 turns!");
+            GameLog.Write($"Attack damage increased by {boostPercentage:F1}% for 3 turns!");
 
             // Set cooldown (uses level-based reduction)
             CurrentCooldown = GetEffectiveCooldown();
@@ -75,7 +74,7 @@ namespace GameLogic.Abilities.PlayerAbilities
         /// </summary>
         protected override void OnLevelUp()
         {
-            Console.WriteLine($"Attack boost increased to +{GetScaledValue(1.0, 70.0):F1}%!");
+            GameLog.Write($"Attack boost increased to +{GetScaledValue(1.0, 70.0):F1}%!");
         }
     }
 
@@ -100,7 +99,7 @@ namespace GameLogic.Abilities.PlayerAbilities
         {
             // This effect is passive - the boost is checked during damage calculation
             // No per-turn action needed
-            Console.WriteLine($"  {Name}: +{Potency}% damage ({Duration} turns left)");
+            GameLog.Write($"  {Name}: +{Potency}% damage ({Duration} turns left)");
         }
 
         /// <summary>
@@ -113,12 +112,12 @@ namespace GameLogic.Abilities.PlayerAbilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"⚔ {target.Name}'s attacks are empowered!");
+            GameLog.Write($"⚔ {target.Name}'s attacks are empowered!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"⚔ {target.Name}'s attack boost faded.");
+            GameLog.Write($"⚔ {target.Name}'s attack boost faded.");
         }
     }
 }

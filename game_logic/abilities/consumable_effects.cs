@@ -20,7 +20,7 @@ namespace GameLogic.Abilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"{target.Name} feels stronger! (+{_damageBonus} damage)");
+            GameLog.Write($"{target.Name} feels stronger! (+{_damageBonus} damage)");
         }
 
         public override void ApplyEffect(Entity target, RNGManager rng)
@@ -30,7 +30,7 @@ namespace GameLogic.Abilities
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"{target.Name}'s strength boost faded.");
+            GameLog.Write($"{target.Name}'s strength boost faded.");
         }
 
         public int GetDamageBonus()
@@ -55,7 +55,7 @@ namespace GameLogic.Abilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"{target.Name} feels more resilient! (-{_damageReduction} damage taken)");
+            GameLog.Write($"{target.Name} feels more resilient! (-{_damageReduction} damage taken)");
         }
 
         public override void ApplyEffect(Entity target, RNGManager rng)
@@ -65,7 +65,7 @@ namespace GameLogic.Abilities
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"{target.Name}'s resistance faded.");
+            GameLog.Write($"{target.Name}'s resistance faded.");
         }
 
         public int GetDamageReduction()
@@ -87,18 +87,18 @@ namespace GameLogic.Abilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"{target.Name} begins regenerating health!");
+            GameLog.Write($"{target.Name} begins regenerating health!");
         }
 
         public override void ApplyEffect(Entity target, RNGManager rng)
         {
             target.Heal(Potency);
-            Console.WriteLine($"{target.Name} regenerated {Potency} HP!");
+            GameLog.Write($"{target.Name} regenerated {Potency} HP!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"{target.Name}'s regeneration ended.");
+            GameLog.Write($"{target.Name}'s regeneration ended.");
         }
     }
 
@@ -115,7 +115,7 @@ namespace GameLogic.Abilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"{target.Name} feels faster!");
+            GameLog.Write($"{target.Name} feels faster!");
         }
 
         public override void ApplyEffect(Entity target, RNGManager rng)
@@ -125,7 +125,7 @@ namespace GameLogic.Abilities
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"{target.Name}'s haste ended.");
+            GameLog.Write($"{target.Name}'s haste ended.");
         }
     }
 
@@ -147,19 +147,19 @@ namespace GameLogic.Abilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"{target.Name} is burning!");
+            GameLog.Write($"{target.Name} is burning!");
         }
 
         public override void ApplyEffect(Entity target, RNGManager rng)
         {
             int damage = rng.Roll(_minDamage, _maxDamage) * StackCount;
             target.TakeDamage(damage);
-            Console.WriteLine($"{target.Name} takes {damage} burn damage!");
+            GameLog.Write($"{target.Name} takes {damage} burn damage!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"{target.Name} is no longer burning.");
+            GameLog.Write($"{target.Name} is no longer burning.");
         }
     }
 
@@ -176,19 +176,19 @@ namespace GameLogic.Abilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"{target.Name} is bleeding!");
+            GameLog.Write($"{target.Name} is bleeding!");
         }
 
         public override void ApplyEffect(Entity target, RNGManager rng)
         {
             int damage = Potency * StackCount;
             target.TakeDamage(damage);
-            Console.WriteLine($"{target.Name} loses {damage} HP from bleeding!");
+            GameLog.Write($"{target.Name} loses {damage} HP from bleeding!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"{target.Name}'s bleeding stopped.");
+            GameLog.Write($"{target.Name}'s bleeding stopped.");
         }
     }
 }

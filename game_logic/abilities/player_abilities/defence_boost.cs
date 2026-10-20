@@ -25,7 +25,6 @@ namespace GameLogic.Abilities.PlayerAbilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{user.Name} uses {Name}!");
 
             // Get scaled defense percentage based on ability level
             double defensePercentage = GetScaledValue(1.0, 60.0);  // 1% to 60%
@@ -38,7 +37,7 @@ namespace GameLogic.Abilities.PlayerAbilities
 
             user.AddEffect(effect);
 
-            Console.WriteLine($"Damage taken reduced by {defensePercentage:F1}% for 3 turns!");
+            GameLog.Write($"Damage taken reduced by {defensePercentage:F1}% for 3 turns!");
 
             // Set cooldown (uses level-based reduction)
             CurrentCooldown = GetEffectiveCooldown();
@@ -84,7 +83,7 @@ namespace GameLogic.Abilities.PlayerAbilities
         /// </summary>
         protected override void OnLevelUp()
         {
-            Console.WriteLine($"Defense reduction increased to -{GetScaledValue(1.0, 60.0):F1}%!");
+            GameLog.Write($"Defense reduction increased to -{GetScaledValue(1.0, 60.0):F1}%!");
         }
     }
 
@@ -109,7 +108,7 @@ namespace GameLogic.Abilities.PlayerAbilities
         {
             // This effect is passive - the reduction is checked during damage calculation
             // No per-turn action needed
-            Console.WriteLine($"  {Name}: -{Potency}% damage taken ({Duration} turns left)");
+            GameLog.Write($"  {Name}: -{Potency}% damage taken ({Duration} turns left)");
         }
 
         /// <summary>
@@ -123,12 +122,12 @@ namespace GameLogic.Abilities.PlayerAbilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"🛡 {target.Name} is fortified with defensive energy!");
+            GameLog.Write($"🛡 {target.Name} is fortified with defensive energy!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"🛡 {target.Name}'s defense boost faded.");
+            GameLog.Write($"🛡 {target.Name}'s defense boost faded.");
         }
     }
 }

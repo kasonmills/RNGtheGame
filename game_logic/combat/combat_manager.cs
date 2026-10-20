@@ -65,6 +65,9 @@ namespace GameLogic.Combat
         private readonly HashSet<Enemy> _fledEnemies;
         private readonly HashSet<Entity> _directlyControlled;
 
+        // Speed penalties from being revived, waiting to be added to the next round's speed
+        private readonly Dictionary<Entity, int> _pendingRevivePenalties;
+
         /// <summary>
         /// Fired for narrative combat-log lines (attacks, abilities, items, round events, rewards).
         /// TODO-GODOT: subscribe to this to drive a combat-log UI.
@@ -128,6 +131,7 @@ namespace GameLogic.Combat
             _defendingEntities = new HashSet<Entity>();
             _fledEnemies = new HashSet<Enemy>();
             _directlyControlled = new HashSet<Entity>();
+            _pendingRevivePenalties = new Dictionary<Entity, int>();
             _party = new List<Entity>();
             _allCombatants = new List<Entity>();
             _turnQueue = new Queue<Entity>();
@@ -145,6 +149,12 @@ namespace GameLogic.Combat
             Console.WriteLine(message);
             CombatMessage?.Invoke(message);
         }
+
+        /// <summary>
+        /// Messages that items, abilities and effects send through GameLog during the fight -
+        /// passed on into the combat log so the combat screen sees them too.
+        /// </summary>
+        private void OnGameLogMessage(string message) => Log(message);
 
         private void Raise(CombatEvent combatEvent)
         {
@@ -176,6 +186,10 @@ namespace GameLogic.Combat
             _bossManager = bossManager;
             _combatActive = true;
             _partyFled = false;
+
+            // Listen to GameLog for the length of the fight (removed again in EndCombat)
+            GameLog.MessageLogged -= OnGameLogMessage;
+            GameLog.MessageLogged += OnGameLogMessage;
             LastResult = null;
             IsWaitingForPlayerAction = false;
             CurrentActor = null;
@@ -228,6 +242,7 @@ namespace GameLogic.Combat
             // Clear tracking structures
             _defendingEntities.Clear();
             _fledEnemies.Clear();
+            _pendingRevivePenalties.Clear();
             _turnQueue.Clear();
             _turnOrder = new List<TurnSlot>();
             _currentRound = 1;
@@ -316,17 +331,18 @@ namespace GameLogic.Combat
                     return true;
 
                 case ActionType.UseAbility:
-                    var ability = GetAbility(action.Actor);
-                    if (ability == null)
+                    var abilities = GetAbilities(action.Actor);
+                    if (abilities.Count == 0)
                     {
                         reason = $"{action.Actor.Name} has no ability to use.";
                         return false;
                     }
-                    if (action.Ability != null && action.Ability != ability)
+                    if (action.Ability != null && !abilities.Contains(action.Ability))
                     {
                         reason = $"{action.Actor.Name} does not have {action.Ability.Name}.";
                         return false;
                     }
+                    var ability = action.Ability ?? GetAbility(action.Actor) ?? abilities[0];
                     if (ability.IsPassive)
                     {
                         reason = $"{ability.Name} is a passive ability - it is always on and can't be used as an action.";
@@ -343,7 +359,11 @@ namespace GameLogic.Combat
                     {
                         action.Target = action.Actor;
                     }
-                    if (!GetValidTargets(action.Actor, ActionType.UseAbility).Contains(action.Target))
+                    if (action.Target == null && ability.TargetType == AbilityTarget.AllAllies)
+                    {
+                        action.Target = action.Actor;
+                    }
+                    if (!GetValidTargets(action.Actor, ActionType.UseAbility, ability: ability).Contains(action.Target))
                     {
                         reason = $"Choose a valid target for {ability.Name}.";
                         return false;
@@ -351,7 +371,7 @@ namespace GameLogic.Combat
                     return true;
 
                 case ActionType.UseItem:
-                    if (action.Item is not Items.Consumable consumable || !IsUsableInCombat(consumable))
+                    if (action.Item is not Items.Consumable consumable)
                     {
                         reason = $"{action.Item?.Name ?? "That item"} can't be used in a fight.";
                         return false;
@@ -401,8 +421,10 @@ namespace GameLogic.Combat
         /// Who the actor may target with this action - opponents for attacks, standing party
         /// members for potions and support abilities, fallen party members for revives.
         /// An empty list means the action can't be used right now (grey out the button).
+        /// For abilities, pass the ability when the combatant has more than one (otherwise
+        /// their main ability is used).
         /// </summary>
-        public List<Entity> GetValidTargets(Entity actor, ActionType actionType, Items.Item item = null)
+        public List<Entity> GetValidTargets(Entity actor, ActionType actionType, Items.Item item = null, Ability ability = null)
         {
             var targets = new List<Entity>();
             if (actor == null) return targets;
@@ -414,7 +436,7 @@ namespace GameLogic.Combat
                     break;
 
                 case ActionType.UseAbility:
-                    var ability = GetAbility(actor);
+                    ability ??= GetAbility(actor);
                     if (ability == null) break;
 
                     switch (ability.TargetType)
@@ -434,7 +456,7 @@ namespace GameLogic.Combat
                     break;
 
                 case ActionType.UseItem:
-                    if (item is Items.Consumable consumable && IsUsableInCombat(consumable))
+                    if (item is Items.Consumable consumable)
                     {
                         if (consumable.Type == Items.ConsumableType.RevivePotion)
                             targets.AddRange(GetFallenAllies(actor));
@@ -463,15 +485,32 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// True when the combatant's ability can be used as an action right now.
+        /// Every ability this combatant can use in a fight. Most have one (GetAbility); a
+        /// companion can have more (Felicity learns a party heal at level 20).
         /// </summary>
-        public bool CanUseAbility(Entity combatant)
+        public List<Ability> GetAbilities(Entity combatant)
         {
+            if (combatant is CompanionBase companion)
+            {
+                return companion.GetCombatAbilities();
+            }
+
             var ability = GetAbility(combatant);
+            return ability == null ? new List<Ability>() : new List<Ability> { ability };
+        }
+
+        /// <summary>
+        /// True when the combatant's ability (their main one, or the one given) can be used
+        /// as an action right now.
+        /// </summary>
+        public bool CanUseAbility(Entity combatant, Ability ability = null)
+        {
+            ability ??= GetAbility(combatant);
             return ability != null
+                && GetAbilities(combatant).Contains(ability)
                 && !ability.IsPassive
                 && !ability.IsOnCooldown()
-                && GetValidTargets(combatant, ActionType.UseAbility).Count > 0;
+                && GetValidTargets(combatant, ActionType.UseAbility, ability: ability).Count > 0;
         }
 
         /// <summary>
@@ -483,17 +522,8 @@ namespace GameLogic.Combat
 
             return _player.Inventory.Items
                 .OfType<Items.Consumable>()
-                .Where(item => item.Quantity > 0 && IsUsableInCombat(item))
+                .Where(item => item.Quantity > 0)
                 .ToList();
-        }
-
-        /// <summary>
-        /// Bombs are no longer combat items (decided 2026-10-14) - any still in the item list
-        /// can't be used in a fight.
-        /// </summary>
-        private static bool IsUsableInCombat(Items.Consumable consumable)
-        {
-            return consumable.Type != Items.ConsumableType.Bomb;
         }
 
         public bool IsPartyMember(Entity combatant) => _party.Contains(combatant);
@@ -862,8 +892,6 @@ namespace GameLogic.Combat
                         break;
                 }
 
-                entity.SpeedModifier = modifier;
-
                 // Display speed change
                 if (modifier != 0)
                 {
@@ -871,7 +899,18 @@ namespace GameLogic.Combat
                     string actionText = entity.LastAction.ToString();
                     Log($"{entity.Name}'s speed {changeText} from {actionText}");
                 }
+
+                // A revive this round slows them down next round, on top of the action change
+                if (_pendingRevivePenalties.TryGetValue(entity, out int revivePenalty))
+                {
+                    modifier -= revivePenalty;
+                    Log($"{entity.Name}'s speed -{revivePenalty} from being revived");
+                }
+
+                entity.SpeedModifier = modifier;
             }
+
+            _pendingRevivePenalties.Clear();
         }
 
         /// <summary>
@@ -926,10 +965,12 @@ namespace GameLogic.Combat
             // Reduce ability cooldowns for everyone at end of round
             foreach (var combatant in _allCombatants)
             {
-                var ability = GetAbility(combatant);
-                if (ability != null && ability.CurrentCooldown > 0)
+                foreach (var ability in GetAbilities(combatant))
                 {
-                    ability.CurrentCooldown--;
+                    if (ability.CurrentCooldown > 0)
+                    {
+                        ability.CurrentCooldown--;
+                    }
                 }
             }
         }
@@ -955,12 +996,13 @@ namespace GameLogic.Combat
             }
 
             // Use companion AI to decide action: 0 = Attack, 1 = Ability, 2 = Defend
-            int actionDecision = companion.DecideCombatAction(target, _rngManager);
+            var allies = GetAllies(companion);
+            int actionDecision = companion.DecideCombatAction(target, allies, _rngManager);
 
             switch (actionDecision)
             {
                 case 1: // Use Ability (falls back to attacking if it can't be used)
-                    var ability = companion.UniqueAbility;
+                    var ability = companion.ChooseCombatAbility(allies);
                     if (ability != null && !ability.IsPassive && !ability.IsOnCooldown())
                     {
                         return CombatAction.UseAbility(companion, ability, ResolveAbilityTarget(companion, ability, target));
@@ -1295,9 +1337,12 @@ namespace GameLogic.Combat
             }
 
             var target = action.Target ?? action.Actor;
-            Log(target == action.Actor
-                ? $"\n{action.Actor.Name} uses {action.Ability.Name}!"
-                : $"\n{action.Actor.Name} uses {action.Ability.Name} on {target.Name}!");
+            bool wholeParty = action.Ability.TargetType == AbilityTarget.AllAllies;
+            Log(wholeParty
+                ? $"\n{action.Actor.Name} uses {action.Ability.Name} on the whole party!"
+                : target == action.Actor
+                    ? $"\n{action.Actor.Name} uses {action.Ability.Name}!"
+                    : $"\n{action.Actor.Name} uses {action.Ability.Name} on {target.Name}!");
 
             Raise(new CombatEvent
             {
@@ -1307,7 +1352,14 @@ namespace GameLogic.Combat
                 Ability = action.Ability
             });
 
-            action.Ability.Execute(action.Actor, target, _rngManager);
+            if (wholeParty)
+            {
+                action.Ability.ExecuteOnGroup(action.Actor, GetAllies(action.Actor), _rngManager);
+            }
+            else
+            {
+                action.Ability.Execute(action.Actor, target, _rngManager);
+            }
         }
 
         /// <summary>
@@ -1319,7 +1371,7 @@ namespace GameLogic.Combat
             // Track action for speed modifier calculation
             action.Actor.LastAction = Entities.CombatAction.UseItem;
 
-            if (action.Item is not Items.Consumable consumable || !IsUsableInCombat(consumable))
+            if (action.Item is not Items.Consumable consumable)
             {
                 Log(action.Item == null ? "Error: No item provided!" : $"{action.Item.Name} can't be used in a fight.");
                 return;
@@ -1335,24 +1387,22 @@ namespace GameLogic.Combat
                 Item = consumable
             });
 
+            // The item writes its own "used ... on ..." and result lines (through GameLog)
             if (consumable.Type == Items.ConsumableType.RevivePotion)
             {
-                Log($"\n{action.Actor.Name} uses {consumable.Name} on {target.Name}!");
                 if (consumable.UseRevivePotion(action.Actor, target))
                 {
-                    Log($"{target.Name} is back on their feet with {target.Health}/{target.MaxHealth} HP!");
-
-                    // Revival penalty: revived entities are disoriented and slower
+                    // Revival penalty: revived entities are disoriented and slower next round.
+                    // Stored until EndRound, which resets SpeedModifier before working out the
+                    // next round's speeds. Whatever they did before falling no longer counts.
                     int speedPenalty = _rngManager.Roll(2, 4);
-                    target.SpeedModifier = -speedPenalty;
-                    Log($"{target.Name} is disoriented from revival! Speed -{speedPenalty} for this round.");
+                    _pendingRevivePenalties[target] = speedPenalty;
+                    target.LastAction = Entities.CombatAction.None;
+                    Log($"{target.Name} is disoriented from revival! Speed -{speedPenalty} next round.");
                 }
             }
             else
             {
-                Log(target == action.Actor
-                    ? $"\n{action.Actor.Name} uses {consumable.Name}!"
-                    : $"\n{action.Actor.Name} uses {consumable.Name} on {target.Name}!");
                 consumable.UseOn(target, action.Actor);
             }
 
@@ -1594,6 +1644,9 @@ namespace GameLogic.Combat
             ResetAbilityCombatUsage();
             LastResult = result;
 
+            // Rewards are logged - stop passing GameLog messages into the combat log
+            GameLog.MessageLogged -= OnGameLogMessage;
+
             Raise(new CombatEvent { Type = CombatEventType.CombatEnded, Message = outcome.ToString() });
             CombatFinished?.Invoke(result);
             CombatEnded?.Invoke(outcome == CombatOutcome.Won || outcome == CombatOutcome.OpponentFled);
@@ -1741,7 +1794,10 @@ namespace GameLogic.Combat
         {
             foreach (var member in _party)
             {
-                GetAbility(member)?.ResetCombatUsage();
+                foreach (var ability in GetAbilities(member))
+                {
+                    ability.ResetCombatUsage();
+                }
             }
         }
 

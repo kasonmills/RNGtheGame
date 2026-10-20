@@ -74,7 +74,7 @@ namespace GameLogic.Abilities
             // Notify every 5 levels about progress
             if (Level % 5 == 0)
             {
-                Console.WriteLine($"Your willpower strengthens! Cleanse chance is now {newChance}%!");
+                GameLog.Write($"Your willpower strengthens! Cleanse chance is now {newChance}%!");
             }
         }
 
@@ -131,8 +131,8 @@ namespace GameLogic.Abilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"{Name} is a passive ability providing a {GetPassiveBonusValue()}% chance to cleanse negative effects each round.");
-            Console.WriteLine("It is always active and cannot be manually used.");
+            GameLog.Write($"{Name} is a passive ability providing a {GetPassiveBonusValue()}% chance to cleanse negative effects each round.");
+            GameLog.Write("It is always active and cannot be manually used.");
         }
     }
 }

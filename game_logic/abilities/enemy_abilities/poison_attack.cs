@@ -32,7 +32,6 @@ namespace GameLogic.Abilities.EnemyAbilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{user.Name} uses {Name}!");
 
             // Calculate poison damage based on enemy level
             // Level 1: 2-4 damage per turn for 3 turns
@@ -52,7 +51,7 @@ namespace GameLogic.Abilities.EnemyAbilities
 
             target.AddEffect(poisonEffect);
 
-            Console.WriteLine($"The attack was venomous! Poison will deal {minPoisonDamage}-{maxPoisonDamage} damage per turn for {duration} turns!");
+            GameLog.Write($"The attack was venomous! Poison will deal {minPoisonDamage}-{maxPoisonDamage} damage per turn for {duration} turns!");
 
             // Set cooldown (uses level-based reduction)
             CurrentCooldown = GetEffectiveCooldown();
@@ -104,18 +103,18 @@ namespace GameLogic.Abilities.EnemyAbilities
             // Apply damage
             target.TakeDamage(damage);
 
-            Console.WriteLine($"  💀 {Name}: {target.Name} takes {damage} poison damage! ({Duration} turns left)");
-            Console.WriteLine($"     {target.Name}'s HP: {target.Health}/{target.MaxHealth}");
+            GameLog.Write($"  💀 {Name}: {target.Name} takes {damage} poison damage! ({Duration} turns left)");
+            GameLog.Write($"     {target.Name}'s HP: {target.Health}/{target.MaxHealth}");
         }
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"☠ {target.Name} is poisoned!");
+            GameLog.Write($"☠ {target.Name} is poisoned!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"☠ The poison wore off from {target.Name}.");
+            GameLog.Write($"☠ The poison wore off from {target.Name}.");
         }
 
         public override string GetDisplayInfo()

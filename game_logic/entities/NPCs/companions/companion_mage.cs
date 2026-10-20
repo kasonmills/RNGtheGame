@@ -38,8 +38,8 @@ namespace GameLogic.Entities.NPCs.Companions
             UniqueAbility = new ArcaneBlastAbility(this);
 
             // Equip starting weapon
-            EquippedWeapon = Items.ItemDatabase.GetWeapon("cracked staff");
-            EquippedArmor = Items.ItemDatabase.GetArmor("tattered cloth");
+            EquippedWeapon = Items.ItemDatabase.GetWeapon("wooden staff");
+            EquippedArmor = Items.ItemDatabase.GetArmor("tattered cloth set");
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace GameLogic.Entities.NPCs.Companions
             // Store flag that we applied the bonus
             _passiveApplied = true;
 
-            Console.WriteLine($"{Name}'s arcane knowledge empowers your spells! (+15% Staff damage)");
+            GameLog.Write($"{Name}'s arcane knowledge empowers your spells! (+15% Staff damage)");
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace GameLogic.Entities.NPCs.Companions
         public override void RemovePassiveBonus(Player.Player player)
         {
             _passiveApplied = false;
-            Console.WriteLine($"{Name}'s arcane empowerment fades. (-15% Staff damage)");
+            GameLog.Write($"{Name}'s arcane empowerment fades. (-15% Staff damage)");
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace GameLogic.Entities.NPCs.Companions
             if (Level % 3 == 0)
             {
                 Speed++;
-                Console.WriteLine($"{Name}'s magical prowess increased mobility! Speed increased to {Speed}!");
+                GameLog.Write($"{Name}'s magical prowess increased mobility! Speed increased to {Speed}!");
             }
         }
     }
@@ -108,14 +108,13 @@ namespace GameLogic.Entities.NPCs.Companions
 
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{_mage.Name} uses {Name}!");
 
             // Deal high damage based on mage's level
             int baseDamage = 10 + (_mage.Level * 3);  // High base damage
             int damage = rng.Roll(baseDamage, baseDamage + 10);
 
             target.TakeDamage(damage);
-            Console.WriteLine($"💥 Arcane energy explodes! {target.Name} takes {damage} magic damage!");
+            GameLog.Write($"💥 Arcane energy explodes! {target.Name} takes {damage} magic damage!");
 
             // Chance for secondary explosion (scales with level)
             int explosionChance = 30 + (_mage.Level / 2);  // 30-80% chance
@@ -125,7 +124,7 @@ namespace GameLogic.Entities.NPCs.Companions
             {
                 int secondaryDamage = damage / 2;
                 target.TakeDamage(secondaryDamage);
-                Console.WriteLine($"⚡ The blast resonates! {target.Name} takes an additional {secondaryDamage} damage!");
+                GameLog.Write($"⚡ The blast resonates! {target.Name} takes an additional {secondaryDamage} damage!");
             }
 
             // Set cooldown (uses level-based reduction)
@@ -149,7 +148,7 @@ namespace GameLogic.Entities.NPCs.Companions
 
         protected override void OnLevelUp()
         {
-            Console.WriteLine($"{Name}'s power intensifies!");
+            GameLog.Write($"{Name}'s power intensifies!");
         }
     }
 }
