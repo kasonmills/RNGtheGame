@@ -35,6 +35,11 @@ namespace GameLogic.Entities.NPCs.Companions
         public CompanionAIStyle AIStyle { get; set; }
         public Ability UniqueAbility { get; protected set; }  // Each companion has a signature ability
 
+        /// <summary>
+        /// Highest level a companion can reach - the same as the player (decided 2026-10-21)
+        /// </summary>
+        public const int MaxLevel = 50;
+
         // Companion-specific bonuses (passive effects) - companions without one leave this out
         public virtual string PassiveBonusDescription => "None";
 
@@ -68,7 +73,7 @@ namespace GameLogic.Entities.NPCs.Companions
             GameLog.Write($"{Name} gained {amount} XP!");
 
             // Check for level up
-            while (Experience >= ExperienceToNextLevel && Level < 100)
+            while (Experience >= ExperienceToNextLevel && Level < MaxLevel)
             {
                 Experience -= ExperienceToNextLevel;
                 LevelUp();
@@ -93,6 +98,28 @@ namespace GameLogic.Entities.NPCs.Companions
 
             return Math.Max(1, baseSpeed);  // Minimum speed of 1
         }
+
+        /// <summary>
+        /// Base damage roll for a basic attack, before effects, crits and defense: the weapon's
+        /// range (1-3 unarmed) plus 1 per 2 levels. Companions that don't fight with a weapon override this.
+        /// </summary>
+        public virtual int RollAttackDamage(RNGManager rng)
+        {
+            int weaponDamage = EquippedWeapon != null
+                ? rng.Roll(EquippedWeapon.MinDamage, EquippedWeapon.MaxDamage)
+                : rng.Roll(1, 3);
+            return weaponDamage + Level / 2; // Same level bonus as the player
+        }
+
+        /// <summary>
+        /// Hit chance (1-100) for a basic attack, before the player's passives
+        /// </summary>
+        public virtual int AttackAccuracy => EquippedWeapon != null ? EquippedWeapon.Accuracy : 60;
+
+        /// <summary>
+        /// Critical hit chance (0-100) for a basic attack, before effects
+        /// </summary>
+        public virtual int AttackCritChance => EquippedWeapon != null ? EquippedWeapon.CritChance : 2;
 
         /// <summary>
         /// Companion attacks an enemy (used during combat)
@@ -184,6 +211,20 @@ namespace GameLogic.Entities.NPCs.Companions
 
             // Execute the ability
             UniqueAbility.Execute(this, target, rng);
+        }
+
+        /// <summary>
+        /// True once this companion's starting items have gone into the party bag
+        /// </summary>
+        public bool StartingItemsGiven { get; set; }
+
+        /// <summary>
+        /// Items this companion brings into the shared party bag when first recruited
+        /// (e.g. Boon's starting bolts). None by default.
+        /// </summary>
+        public virtual List<Item> GetStartingPartyItems()
+        {
+            return new List<Item>();
         }
 
         /// <summary>

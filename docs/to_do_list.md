@@ -35,35 +35,60 @@ _This is the living plan for turning the current codebase into what the story ne
     - **Rework or new - decided 2026-10-19:**
       | Companion | Built from |
       |---|---|
-      | Risk, Captain of the Royal Guard | rework of the Warrior (`companion_warrior.cs`) |
-      | Boon, the Sharpshooter | rework of the Ranger (`companion_ranger.cs`) |
-      | Felicity, the Healer | rework of the Healer (`companion_healer.cs`) |
+      | Risk, Captain of the Royal Guard | rework of the Warrior (now `companion_risk.cs`) |
+      | Boon, the Sharpshooter | rework of the Ranger (now `companion_boon.cs`) |
+      | Felicity, the Healer | rework of the Healer (now `companion_felicity.cs`) |
       | The Mage (name not decided) | rework of the Mage (`companion_mage.cs`) - an attacking spellcaster, the closest fit |
       | Fluke, the luck wizard | **new class** - built around the new party-wide luck effect |
       | Chance, the cat | **new class** - two forms and his own damage roll fit no existing class |
       - **The Rogue (`companion_rogue.cs`) stays in the code, dormant** - no planned companion uses it; kept as a possible future companion, the same way Leadership and the player classes are kept.
       - **Six companions, three fighting slots:** only three companions fight at once, so the recruited-versus-fighting roster (to-do 7 under `core/`) is needed for this roster.
       - Still to settle when building: whether the reworked files are renamed after the new companions, and the recruitment order (Chance first, in the tutorial).
+      - **Default equipment for every companion - to decide (logged 2026-10-21).** Each companion's starting weapon and armor are placeholders from the old classes:
+        - Risk: rusty sword + rusty chainmail set.
+        - Felicity: quarterstaff + rough linen set.
+        - Chance: nothing (cat form).
+        - Boon, Fluke and the Mage: to be set when they are built.
+        Decide for each:
+        - The starting weapon and armor, and whether they should match the story (Boon's homemade crossbow, Risk's Royal Guard armor).
+        - Whether starting gear gets better when a companion joins at a higher level.
+        - Whether the player can swap companions' gear (and whether Chance can wear any at all).
     - **Chance - the first companion (2026-10-15).**
       - **Story:** the kingdom's renowned hero, who seemingly disappeared right around the time the randomness started. What really happened: Fluke (the luck wizard - see Tier 1) was casting a spell to give the kingdom's army luck. Chance, not knowing exactly what Fluke was doing, sabotaged the spell, part of it backfired on him, and it turned him into a **black cat**. He is the player's first companion.
       - **Cat form:** his basic attack has an absolutely massive damage range - something like 1 to 100, possibly even wider.
       - **Human form (later in the game):** the Demon Prince (boss #6) casts chaos magic on him that lets him return to human form, but it doesn't last.
       - **Unique ability - form switching (after the Demon Prince):** every time he attacks in human form, a check is rolled; if it comes in under a set threshold, he turns back into a cat. Every time he attacks in cat form, the same check is rolled, and it can turn him back into a human.
-      - Replaces the Warrior as the tutorial's starter companion (`TutorialManager.GetStarterCompanion()` returns a `CompanionWarrior` today).
-      - **Still open (2026-10-15):**
-        - The cat's damage range at level 1 versus later: fixed, or growing with his level? Evenly spread, or mostly low with rare huge hits?
-        - Human form: what he fights with (a weapon like the player, or his own fixed stats) and whether either form can wear gear.
+      - Replaces the Warrior as the tutorial's starter companion (`TutorialManager.GetStarterCompanion()` now returns `CompanionChance` - 🧪 needs testing).
+      - **Decided 2026-10-21:** the cat's attack is an **even roll from his level up to 100** - the bottom rises by 1 each level, the top stays at 100 (level 1: 1-100, level 15: 15-100, level 30: 30-100). Before the Demon Prince his basic attack is his whole kit (no ability). Build cat form now; human form and switching later.
+      - 🧪 **Implemented 2026-10-21, needs testing:** new `companion_chance.cs` (`CompanionChance`), and the tutorial's starter companion is now Chance instead of Garrick. His form is tracked (`ChanceForm.Cat` / `Human`), but nothing switches it yet. Engine: a companion can now set its own attack roll, accuracy and crit chance (`RollAttackDamage`, `AttackAccuracy`, `AttackCritChance` on `CompanionBase`), and the damage calculator uses them; other companions behave as before.
+        - What to test: the tutorial gives you Chance; his hits land anywhere from his level to 100 (crits can go above that); the bottom of the range goes up when he levels; no extra level bonus is added on top.
+      - **Still open:**
+        - Placeholder numbers I picked, to tune: 85% accuracy, 5% crit chance, health 80 + 8 per level, speed 14 (+1 every 3 levels), Aggressive AI. His description and dialogue lines are placeholders too.
+        - Skarn's stats are still stopgaps, so a 1-100 hitter may end the tutorial fight very quickly - check once both are tuned.
+        - Gear: the cat ignores weapons for damage; should he be blocked from equipping weapons/armor at all? The companion info screen will show him as "Unarmed (1-3 dmg)" until that is updated.
+        - Human form: what he fights with (a weapon like the player, or his own fixed stats) and whether he can wear gear.
         - The threshold: a fixed number, or changed by level or luck? Is the check made before or after the attack (does that attack land in the old form or the new one)?
-        - Before the Demon Prince he is a cat with no switching - does he have any ability in that part of the game?
     - **Risk - Captain of the Royal Guard (2026-10-15).** The companion who later turns into a boss (boss #8, Tier 2) - the Warrior → Captain swap already confirmed above.
       - **Companion ability:** while he is wearing armor, every attack that hits him has a percent chance to do **no damage at all**, even when he is not defending. The chance goes **up** while he is defending.
       - **Boss ability:** a really high critical hit chance (about 55%, possibly higher on harder difficulties) and a really high critical hit damage multiplier.
       - **Rework or new:** the existing Warrior (armor-focused, defensive) is the natural starting point - it was already marked as the companion that becomes the Captain.
       - **What the code has already** (checked 2026-10-15): enemies carry their own `CritChance`, and the combat pass added `Entity.CritMultiplier` (default 1.5, needs testing), so the boss side needs only numbers plus the difficulty bonus. The companion side is new: a "no damage" check after the hit roll in `DamageCalculator.CalculateAttack()`. It differs from the existing Evasion ability, which makes the attack miss; here the attack lands and does nothing.
-      - **Still open (2026-10-15):**
-        - The numbers: the base chance, how much defending adds, and whether either grows with his level.
+      - **Decided 2026-10-21:** the no-damage chance is **15% at level 1, +1% every other level**, and **doubled while defending** (30% at level 1). It **only blocks damage** - a poison, burn or other status effect the hit carries still applies. It is his unique ability (passive); Shield Bash is removed.
+      - 🧪 **Implemented 2026-10-21, needs testing:** `companion_warrior.cs` → `companion_risk.cs` (`CompanionRisk`, "Risk"). Unique ability `RoyalGuardArmorAbility` ("Royal Guard's Armor", passive): 15% + his level / 2 (so it goes up on even levels), x2 while defending, 0 without armor. The check sits in `CombatManager.ProcessAttack` after defending and Evasion; a blocked hit raises the new `AttackBlocked` combat event and still applies the attack's status effect. Shield Bash and its stun effect are deleted.
+        - What to test: about 15% of hits on Risk do no damage (about 30% while he defends); taking his armor off turns it off; a blocked hit that carries an effect (e.g. Skarn's grapple slow) still applies the effect; the percentage goes up on even levels.
+      - **Decided 2026-10-21 (follow-up):**
+        - **Max level 50**, like the player. **The chance is capped at 70%.** With the formula, defending reaches the cap at level 40 (15 + 20 = 35, doubled); not defending, he reaches 40% at level 50.
+        - **Keep his +10% max health passive for the player.** More companions may get passives like this later.
+        - **Only weapon and other non-magical attacks can be stopped.** The idea: he's armored and a skilled fighter who knows how to brace for a hit. Magic damage goes through as normal.
+      - 🧪 **Implemented 2026-10-21, needs testing:**
+        - The 70% cap.
+        - A new `CombatAction.IsMagical` flag, which skips the check.
+        - The companion level cap: `CompanionBase.MaxLevel = 50` (was 100) for **every** companion, so it matches the player.
+        - Nothing sets `IsMagical` yet: no enemy has a magic attack so far. Magic enemies and bosses need to set it when they are built.
+      - **Still open:**
+        - The player's level cap of 50 is not in the code yet: `Player` has no cap.
+        - The ability name "Royal Guard's Armor" is a placeholder.
         - Whether the armor matters beyond "wearing some" (heavier or better armor = higher chance?).
-        - Whether a blocked hit also stops what comes with it (poison, grapple, a critical hit).
         - The boss's crit multiplier, and the crit chance per difficulty.
         - Why he leaves the party, when, and what happens to the gear he had equipped.
     - **Boon, the Sharpshooter (2026-10-15).** A dwarf and the party's ranged companion.
@@ -73,11 +98,50 @@ _This is the living plan for turning the current codebase into what the story ne
       - **Unique ability:** he rarely misses.
       - **Ties into combat positions** (to-do 18 under `core/`) - see the ranged-weapon accuracy idea logged there 2026-10-15.
       - **Rework or new:** the existing Ranger (ranged, bow) is the natural starting point. A crossbow weapon type already exists in the item database.
-      - **Still open (2026-10-15):**
-        - How "rarely misses" works: a very high base accuracy, ignoring the position penalties for ranged attacks, or both.
-        - The arrow types and what each does; whether ordinary bolts are unlimited; where special arrows are resupplied (shops? the blacksmith? crafted?) and whether they sit in the shared party bag.
-        - When he uses the throwing axes instead of the crossbow (out of bolts, targets in the front row, his choice?).
-        - Choosing an arrow type in combat: is it part of his Attack, or his Ability? On auto, how does he choose?
+      - **Decided 2026-10-21:**
+        - **Rarely misses:** his hit chance has a high floor, so it never drops below it whatever his crossbow. When combat positions are built, he also ignores the ranged position penalties.
+        - **Bolts:** ordinary bolts are unlimited. Special bolts are items in the shared party bag (bought from shops, found in loot). Firing one is his Ability action: you pick the type when controlling him, and on auto he picks one that fits.
+        - **Bolt types:** Piercing, Pinning, Fire, Ice and Acid (possibly more later). He joins with **5 Piercing and 5 Pinning**.
+        - **Throwing axes:** if the chosen special bolt type has run out, he throws an axe instead of wasting the turn.
+      - 🧪 **Implemented 2026-10-21, needs testing:**
+        - **The file:** `companion_ranger.cs` → `companion_boon.cs` (`CompanionBoon`, "Boon"). Multishot and the Marked effect are deleted.
+        - **Accuracy (changed 2026-10-21):** 95% **only with Boon's Crossbow**, the one he built himself, on every difficulty: the difficulty accuracy penalty (Bucket A #17) doesn't apply with it. With any other weapon, his accuracy is that weapon's, and the difficulty penalty applies like anyone else's. Boon's Crossbow is a new item in `item_database.cs`, 95% accuracy, his starting weapon. It isn't in `GetAllWeapons()`, so it never drops as loot or turns up in a shop.
+        - **Bolts:** new `items/ammunition.cs` holds all five `BoltType`s as stackable `Ammunition` items. They save and load with the party bag. A companion can now bring items into the bag when first recruited (`GetStartingPartyItems`), which is how his 10 bolts arrive.
+        - **Special Shot (his unique ability):** it fires as a normal crossbow attack, so the same hit, crit and defense rules apply, with the bolt's effect added:
+          - Piercing ignores defense.
+          - Pinning gives -5 speed for 2 rounds (new `PinnedEffect`).
+          - Fire burns for 3 rounds.
+          - Ice and Acid hit like an ordinary bolt until their effects are designed.
+        - **Out of the chosen type:** he throws an axe for 75% of a normal shot.
+        - **On auto:**
+          - Pinning on a target at least as fast as him that isn't pinned yet.
+          - Piercing on a target with 5+ defense.
+          - Fire on a target that isn't burning.
+          - Otherwise an ordinary shot.
+        - **For the combat screen:** `CombatManager.GetBoltCounts()` lists the bolts in the bag. To fire one, the screen submits UseAbility with an `Ammunition` of the chosen type as the action's Item.
+        - What to test:
+          - Recruiting him adds 5 + 5 bolts.
+          - Each special shot uses one bolt.
+          - Piercing ignores the target's armor.
+          - Pinning slows the target.
+          - Choosing a type you have none of throws an axe.
+          - His shots almost never miss.
+          - Bolts survive a save and load.
+      - **Still open:**
+        - What **Ice** and **Acid** bolts do. Fire's burn strength (3 + level/5 per turn) is a placeholder.
+        - Placeholder numbers to tune:
+          - the 95% accuracy floor
+          - the pin's -5 speed for 2 rounds
+          - the axe's 75% damage
+          - the auto-use rules
+          - bolt prices (6-10 gold)
+        - Where bolts are sold or found: no shop or loot table has them yet.
+        - His barks: lines he says when he hits, reminding the party he rarely misses. They're only in his dialogue list so far, not said in combat.
+        - **His +10% accuracy passive for the player** (kept from the Ranger) has never actually been applied: nothing reads it. Wire it in, or drop it?
+        - Boon's Crossbow's damage (6-12) and crit (5%) are placeholders copied from the light crossbow, to settle with the default-equipment to-do above. Also to decide:
+          - whether it can be upgraded at the blacksmith like other weapons;
+          - whether the player can take it off him, or give it to someone else.
+        - Whether Precision Training (the player's passive that boosts companion accuracy) should push him above 95% with his own crossbow. Right now it does.
     - **Felicity, the Healer (2026-10-15).**
       - **Ability:** heals party members, herself included.
       - **Weapon:** a quarterstaff when she attacks.
@@ -161,6 +225,13 @@ _This is the living plan for turning the current codebase into what the story ne
     - **Not built:** difficulty never changes it. Nothing in `difficulty_scaler.cs`, `GameSettings` or combat touches enemy accuracy, and difficulty has no effect on anything yet (see "Difficulty selection has zero mechanical effect").
     - **To do:** add an accuracy bonus per difficulty (none on Normal, rising through Hard and Difficult to Unfair) on top of each enemy's base, applied when the enemy is created for a fight. Decide the numbers and whether there is a ceiling (for example never above 95-100%, so Unfair still leaves room to dodge). It has to work with the Evasion ability and the reposition action (standing farther back lowers enemy accuracy - core/ to-do 18).
     - **Found 2026-10-14 - enemy attacks on companions never miss.** `combat_manager.cs` (around line 873) works out damage to a companion by hand: no accuracy roll, no crits, `Missed = false` every time. Only attacks on the player roll against `Accuracy`. Route companion targets through the same hit check (and the difficulty bonus) so accuracy means the same thing for everyone.
+17. **Party accuracy lowered by difficulty (idea and decision 2026-10-21).** The player's and every companion's hit chance drops on harder difficulties, a flat number of percentage points off what their weapon and bonuses give: **Normal -0, Hard -7, Difficult -14, Unfair -21**. It adds another layer of chaos, and it works the same for every companion. **Exception: Boon with his own crossbow** keeps 95% on every difficulty (changed 2026-10-21: with any other weapon, the penalty applies to him too). Weapon accuracy, weapon masteries and Precision Training all still count. Enemies are not affected; enemy accuracy per difficulty is #16.
+    - 🧪 **Implemented 2026-10-21, needs testing:**
+      - `GameSettings.GetPartyAccuracyPenalty()` holds the numbers.
+      - `DamageCalculator.GetAccuracy()` takes the penalty off the player's and companions' hit chance (minimum 1%), skipping enemies and Boon when he's using his own crossbow.
+      - `CombatManager.Difficulty` is set by `GameManager` on a new game and on a load. Without it, it defaults to Normal (no penalty), which covers the Godot test scene.
+      - This is the first thing the chosen difficulty actually changes in a fight.
+    - What to test: on Hard, a weapon with 85% accuracy hits about 78% of the time; Boon's hit rate with his own crossbow is the same on every difficulty, and drops like everyone's with any other weapon; enemies' hit rates don't change; loading a save keeps the penalty.
 
 ### Bucket B: Confirmed work, dependency-ordered
 

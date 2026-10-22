@@ -22,6 +22,7 @@ namespace GameLogic.Combat
         AttackLanded,       // Actor hit Target; IsCritical; Amount = damage after defense
         AttackMissed,       // Actor missed Target
         AttackEvaded,       // Target dodged (Evasion ability)
+        AttackBlocked,      // Attack landed but did no damage (Risk's armor); status effects still apply
         AbilityUsed,        // Actor used Ability on Target
         ItemUsed,           // Actor used Item on Target
 

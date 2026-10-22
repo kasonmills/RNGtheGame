@@ -43,11 +43,12 @@ RNGtheGame/
 │   │       ├── quest_giver.cs
 │   │       └── companions/
 │   │           ├── companion_base.cs
-│   │           ├── companion_warrior.cs
+│   │           ├── companion_chance.cs      # Chance, the first companion (cat form)
+│   │           ├── companion_risk.cs        # Risk, Captain of the Royal Guard (reworked from the Warrior)
 │   │           ├── companion_mage.cs
 │   │           ├── companion_rogue.cs
 │   │           ├── companion_felicity.cs    # Felicity, the Healer (reworked from the Healer)
-│   │           ├── companion_ranger.cs
+│   │           ├── companion_boon.cs        # Boon, the Sharpshooter (reworked from the Ranger)
 │   │           └── party_manager.cs     # Party roster and size rules
 │   │
 │   ├── combat/
@@ -85,6 +86,7 @@ RNGtheGame/
 │   │   ├── weapon.cs
 │   │   ├── armor.cs
 │   │   ├── consumable.cs                # Potions and other usable items
+│   │   ├── ammunition.cs                # Special crossbow bolts (Boon's special shots)
 │   │   ├── quest_item.cs
 │   │   └── item_database.cs             # Every item definition
 │   │

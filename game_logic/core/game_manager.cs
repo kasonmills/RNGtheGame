@@ -134,6 +134,7 @@ namespace GameLogic.Core
             _bossManager = result.BossManager;
             _questManager = result.QuestManager;
             _questGiver = result.QuestGiver;
+            _combatManager.Difficulty = difficulty; // Harder difficulties lower the party's hit chance
 
             ChangeState(GameState.Tutorial); // Opening tutorial before the player is free to roam
             _isRunning = true;
@@ -197,6 +198,7 @@ namespace GameLogic.Core
             {
                 _player = result.Player;
                 _gameSettings = result.GameSettings;
+                _combatManager.Difficulty = _gameSettings.Difficulty; // Harder difficulties lower the party's hit chance
                 _statistics = result.Statistics;
                 _bossManager = result.BossManager;
                 _questManager = result.QuestManager;

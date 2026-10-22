@@ -74,6 +74,14 @@ namespace GameLogic.Entities.Player
                         return existingItem;
                     }
                 }
+                // For bolts: match the bolt type
+                else if (item is Ammunition ammo && existingItem is Ammunition existingAmmo)
+                {
+                    if (existingAmmo.Type == ammo.Type)
+                    {
+                        return existingItem;
+                    }
+                }
                 // For weapons: match name AND level
                 else if (item is Weapon weapon && existingItem is Weapon existingWeapon)
                 {

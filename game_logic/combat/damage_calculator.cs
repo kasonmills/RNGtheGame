@@ -21,6 +21,12 @@ namespace GameLogic.Combat
     {
         private RNGManager _rngManager;
 
+        /// <summary>
+        /// The save's difficulty - harder difficulties lower the party's hit chance
+        /// (GameSettings.GetPartyAccuracyPenalty)
+        /// </summary>
+        public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Normal;
+
         public DamageCalculator(RNGManager rngManager)
         {
             _rngManager = rngManager;
@@ -33,7 +39,8 @@ namespace GameLogic.Combat
         /// </summary>
         /// <param name="partyLeader">The player - needed for the player's passive abilities that
         /// boost companions (Precision Training, Rallying Cry). Can be null.</param>
-        public DamageResult CalculateAttack(Entity attacker, Entity target, Player partyLeader = null)
+        /// <param name="ignoreDefense">Skip the target's defense/armor (e.g. a piercing bolt).</param>
+        public DamageResult CalculateAttack(Entity attacker, Entity target, Player partyLeader = null, bool ignoreDefense = false)
         {
             DamageResult result = new DamageResult();
 
@@ -91,9 +98,11 @@ namespace GameLogic.Combat
             }
 
             // Step 7: The target's defense (enemy defense stat, or worn armor and defensive effects)
-            int finalDamage = target is Enemy enemyTarget
-                ? ApplyEnemyDefenseReduction(baseDamage, enemyTarget)
-                : ApplyArmorReduction(baseDamage, target);
+            int finalDamage = ignoreDefense
+                ? baseDamage
+                : target is Enemy enemyTarget
+                    ? ApplyEnemyDefenseReduction(baseDamage, enemyTarget)
+                    : ApplyArmorReduction(baseDamage, target);
 
             result.RawDamage = baseDamage;
             result.FinalDamage = finalDamage;
@@ -119,9 +128,24 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Hit chance (1-100) for any attacker
+        /// Hit chance (1-100) for any attacker. The player and companions lose a set amount
+        /// on harder difficulties (except Boon with his own crossbow); enemies don't.
         /// </summary>
         private int GetAccuracy(Entity attacker, Player partyLeader)
+        {
+            if (attacker is Enemy || (attacker is CompanionBoon boon && boon.HasOwnCrossbow))
+            {
+                return GetBaseAccuracy(attacker, partyLeader);
+            }
+
+            int penalty = GameSettings.GetPartyAccuracyPenalty(Difficulty);
+            return Math.Max(1, GetBaseAccuracy(attacker, partyLeader) - penalty);
+        }
+
+        /// <summary>
+        /// Hit chance (1-100) before the difficulty penalty
+        /// </summary>
+        private int GetBaseAccuracy(Entity attacker, Player partyLeader)
         {
             switch (attacker)
             {
@@ -129,7 +153,9 @@ namespace GameLogic.Combat
                     return GetPlayerAccuracy(player);
 
                 case NPCBase companion:
-                    int accuracy = companion.EquippedWeapon != null ? companion.EquippedWeapon.Accuracy : 60;
+                    int accuracy = companion is CompanionBase partyCompanion
+                        ? partyCompanion.AttackAccuracy
+                        : companion.EquippedWeapon != null ? companion.EquippedWeapon.Accuracy : 60;
 
                     // Precision Training (the player's passive) improves companion accuracy
                     if (partyLeader?.SelectedAbility is PrecisionTrainingAbility precisionTraining)
@@ -157,6 +183,9 @@ namespace GameLogic.Combat
                     int playerDamage = GetPlayerBaseDamage(player) + player.Level / 2; // +1 damage per 2 levels
                     return ApplyPlayerPassiveAbilities(player, playerDamage);
 
+                case CompanionBase partyCompanion:
+                    return partyCompanion.RollAttackDamage(_rngManager);
+
                 case NPCBase companion:
                     int companionDamage = companion.EquippedWeapon != null
                         ? _rngManager.Roll(companion.EquippedWeapon.MinDamage, companion.EquippedWeapon.MaxDamage)
@@ -183,6 +212,7 @@ namespace GameLogic.Combat
 
             int critChance = attacker switch
             {
+                CompanionBase partyCompanion => partyCompanion.AttackCritChance,
                 NPCBase companion => companion.EquippedWeapon != null ? companion.EquippedWeapon.CritChance : 2,
                 Enemy enemy => enemy.CritChance,
                 _ => 0

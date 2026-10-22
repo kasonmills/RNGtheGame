@@ -123,6 +123,16 @@ namespace GameLogic.Combat
         /// </summary>
         public IReadOnlyList<TurnSlot> TurnOrder => _turnOrder;
 
+        /// <summary>
+        /// The save's difficulty (harder difficulties lower the party's hit chance). Set by
+        /// GameManager from the game settings.
+        /// </summary>
+        public DifficultyLevel Difficulty
+        {
+            get => _damageCalculator.Difficulty;
+            set => _damageCalculator.Difficulty = value;
+        }
+
         public CombatManager(RNGManager rngManager)
         {
             _rngManager = rngManager;
@@ -613,6 +623,13 @@ namespace GameLogic.Combat
                 speed -= grapple.Potency;
             }
 
+            // Same for Boon's pinning bolt
+            var pinned = entity.GetEffect<PinnedEffect>();
+            if (pinned != null)
+            {
+                speed -= pinned.Potency;
+            }
+
             return Math.Max(1, speed);
         }
 
@@ -996,6 +1013,18 @@ namespace GameLogic.Combat
             }
 
             // Use companion AI to decide action: 0 = Attack, 1 = Ability, 2 = Defend
+            // Boon fires a special bolt when one in the party bag fits this target
+            if (companion is CompanionBoon boon)
+            {
+                var bolt = boon.ChooseBolt(target, GetBoltCounts().Keys);
+                if (bolt != null)
+                {
+                    var shot = CombatAction.UseAbility(boon, boon.SpecialShot, target);
+                    shot.Item = new Items.Ammunition(bolt.Value);
+                    return shot;
+                }
+            }
+
             var allies = GetAllies(companion);
             int actionDecision = companion.DecideCombatAction(target, allies, _rngManager);
 
@@ -1251,7 +1280,7 @@ namespace GameLogic.Combat
                 Log("(Fighting unarmed - find a weapon!)");
             }
 
-            DamageResult result = _damageCalculator.CalculateAttack(attacker, target, _player);
+            DamageResult result = _damageCalculator.CalculateAttack(attacker, target, _player, action.IgnoresDefense);
 
             if (result.Missed)
             {
@@ -1286,6 +1315,21 @@ namespace GameLogic.Combat
             if (action.DamageMultiplier != 1.0)
             {
                 result.FinalDamage = (int)(result.FinalDamage * action.DamageMultiplier);
+            }
+
+            // Risk's armor: a chance a weapon or other non-magical hit lands but does no damage
+            // (doubled while defending). Only the damage is stopped - a status effect the attack
+            // carries still applies. Magic attacks go through as normal.
+            if (target is CompanionRisk risk && !action.IsMagical && risk.RollNoDamage(_rngManager, isDefending))
+            {
+                Log($"The hit glances off {risk.Name}'s armor! No damage taken!");
+                Raise(CombatEventType.AttackBlocked, attacker, target);
+
+                if (action.AppliesEffect != null)
+                {
+                    target.AddEffect(action.AppliesEffect);
+                }
+                return;
             }
 
             if (result.IsCritical)
@@ -1336,6 +1380,12 @@ namespace GameLogic.Combat
                 return;
             }
 
+            if (action.Ability is SpecialShotAbility specialShot)
+            {
+                ProcessSpecialShot(action, specialShot);
+                return;
+            }
+
             var target = action.Target ?? action.Actor;
             bool wholeParty = action.Ability.TargetType == AbilityTarget.AllAllies;
             Log(wholeParty
@@ -1360,6 +1410,82 @@ namespace GameLogic.Combat
             {
                 action.Ability.Execute(action.Actor, target, _rngManager);
             }
+        }
+
+        /// <summary>
+        /// Boon's Special Shot: spend one bolt of the chosen type (action.Item) from the party
+        /// bag and fire it as a normal crossbow attack with the bolt's effect added. If that
+        /// type has run out, he throws an axe instead (a weaker normal attack).
+        /// </summary>
+        private void ProcessSpecialShot(CombatAction action, SpecialShotAbility shot)
+        {
+            var shooter = action.Actor;
+            var target = action.Target;
+            var boltType = (action.Item as Items.Ammunition)?.Type;
+
+            Raise(new CombatEvent
+            {
+                Type = CombatEventType.AbilityUsed,
+                Actor = shooter,
+                Target = target,
+                Ability = shot
+            });
+
+            var stack = boltType == null ? null : _player?.Inventory.Items
+                .OfType<Items.Ammunition>()
+                .FirstOrDefault(ammo => ammo.Type == boltType.Value && ammo.Quantity > 0);
+
+            var attack = new CombatAction(ActionType.Attack, shooter, target);
+
+            if (stack == null)
+            {
+                string boltName = boltType == null ? "special bolts" : $"{Items.Ammunition.GetName(boltType.Value)}s";
+                Log($"\n{shooter.Name} is out of {boltName} - he throws an axe instead!");
+                attack.DamageMultiplier = SpecialShotAbility.AxeDamageShare;
+                ProcessAttack(attack);
+                shooter.LastAction = Entities.CombatAction.UseAbility;
+                return;
+            }
+
+            _player.Inventory.RemoveQuantity(stack, 1);
+            int left = stack.Quantity;
+            Log($"\n{shooter.Name} loads a {stack.Name}! ({left} left)");
+
+            switch (stack.Type)
+            {
+                case Items.BoltType.Piercing:
+                    attack.IgnoresDefense = true;
+                    break;
+                case Items.BoltType.Pinning:
+                    attack.AppliesEffect = new PinnedEffect(SpecialShotAbility.PinDuration, SpecialShotAbility.PinSpeedReduction);
+                    break;
+                case Items.BoltType.Fire:
+                    attack.AppliesEffect = new BurnEffect(shot.BurnPotency, SpecialShotAbility.BurnDuration);
+                    break;
+                // Ice and Acid: effects not designed yet - they hit like an ordinary bolt
+            }
+
+            ProcessAttack(attack);
+            shooter.LastAction = Entities.CombatAction.UseAbility;
+            shot.GainCombatExperience();
+        }
+
+        /// <summary>
+        /// Special bolts in the party bag, by type (only types with at least one left).
+        /// A combat screen uses this to offer Boon's bolt choices.
+        /// </summary>
+        public Dictionary<Items.BoltType, int> GetBoltCounts()
+        {
+            var counts = new Dictionary<Items.BoltType, int>();
+            if (_player == null) return counts;
+
+            foreach (var ammo in _player.Inventory.Items.OfType<Items.Ammunition>())
+            {
+                if (ammo.Quantity <= 0) continue;
+                counts.TryGetValue(ammo.Type, out int count);
+                counts[ammo.Type] = count + ammo.Quantity;
+            }
+            return counts;
         }
 
         /// <summary>

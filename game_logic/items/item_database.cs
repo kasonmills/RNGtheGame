@@ -2280,6 +2280,24 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (1, 7)    // Crossbow: +1 to +7 max damage (extreme range like bow)
                 ),
 
+                // Boon's own crossbow - not in GetAllWeapons(), so it never drops as loot
+                // or shows up in shops. Damage/crit are placeholders; the 95% accuracy is decided.
+                "boon's crossbow" => new Weapon(
+                    "Boon's Crossbow",
+                    "A mechanical crossbow Boon built himself. In his hands, it doesn't miss.",
+                    WeaponType.Crossbow,
+                    minDamage: 6,
+                    maxDamage: 12,
+                    critChance: 5,
+                    accuracy: 95,
+                    ItemRarity.Uncommon,
+                    level,
+                    value: 0,
+                    minDamageUpgradeRange: (0, 1),
+                    damageShiftRange: (0, 2),
+                    maxDamageUpgradeRange: (1, 7)
+                ),
+
                 "heavy crossbow" => new Weapon(
                     "Heavy Crossbow",
                     "A powerful crossbow that hits with devastating force.",

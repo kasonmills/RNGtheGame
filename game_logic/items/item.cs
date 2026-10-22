@@ -25,7 +25,8 @@ namespace GameLogic.Items
         Consumable,
         QuestItem,
         Material,
-        Treasure
+        Treasure,
+        Ammunition
     }
 
     /// <summary>

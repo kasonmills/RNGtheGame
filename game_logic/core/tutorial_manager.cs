@@ -64,7 +64,7 @@ namespace GameLogic.Core
         /// </summary>
         public CompanionBase GetStarterCompanion()
         {
-            return new CompanionWarrior();
+            return new CompanionChance();
         }
 
         /// <summary>

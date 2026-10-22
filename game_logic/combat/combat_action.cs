@@ -22,6 +22,8 @@ namespace GameLogic.Combat
         // Optional, generically reusable by any boss mechanic:
         public double DamageMultiplier { get; set; } = 1.0;  // Applied to attack damage before defend/evasion (e.g. a charge attack)
         public AbilityEffect AppliesEffect { get; set; }      // Applied to the target if the attack lands (e.g. a slow/grapple)
+        public bool IsMagical { get; set; }                   // A magic attack - armor-based defenses (Risk's no-damage chance) don't apply
+        public bool IgnoresDefense { get; set; }              // Skips the target's defense/armor reduction (e.g. a piercing bolt)
 
         public CombatAction(ActionType type, Entity actor, Entity target = null)
         {

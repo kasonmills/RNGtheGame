@@ -266,6 +266,11 @@ namespace GameLogic.Data
                 serialized.ConsumableType = consumable.Type.ToString();
                 serialized.EffectPower = consumable.EffectPower;
             }
+            else if (item is Ammunition ammo)
+            {
+                serialized.ItemType = "Ammunition";
+                serialized.BoltType = ammo.Type.ToString();
+            }
             else if (item is QuestItem)
             {
                 serialized.ItemType = "QuestItem";
@@ -331,6 +336,12 @@ namespace GameLogic.Data
                 case "Consumable":
                     // Get consumable with quantity
                     item = ItemDatabase.GetConsumable(serialized.Name, serialized.Level, serialized.Quantity);
+                    break;
+
+                case "Ammunition":
+                    item = Enum.TryParse(serialized.BoltType, out BoltType boltType)
+                        ? new Ammunition(boltType, serialized.Quantity)
+                        : null;
                     break;
 
                 case "QuestItem":

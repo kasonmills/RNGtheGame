@@ -65,6 +65,16 @@ namespace GameLogic.Entities.NPCs.Companions
             if (companion is CompanionBase companionBase)
             {
                 companionBase.ApplyPassiveBonus(player);
+
+                // Items a companion brings into the party bag (e.g. Boon's starting bolts) - once only
+                if (!companionBase.StartingItemsGiven)
+                {
+                    foreach (var item in companionBase.GetStartingPartyItems())
+                    {
+                        player.Inventory.AddItem(item);
+                    }
+                    companionBase.StartingItemsGiven = true;
+                }
             }
 
             return true;

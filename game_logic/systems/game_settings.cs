@@ -109,6 +109,23 @@ namespace GameLogic.Systems
         }
 
         /// <summary>
+        /// Hit chance taken off the player's and companions' attacks on each difficulty
+        /// (percentage points): Normal 0, Hard 7, Difficult 14, Unfair 21. Enemies are not
+        /// affected, and Boon is exempt (decided 2026-10-21).
+        /// </summary>
+        public static int GetPartyAccuracyPenalty(DifficultyLevel difficulty)
+        {
+            return difficulty switch
+            {
+                DifficultyLevel.Normal => 0,
+                DifficultyLevel.Hard => 7,
+                DifficultyLevel.Difficult => 14,
+                DifficultyLevel.Unfair => 21,
+                _ => 0
+            };
+        }
+
+        /// <summary>
         /// Clone settings
         /// </summary>
         public GameSettings Clone()

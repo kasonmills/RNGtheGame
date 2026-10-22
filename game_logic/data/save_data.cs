@@ -34,6 +34,9 @@ namespace GameLogic.Data
         // Consumable-specific
         public string ConsumableType { get; set; }
         public int? EffectPower { get; set; }
+
+        // Ammunition-specific
+        public string BoltType { get; set; }
     }
 
     /// <summary>
