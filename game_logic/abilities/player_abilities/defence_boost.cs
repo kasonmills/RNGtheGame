@@ -5,7 +5,7 @@ namespace GameLogic.Abilities.PlayerAbilities
 {
     /// <summary>
     /// Defense Boost - Reduces incoming damage
-    /// Scalable: Level 1 = -1% damage taken, Level 100 = -60% damage taken
+    /// Scalable: Level 1 = -1% damage taken, max level = -60% damage taken
     /// Applies a temporary defensive buff effect
     /// </summary>
     public class DefenseBoost : Ability

@@ -295,7 +295,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (1, 3)
                 ),
 
-                // Epic Swords
+                // Epic Swords - now Rare until each is decided (Epic removed 2026-10-22)
                 "dragonforged blade" => new Weapon(
                     "Dragonforged Blade",
                     "Tempered in dragonfire, burns enemies.",
@@ -304,7 +304,7 @@ namespace GameLogic.Items
                     maxDamage: 40,
                     critChance: 18,
                     accuracy: 90,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 800,
                     minDamageUpgradeRange: (1, 2),
@@ -320,7 +320,7 @@ namespace GameLogic.Items
                     maxDamage: 38,
                     critChance: 20,
                     accuracy: 89,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 750,
                     minDamageUpgradeRange: (1, 2),
@@ -336,7 +336,7 @@ namespace GameLogic.Items
                     maxDamage: 39,
                     critChance: 19,
                     accuracy: 91,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 820,
                     minDamageUpgradeRange: (1, 2),
@@ -669,7 +669,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (1, 4)
                 ),
 
-                // Epic Axes
+                // Epic Axes - now Rare until each is decided (Epic removed 2026-10-22)
                 "titan's cleaver" => new Weapon(
                     "Titan's Cleaver",
                     "Colossal axe wielded by ancient giants.",
@@ -678,7 +678,7 @@ namespace GameLogic.Items
                     maxDamage: 48,
                     critChance: 22,
                     accuracy: 78,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1200,
                     minDamageUpgradeRange: (0, 2),
@@ -694,7 +694,7 @@ namespace GameLogic.Items
                     maxDamage: 50,
                     critChance: 23,
                     accuracy: 77,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1300,
                     minDamageUpgradeRange: (0, 2),
@@ -710,7 +710,7 @@ namespace GameLogic.Items
                     maxDamage: 49,
                     critChance: 21,
                     accuracy: 79,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1250,
                     minDamageUpgradeRange: (0, 2),
@@ -1043,7 +1043,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (0, 2)
                 ),
 
-                // Epic Maces
+                // Epic Maces - now Rare until each is decided (Epic removed 2026-10-22)
                 "skullcrusher" => new Weapon(
                     "Skullcrusher",
                     "Legendary weapon feared across battlefields.",
@@ -1052,7 +1052,7 @@ namespace GameLogic.Items
                     maxDamage: 45,
                     critChance: 30,
                     accuracy: 68,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1100,
                     minDamageUpgradeRange: (0, 1),
@@ -1068,7 +1068,7 @@ namespace GameLogic.Items
                     maxDamage: 47,
                     critChance: 31,
                     accuracy: 67,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1150,
                     minDamageUpgradeRange: (0, 1),
@@ -1084,7 +1084,7 @@ namespace GameLogic.Items
                     maxDamage: 46,
                     critChance: 29,
                     accuracy: 69,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1120,
                     minDamageUpgradeRange: (0, 1),
@@ -1417,7 +1417,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (0, 2)
                 ),
 
-                // Epic Spears
+                // Epic Spears - now Rare until each is decided (Epic removed 2026-10-22)
                 "gungnir" => new Weapon(
                     "Gungnir",
                     "Odin's legendary spear that never misses.",
@@ -1426,7 +1426,7 @@ namespace GameLogic.Items
                     maxDamage: 42,
                     critChance: 30,
                     accuracy: 97,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1050,
                     minDamageUpgradeRange: (0, 1),
@@ -1442,7 +1442,7 @@ namespace GameLogic.Items
                     maxDamage: 44,
                     critChance: 31,
                     accuracy: 98,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1100,
                     minDamageUpgradeRange: (0, 1),
@@ -1458,7 +1458,7 @@ namespace GameLogic.Items
                     maxDamage: 43,
                     critChance: 29,
                     accuracy: 96,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1080,
                     minDamageUpgradeRange: (0, 1),
@@ -1791,7 +1791,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (0, 3)
                 ),
 
-                // Epic Staves
+                // Epic Staves - now Rare until each is decided (Epic removed 2026-10-22)
                 "staff of power" => new Weapon(
                     "Staff of Power",
                     "Radiates pure magical energy.",
@@ -1800,7 +1800,7 @@ namespace GameLogic.Items
                     maxDamage: 38,
                     critChance: 15,
                     accuracy: 97,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 950,
                     minDamageUpgradeRange: (1, 3),
@@ -1816,7 +1816,7 @@ namespace GameLogic.Items
                     maxDamage: 40,
                     critChance: 16,
                     accuracy: 98,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1000,
                     minDamageUpgradeRange: (1, 3),
@@ -1832,7 +1832,7 @@ namespace GameLogic.Items
                     maxDamage: 39,
                     critChance: 14,
                     accuracy: 96,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 980,
                     minDamageUpgradeRange: (1, 3),
@@ -2165,7 +2165,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (1, 7)
                 ),
 
-                // Epic Bows
+                // Epic Bows - now Rare until each is decided (Epic removed 2026-10-22)
                 "artemis's rage" => new Weapon(
                     "Artemis's Rage",
                     "Divine bow of the hunt goddess.",
@@ -2174,7 +2174,7 @@ namespace GameLogic.Items
                     maxDamage: 48,
                     critChance: 25,
                     accuracy: 90,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1000,
                     minDamageUpgradeRange: (0, 1),
@@ -2190,7 +2190,7 @@ namespace GameLogic.Items
                     maxDamage: 50,
                     critChance: 26,
                     accuracy: 91,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1050,
                     minDamageUpgradeRange: (0, 1),
@@ -2206,7 +2206,7 @@ namespace GameLogic.Items
                     maxDamage: 49,
                     critChance: 24,
                     accuracy: 89,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1020,
                     minDamageUpgradeRange: (0, 1),
@@ -2557,7 +2557,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (1, 7)
                 ),
 
-                // Epic Crossbows
+                // Epic Crossbows - now Rare until each is decided (Epic removed 2026-10-22)
                 "wyrm's bane" => new Weapon(
                     "Wyrm's Bane",
                     "Legendary dragon-slaying crossbow.",
@@ -2566,7 +2566,7 @@ namespace GameLogic.Items
                     maxDamage: 52,
                     critChance: 18,
                     accuracy: 97,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1100,
                     minDamageUpgradeRange: (0, 1),
@@ -2582,7 +2582,7 @@ namespace GameLogic.Items
                     maxDamage: 54,
                     critChance: 19,
                     accuracy: 98,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1150,
                     minDamageUpgradeRange: (0, 1),
@@ -2598,7 +2598,7 @@ namespace GameLogic.Items
                     maxDamage: 51,
                     critChance: 20,
                     accuracy: 99,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1080,
                     minDamageUpgradeRange: (0, 1),
@@ -2931,7 +2931,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (0, 2)
                 ),
 
-                // Epic Wands
+                // Epic Wands - now Rare until each is decided (Epic removed 2026-10-22)
                 "deathstick" => new Weapon(
                     "Deathstick",
                     "Wand of legend, unbeatable in duels.",
@@ -2940,7 +2940,7 @@ namespace GameLogic.Items
                     maxDamage: 30,
                     critChance: 24,
                     accuracy: 96,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 900,
                     minDamageUpgradeRange: (1, 3),
@@ -2956,7 +2956,7 @@ namespace GameLogic.Items
                     maxDamage: 32,
                     critChance: 25,
                     accuracy: 97,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 950,
                     minDamageUpgradeRange: (1, 3),
@@ -2972,7 +2972,7 @@ namespace GameLogic.Items
                     maxDamage: 31,
                     critChance: 23,
                     accuracy: 95,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 920,
                     minDamageUpgradeRange: (1, 3),
@@ -3305,7 +3305,7 @@ namespace GameLogic.Items
                     maxDamageUpgradeRange: (0, 2)
                 ),
 
-                // Epic Daggers
+                // Epic Daggers - now Rare until each is decided (Epic removed 2026-10-22)
                 "misericorde" => new Weapon(
                     "Misericorde",
                     "The mercy dagger, delivers final blows.",
@@ -3314,7 +3314,7 @@ namespace GameLogic.Items
                     maxDamage: 30,
                     critChance: 38,
                     accuracy: 90,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 850,
                     minDamageUpgradeRange: (0, 1),
@@ -3330,7 +3330,7 @@ namespace GameLogic.Items
                     maxDamage: 32,
                     critChance: 39,
                     accuracy: 91,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 900,
                     minDamageUpgradeRange: (0, 1),
@@ -3346,7 +3346,7 @@ namespace GameLogic.Items
                     maxDamage: 31,
                     critChance: 37,
                     accuracy: 89,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 870,
                     minDamageUpgradeRange: (0, 1),
@@ -4972,7 +4972,7 @@ namespace GameLogic.Items
                 ),
 
                 // ========================================
-                // EPIC ARMOR (30 total - 5 per type)
+                // EPIC ARMOR (30 total - 5 per type) - now Rare until each is decided (Epic removed 2026-10-22)
                 // ========================================
 
                 // Cloth - Epic (5)
@@ -4981,7 +4981,7 @@ namespace GameLogic.Items
                     "Ethereal cloth armor that phases between dimensions. Elite protection for Rogues and Mages.",
                     ArmorType.Cloth,
                     defense: 35,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 420
                 ),
@@ -4991,7 +4991,7 @@ namespace GameLogic.Items
                     "Armor woven from spectral silk, granting supernatural mobility.",
                     ArmorType.Cloth,
                     defense: 40,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 580
                 ),
@@ -5001,7 +5001,7 @@ namespace GameLogic.Items
                     "Ghostly cloth armor that deflects attacks through the ethereal plane.",
                     ArmorType.Cloth,
                     defense: 43,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 720
                 ),
@@ -5011,7 +5011,7 @@ namespace GameLogic.Items
                     "Mystical robes that blur the line between material and spirit.",
                     ArmorType.Cloth,
                     defense: 47,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 890
                 ),
@@ -5021,7 +5021,7 @@ namespace GameLogic.Items
                     "Cloth armor infused with the essence of the void itself.",
                     ArmorType.Cloth,
                     defense: 50,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1050
                 ),
@@ -5032,7 +5032,7 @@ namespace GameLogic.Items
                     "Armor crafted from the hide of a fallen dragon. Exceptional protection.",
                     ArmorType.Leather,
                     defense: 50,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 720
                 ),
@@ -5042,7 +5042,7 @@ namespace GameLogic.Items
                     "Leather armor reinforced with basilisk scales, highly resistant to magic.",
                     ArmorType.Leather,
                     defense: 56,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 980
                 ),
@@ -5052,7 +5052,7 @@ namespace GameLogic.Items
                     "Sleek armor made from the skin of a massive serpent.",
                     ArmorType.Leather,
                     defense: 60,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1180
                 ),
@@ -5062,7 +5062,7 @@ namespace GameLogic.Items
                     "Leather armor from a wyvern, offering superior flexibility and protection.",
                     ArmorType.Leather,
                     defense: 65,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1420
                 ),
@@ -5072,7 +5072,7 @@ namespace GameLogic.Items
                     "Legendary leather armor crafted from chimera hide, resistant to all elements.",
                     ArmorType.Leather,
                     defense: 70,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1680
                 ),
@@ -5083,7 +5083,7 @@ namespace GameLogic.Items
                     "Chainmail forged with dragon scales woven into the links.",
                     ArmorType.Chainmail,
                     defense: 70,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1150
                 ),
@@ -5093,7 +5093,7 @@ namespace GameLogic.Items
                     "Massive chainmail once worn by ancient titans.",
                     ArmorType.Chainmail,
                     defense: 77,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1540
                 ),
@@ -5103,7 +5103,7 @@ namespace GameLogic.Items
                     "Heavy chainmail designed for warriors of immense strength.",
                     ArmorType.Chainmail,
                     defense: 83,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1890
                 ),
@@ -5113,7 +5113,7 @@ namespace GameLogic.Items
                     "Chainmail forged from the bones of a behemoth, nearly impenetrable.",
                     ArmorType.Chainmail,
                     defense: 89,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 2280
                 ),
@@ -5123,7 +5123,7 @@ namespace GameLogic.Items
                     "Chainmail crafted from adamantine, the strongest metal known.",
                     ArmorType.Chainmail,
                     defense: 95,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 2720
                 ),
@@ -5134,7 +5134,7 @@ namespace GameLogic.Items
                     "Full plate armor forged from dragon bones and reinforced with scales.",
                     ArmorType.Plate,
                     defense: 95,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1880
                 ),
@@ -5144,7 +5144,7 @@ namespace GameLogic.Items
                     "Massive plate armor that makes the wearer an unstoppable force.",
                     ArmorType.Plate,
                     defense: 103,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 2480
                 ),
@@ -5154,7 +5154,7 @@ namespace GameLogic.Items
                     "Plate armor designed for warriors who dominate the battlefield.",
                     ArmorType.Plate,
                     defense: 110,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 3020
                 ),
@@ -5164,7 +5164,7 @@ namespace GameLogic.Items
                     "Plate armor forged in the fires of titans, unmatched in durability.",
                     ArmorType.Plate,
                     defense: 117,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 3620
                 ),
@@ -5174,7 +5174,7 @@ namespace GameLogic.Items
                     "The ultimate heavy armor, turning the wearer into a living fortress.",
                     ArmorType.Plate,
                     defense: 125,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 4280
                 ),
@@ -5185,7 +5185,7 @@ namespace GameLogic.Items
                     "Robes woven from astral energy, channeling cosmic power.",
                     ArmorType.Robe,
                     defense: 30,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 620
                 ),
@@ -5195,7 +5195,7 @@ namespace GameLogic.Items
                     "Robes that shimmer with the light of distant stars.",
                     ArmorType.Robe,
                     defense: 35,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 860
                 ),
@@ -5205,7 +5205,7 @@ namespace GameLogic.Items
                     "Robes infused with the power of all four elements.",
                     ArmorType.Robe,
                     defense: 38,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1050
                 ),
@@ -5215,7 +5215,7 @@ namespace GameLogic.Items
                     "Robes worn by masters of the arcane arts, amplifying magical power.",
                     ArmorType.Robe,
                     defense: 41,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1280
                 ),
@@ -5225,7 +5225,7 @@ namespace GameLogic.Items
                     "Holy robes blessed by celestial beings, radiating divine energy.",
                     ArmorType.Robe,
                     defense: 45,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1540
                 ),
@@ -5236,7 +5236,7 @@ namespace GameLogic.Items
                     "Shield covered in dragon scales, offering exceptional protection.",
                     ArmorType.Shield,
                     defense: 60,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 980
                 ),
@@ -5246,7 +5246,7 @@ namespace GameLogic.Items
                     "Legendary shield once carried by titan warriors.",
                     ArmorType.Shield,
                     defense: 66,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1320
                 ),
@@ -5256,7 +5256,7 @@ namespace GameLogic.Items
                     "Shield that has protected countless heroes in battle.",
                     ArmorType.Shield,
                     defense: 71,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1620
                 ),
@@ -5266,7 +5266,7 @@ namespace GameLogic.Items
                     "Massive shield that can withstand any assault.",
                     ArmorType.Shield,
                     defense: 75,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 1960
                 ),
@@ -5276,7 +5276,7 @@ namespace GameLogic.Items
                     "Shield said to make its bearer nearly invincible.",
                     ArmorType.Shield,
                     defense: 80,
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 2340
                 ),
@@ -5565,7 +5565,7 @@ namespace GameLogic.Items
                     "A rare elixir that boosts both attack and defense simultaneously for 1 turn.",
                     ConsumableType.Elixir,
                     effectPower: 30, // Not directly used, effects calculated by level in Use()
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     level,
                     value: 200
                 ),
@@ -5610,7 +5610,7 @@ namespace GameLogic.Items
                     "Revives a fallen ally with substantial health restoration, nearly full strength.",
                     ConsumableType.RevivePotion,
                     effectPower: 0, // Not used - revival scales with level in UseRevivePotion()
-                    ItemRarity.Epic,
+                    ItemRarity.Rare, // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                     Math.Clamp(level, 9, 10), // Levels 9-10
                     value: 200
                 ),
@@ -5635,10 +5635,10 @@ namespace GameLogic.Items
                 ("Bread", ConsumableType.Food, ItemRarity.Common),
                 ("Cooked Meat", ConsumableType.Food, ItemRarity.Common),
                 ("Elixir of Vitality", ConsumableType.Elixir, ItemRarity.Rare),
-                ("Combat Elixir", ConsumableType.Elixir, ItemRarity.Epic),
+                ("Combat Elixir", ConsumableType.Elixir, ItemRarity.Rare), // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                 ("Minor Revival Potion", ConsumableType.RevivePotion, ItemRarity.Uncommon),
                 ("Revival Potion", ConsumableType.RevivePotion, ItemRarity.Rare),
-                ("Greater Revival Potion", ConsumableType.RevivePotion, ItemRarity.Epic),
+                ("Greater Revival Potion", ConsumableType.RevivePotion, ItemRarity.Rare), // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
                 ("Antidote", ConsumableType.Antidote, ItemRarity.Common)
             };
         }

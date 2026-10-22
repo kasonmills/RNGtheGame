@@ -384,7 +384,7 @@ namespace GameLogic.Data
                 }
             }
 
-            player.Level = saveData.Level;
+            player.Level = Math.Clamp(saveData.Level, 1, Player.MaxLevel);
             player.Experience = saveData.Experience;
             player.Health = saveData.Health;
             player.MaxHealth = saveData.MaxHealth;

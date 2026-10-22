@@ -96,7 +96,7 @@ namespace GameLogic.Entities.NPCs.Companions
             Name = "Backstab";
             Description = "Strike from the shadows for guaranteed critical damage";
             TargetType = AbilityTarget.SingleEnemy;
-            Rarity = AbilityRarity.Epic;
+            Rarity = AbilityRarity.Rare;  // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
 
             Cooldown = 3;  // 3 turn cooldown
             Level = rogue.Level;

@@ -5,7 +5,7 @@ namespace GameLogic.Abilities.PlayerAbilities
 {
     /// <summary>
     /// Critical Strike - Increases critical hit chance
-    /// Scalable: Level 1 = +1% crit chance, Level 100 = +50% crit chance
+    /// Scalable: Level 1 = +1% crit chance, max level = +50% crit chance
     /// Applies a temporary buff effect
     /// </summary>
     public class CriticalStrike : Ability

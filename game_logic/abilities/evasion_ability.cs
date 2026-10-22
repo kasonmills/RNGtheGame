@@ -6,7 +6,7 @@ namespace GameLogic.Abilities
     /// <summary>
     /// Evasion - Passive ability that gives a chance to completely avoid damage
     /// Level 1: 1% chance to evade
-    /// Level 100: 60% chance to evade
+    /// Max level: 60% chance to evade
     /// Scales linearly between levels
     /// Does NOT work when defending (defending already reduces damage)
     /// </summary>
@@ -17,7 +17,7 @@ namespace GameLogic.Abilities
             Name = "Evasion";
             Description = "Your reflexes and agility allow you to dodge incoming attacks, taking no damage. Does not work while defending.";
             IsPassive = true;
-            Rarity = AbilityRarity.Epic;
+            Rarity = AbilityRarity.Rare;  // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
 
             // Passive abilities don't have cooldown or targeting
             Cooldown = 0;
@@ -26,13 +26,13 @@ namespace GameLogic.Abilities
 
         /// <summary>
         /// Get the evasion chance percentage based on level
-        /// Scales linearly from 1% (level 1) to 60% (level 100)
+        /// Scales linearly from 1% (level 1) to 60% (max level)
         /// </summary>
         public override int GetPassiveBonusValue()
         {
             // Level 1: 1%
-            // Level 100: 60%
-            // Linear scaling: 1 + ((Level - 1) * 59 / 99)
+            // Max level: 60%
+            // Linear scaling: 1 + ((Level - 1) * 59 / (MaxLevel - 1))
             return GetScaledValueInt(1, 60);
         }
 
@@ -90,9 +90,9 @@ namespace GameLogic.Abilities
                 if (nextMilestone > 60) nextMilestone = 60;
 
                 // Calculate level needed for next milestone
-                // Formula: Level = 1 + ((Chance - 1) * 99 / 59)
+                // Formula: Level = 1 + ((Chance - 1) * (MaxLevel - 1) / 59)
                 int levelsNeeded = nextMilestone - currentChance;
-                double levelsPerPercent = 99.0 / 59.0; // ~1.678 levels per 1%
+                double levelsPerPercent = (MaxLevel - 1) / 59.0; // ~0.49 levels per 1% at a cap of 30
                 int approxLevelForMilestone = Level + (int)Math.Ceiling(levelsNeeded * levelsPerPercent);
 
                 if (approxLevelForMilestone > MaxLevel) approxLevelForMilestone = MaxLevel;

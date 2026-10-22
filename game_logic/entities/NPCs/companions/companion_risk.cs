@@ -120,7 +120,8 @@ namespace GameLogic.Entities.NPCs.Companions
         public const int BaseNoDamageChance = 15;
 
         /// <summary>
-        /// Highest the chance can go, defending or not (reached at level 50 at the latest)
+        /// Highest the chance can go, defending or not. Defending reaches it at level 40, the level cap
+        /// (15 + 20 = 35%, doubled); not defending, he tops out at 35%.
         /// </summary>
         public const int MaxNoDamageChance = 70;
 

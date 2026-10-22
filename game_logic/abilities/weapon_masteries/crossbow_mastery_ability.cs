@@ -6,7 +6,7 @@ namespace GameLogic.Abilities.WeaponMasteries
     /// <summary>
     /// Crossbow Mastery - Passive ability that provides bonuses when wielding a crossbow
     /// Level 1: +1% accuracy, +1% attack damage, +1% crit chance
-    /// Level 100: +40% accuracy, +70% attack damage, +25% crit chance
+    /// Max level: +40% accuracy, +70% attack damage, +25% crit chance
     /// </summary>
     public class CrossbowMasteryAbility : Ability
     {
@@ -53,10 +53,10 @@ namespace GameLogic.Abilities.WeaponMasteries
                          $"  Attack Damage: +{GetAttackDamageBonus()}%\\n" +
                          $"  Critical Hit Chance: +{GetCritChanceBonus()}%\\n";
 
-            if (Level < 100)
+            if (Level < MaxLevel)
             {
                 int nextMilestone = ((Level / 10) + 1) * 10;
-                if (nextMilestone > 100) nextMilestone = 100;
+                if (nextMilestone > MaxLevel) nextMilestone = MaxLevel;
                 Ability tempAbility = new CrossbowMasteryAbility();
                 tempAbility.Level = nextMilestone;
                 var temp = (CrossbowMasteryAbility)tempAbility;

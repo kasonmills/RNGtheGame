@@ -120,9 +120,7 @@ namespace GameLogic.Items
                 ItemRarity.Common => "",
                 ItemRarity.Uncommon => "[U] ",
                 ItemRarity.Rare => "[R] ",
-                ItemRarity.Epic => "[E] ",
                 ItemRarity.Legendary => "[L] ",
-                ItemRarity.Mythic => "[M] ",
                 _ => ""
             };
 

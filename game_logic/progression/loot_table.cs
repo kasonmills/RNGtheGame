@@ -37,9 +37,9 @@ namespace GameLogic.Progression
             ItemCategory category,
             int weight,
             ItemRarity minRarity = ItemRarity.Common,
-            ItemRarity maxRarity = ItemRarity.Mythic,
+            ItemRarity maxRarity = ItemRarity.Legendary,
             int minLevel = 1,
-            int maxLevel = 100,
+            int maxLevel = LevelCaps.MaxLevel,
             int minQuantity = 1,
             int maxQuantity = 1,
             string specificItem = null)
@@ -72,10 +72,8 @@ namespace GameLogic.Progression
         // Rarity probability modifiers (0.0 - 1.0)
         public float CommonChance { get; set; } = 0.60f;    // 60%
         public float UncommonChance { get; set; } = 0.25f;  // 25%
-        public float RareChance { get; set; } = 0.10f;      // 10%
-        public float EpicChance { get; set; } = 0.04f;      // 4%
+        public float RareChance { get; set; } = 0.14f;      // 14% (took Epic's 4% when Epic was removed, 2026-10-22)
         public float LegendaryChance { get; set; } = 0.01f; // 1%
-        public float MythicChance { get; set; } = 0.001f;   // 0.1%
 
         // Drop settings
         public int MinDrops { get; set; } = 1;
@@ -221,6 +219,12 @@ namespace GameLogic.Progression
                     item.Rarity = rarity; // Override rarity
                 }
 
+                // A lower rolled rarity can drop the item's level cap below its level
+                if (item is Weapon weapon && weapon.Level > weapon.MaxLevel)
+                    weapon.Level = weapon.MaxLevel;
+                else if (item is Armor armor && armor.Level > armor.MaxLevel)
+                    armor.Level = armor.MaxLevel;
+
                 // Set quantity for stackable items
                 if (item.IsStackable)
                 {
@@ -289,20 +293,16 @@ namespace GameLogic.Progression
             ItemRarity maxRarity)
         {
             // Apply luck modifier to rarity chances (higher luck = better odds)
-            float mythicChance = table.MythicChance * luckModifier;
             float legendaryChance = table.LegendaryChance * luckModifier;
-            float epicChance = table.EpicChance * luckModifier;
             float rareChance = table.RareChance * luckModifier;
             float uncommonChance = table.UncommonChance * luckModifier;
             float commonChance = table.CommonChance;
 
             // Normalize if luck pushed total over 1.0
-            float total = mythicChance + legendaryChance + epicChance + rareChance + uncommonChance + commonChance;
+            float total = legendaryChance + rareChance + uncommonChance + commonChance;
             if (total > 1.0f)
             {
-                mythicChance /= total;
                 legendaryChance /= total;
-                epicChance /= total;
                 rareChance /= total;
                 uncommonChance /= total;
                 commonChance /= total;
@@ -312,15 +312,11 @@ namespace GameLogic.Progression
             double roll = _rng.NextDouble();
             ItemRarity rarity;
 
-            if (roll < mythicChance)
-                rarity = ItemRarity.Mythic;
-            else if (roll < mythicChance + legendaryChance)
+            if (roll < legendaryChance)
                 rarity = ItemRarity.Legendary;
-            else if (roll < mythicChance + legendaryChance + epicChance)
-                rarity = ItemRarity.Epic;
-            else if (roll < mythicChance + legendaryChance + epicChance + rareChance)
+            else if (roll < legendaryChance + rareChance)
                 rarity = ItemRarity.Rare;
-            else if (roll < mythicChance + legendaryChance + epicChance + rareChance + uncommonChance)
+            else if (roll < legendaryChance + rareChance + uncommonChance)
                 rarity = ItemRarity.Uncommon;
             else
                 rarity = ItemRarity.Common;
@@ -355,9 +351,7 @@ namespace GameLogic.Progression
                 CommonChance = 0.70f,
                 UncommonChance = 0.25f,
                 RareChance = 0.05f,
-                EpicChance = 0.0f,
-                LegendaryChance = 0.0f,
-                MythicChance = 0.0f
+                LegendaryChance = 0.0f
             };
 
             table.AddEntry(new LootEntry(ItemCategory.Consumable, weight: 50, maxLevel: 10));
@@ -381,10 +375,8 @@ namespace GameLogic.Progression
                 NothingDropChance = 0.0f,
                 CommonChance = 0.40f,
                 UncommonChance = 0.35f,
-                RareChance = 0.20f,
-                EpicChance = 0.05f,
-                LegendaryChance = 0.0f,
-                MythicChance = 0.0f
+                RareChance = 0.25f,     // includes the old Epic 5%
+                LegendaryChance = 0.0f
             };
 
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 35, maxRarity: ItemRarity.Rare));
@@ -408,10 +400,8 @@ namespace GameLogic.Progression
                 NothingDropChance = 0.0f,
                 CommonChance = 0.10f,
                 UncommonChance = 0.30f,
-                RareChance = 0.35f,
-                EpicChance = 0.20f,
-                LegendaryChance = 0.05f,
-                MythicChance = 0.001f
+                RareChance = 0.55f,     // includes the old Epic 20%
+                LegendaryChance = 0.05f
             };
 
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 40, minRarity: ItemRarity.Uncommon));
@@ -435,10 +425,8 @@ namespace GameLogic.Progression
                 NothingDropChance = 0.05f,
                 CommonChance = 0.50f,
                 UncommonChance = 0.30f,
-                RareChance = 0.15f,
-                EpicChance = 0.04f,
-                LegendaryChance = 0.01f,
-                MythicChance = 0.0f
+                RareChance = 0.19f,     // includes the old Epic 4%
+                LegendaryChance = 0.01f
             };
 
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 30));
@@ -478,10 +466,8 @@ namespace GameLogic.Progression
                 NothingDropChance = 0.0f,
                 CommonChance = Lerp(0.70f, 0.20f, t),
                 UncommonChance = Lerp(0.25f, 0.35f, t),
-                RareChance = Lerp(0.05f, 0.30f, t),
-                EpicChance = Lerp(0.0f, 0.12f, t),
-                LegendaryChance = Lerp(0.0f, 0.03f, t),
-                MythicChance = 0.0f
+                RareChance = Lerp(0.05f, 0.42f, t),    // includes the old Epic 0-12%
+                LegendaryChance = Lerp(0.0f, 0.03f, t)
             };
 
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 35));

@@ -59,7 +59,7 @@ namespace GameLogic.Progression
         /// <summary>
         /// Calculate what level a given amount of total XP corresponds to
         /// </summary>
-        public static int CalculateLevelFromTotalXP(int totalXP, int baseXP = 100, double scalingFactor = 1.15, int maxLevel = 100)
+        public static int CalculateLevelFromTotalXP(int totalXP, int baseXP = 100, double scalingFactor = 1.15, int maxLevel = GameLogic.Items.LevelCaps.MaxLevel)
         {
             int level = 1;
             int xpAccumulated = 0;

@@ -397,16 +397,14 @@ namespace GameLogic.Entities.NPCs
             Console.WriteLine("  Common:    1.0x");
             Console.WriteLine("  Uncommon:  1.5x");
             Console.WriteLine("  Rare:      2.0x");
-            Console.WriteLine("  Epic:      3.0x");
-            Console.WriteLine("  Legendary: 5.0x");
-            Console.WriteLine("  Mythic:    10.0x\n");
+            Console.WriteLine("  Legendary: 5.0x\n");
 
             Console.WriteLine($"My Skill Discount: {SkillLevel * 5}% off all upgrades!\n");
 
             Console.WriteLine("Examples:");
             Console.WriteLine($"  Common Weapon Lv1→2:  {(int)(60 * (1.0 - SkillLevel * 0.05))} gold");
             Console.WriteLine($"  Rare Weapon Lv5→6:    {(int)(360 * (1.0 - SkillLevel * 0.05))} gold");
-            Console.WriteLine($"  Epic Armor Lv10→11:   {(int)(990 * (1.0 - SkillLevel * 0.05))} gold\n");
+            Console.WriteLine($"  Legendary Armor Lv10→11: {(int)(1650 * (1.0 - SkillLevel * 0.05))} gold\n");
 
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey();

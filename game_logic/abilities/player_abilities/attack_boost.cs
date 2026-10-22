@@ -6,7 +6,7 @@ namespace GameLogic.Abilities.PlayerAbilities
 {
     /// <summary>
     /// Attack Boost - Increases player's attack damage
-    /// Scalable: Level 1 = +1% damage, Level 100 = +70% damage
+    /// Scalable: Level 1 = +1% damage, max level = +70% damage
     /// Applies a temporary buff effect
     /// </summary>
     public class AttackBoost : Ability

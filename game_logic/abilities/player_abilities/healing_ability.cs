@@ -6,7 +6,7 @@ namespace GameLogic.Abilities.PlayerAbilities
 {
     /// <summary>
     /// Healing Ability - Restores health to the user
-    /// Scalable: Level 1 = 10-20 HP, Level 100 = 100-150 HP
+    /// Scalable: Level 1 = 10-20 HP, max level = 100-150 HP
     /// Uses RNG to determine exact healing amount within range
     /// </summary>
     public class HealingAbility : Ability

@@ -1,18 +1,60 @@
 using System;
+using AbilityRarity = GameLogic.Abilities.AbilityRarity;
 
 namespace GameLogic.Items
 {
     /// <summary>
-    /// Rarity levels for items (affects sell value and drop rates)
+    /// Rarity levels for items (affects sell value and drop rates).
+    /// Epic and Mythic were removed 2026-10-22 as out of scope for the MVP.
     /// </summary>
     public enum ItemRarity
     {
         Common,
         Uncommon,
         Rare,
-        Epic,
-        Legendary,
-        Mythic
+        Legendary
+    }
+
+    /// <summary>
+    /// Level caps for everything that levels up (decided 2026-10-22).
+    /// The overall cap is 40: the player, companions, and Legendary weapons, armor and abilities.
+    /// Lower rarities stop sooner: Common 10, Uncommon 20, Rare 30.
+    /// </summary>
+    public static class LevelCaps
+    {
+        /// <summary>
+        /// The highest level anything in the game can reach
+        /// </summary>
+        public const int MaxLevel = 40;
+
+        public const int Common = 10;
+        public const int Uncommon = 20;
+        public const int Rare = 30;
+        public const int Legendary = MaxLevel;
+
+        /// <summary>
+        /// Level cap for a weapon or armor of this rarity
+        /// </summary>
+        public static int ForRarity(ItemRarity rarity) => rarity switch
+        {
+            ItemRarity.Common => Common,
+            ItemRarity.Uncommon => Uncommon,
+            ItemRarity.Rare => Rare,
+            ItemRarity.Legendary => Legendary,
+            _ => Common
+        };
+
+        /// <summary>
+        /// Level cap for an ability of this rarity
+        /// </summary>
+        public static int ForRarity(AbilityRarity rarity) => rarity switch
+        {
+            AbilityRarity.Common => Common,
+            AbilityRarity.Uncommon => Uncommon,
+            AbilityRarity.Rare => Rare,
+            AbilityRarity.Legendary => Legendary,
+            _ => Common
+        };
     }
 
     /// <summary>
@@ -83,9 +125,7 @@ namespace GameLogic.Items
                 ItemRarity.Common => "",
                 ItemRarity.Uncommon => "[U] ",
                 ItemRarity.Rare => "[R] ",
-                ItemRarity.Epic => "[E] ",
                 ItemRarity.Legendary => "[L] ",
-                ItemRarity.Mythic => "[M] ",
                 _ => ""
             };
 
@@ -131,9 +171,7 @@ namespace GameLogic.Items
             {
                 ItemRarity.Uncommon => 0.1f,
                 ItemRarity.Rare => 0.2f,
-                ItemRarity.Epic => 0.3f,
                 ItemRarity.Legendary => 0.4f,
-                ItemRarity.Mythic => 0.5f,
                 _ => 0f
             };
 

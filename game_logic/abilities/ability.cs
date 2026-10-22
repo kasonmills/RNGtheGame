@@ -16,9 +16,9 @@ namespace GameLogic.Abilities
         // Ability Type
         public bool IsPassive { get; protected set; } = false;  // True for passive abilities, false for active
 
-        // Leveling System (1-100)
+        // Leveling System - the cap depends on rarity (Common 10, Uncommon 20, Rare 30, Legendary 40)
         public int Level { get; set; }
-        public int MaxLevel { get; protected set; } = 100;
+        public int MaxLevel => GameLogic.Items.LevelCaps.ForRarity(Rarity);
         public int Experience { get; set; }
         public int ExperienceToNextLevel { get; protected set; } = 100; // Increases per level
 
@@ -152,7 +152,7 @@ namespace GameLogic.Abilities
         /// <summary>
         /// Calculate XP needed for next level (exponential scaling based on rarity)
         /// Base XP requirement determined by ability rarity:
-        /// Common: 100, Uncommon: 200, Rare: 300, Epic: 400, Legendary: 500
+        /// Common: 100, Uncommon: 200, Rare: 300, Legendary: 500
         /// Uses same exponential formula as player: base * (1.035^(Level-1))
         /// </summary>
         protected virtual int CalculateNextLevelXP()
@@ -182,8 +182,6 @@ namespace GameLogic.Abilities
                     return 200;
                 case AbilityRarity.Rare:
                     return 300;
-                case AbilityRarity.Epic:
-                    return 400;
                 case AbilityRarity.Legendary:
                     return 500;
                 default:
@@ -260,20 +258,21 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
-        /// Get the effective cooldown based on ability level
-        /// Levels 1-24: No reduction
-        /// Levels 25-74: -1 turn cooldown
-        /// Levels 75-100: -2 turns cooldown
+        /// Get the effective cooldown based on ability level, relative to its level cap
+        /// (these were levels 25 and 75 when every cap was 100):
+        /// Below a quarter of the cap: No reduction
+        /// From a quarter of the cap: -1 turn cooldown
+        /// From three quarters of the cap: -2 turns cooldown
         /// </summary>
         public int GetEffectiveCooldown()
         {
             int reduction = 0;
 
-            if (Level >= 75)
+            if (Level >= MaxLevel * 3 / 4)
             {
                 reduction = 2;
             }
-            else if (Level >= 25)
+            else if (Level >= MaxLevel / 4)
             {
                 reduction = 1;
             }
@@ -299,13 +298,20 @@ namespace GameLogic.Abilities
         /// Get the scaled value based on ability level
         /// Used by child classes to scale their effects
         /// minValue = value at level 1
-        /// maxValue = value at max level (100)
+        /// maxValue = value at max level (the rarity's cap)
         /// </summary>
         protected double GetScaledValue(double minValue, double maxValue)
         {
-            // Linear scaling from minValue to maxValue
+            return GetScaledValueAt(Level, minValue, maxValue);
+        }
+
+        /// <summary>
+        /// The scaled value at a given level (linear from minValue at level 1 to maxValue at the cap)
+        /// </summary>
+        protected double GetScaledValueAt(int level, double minValue, double maxValue)
+        {
             double range = maxValue - minValue;
-            double progress = (double)(Level - 1) / (MaxLevel - 1);
+            double progress = (double)(level - 1) / (MaxLevel - 1);
             return minValue + (range * progress);
         }
 
@@ -333,14 +339,15 @@ namespace GameLogic.Abilities
     }
 
     /// <summary>
-    /// Rarity affects how powerful abilities can become
+    /// Rarity affects how powerful abilities can become and their level cap
+    /// (Common 10, Uncommon 20, Rare 30, Legendary 40 - see LevelCaps in item.cs).
+    /// Epic was removed 2026-10-22 as out of scope for the MVP.
     /// </summary>
     public enum AbilityRarity
     {
         Common,         // Basic abilities
         Uncommon,       // Slightly better scaling
         Rare,           // Good scaling
-        Epic,           // Great scaling
         Legendary       // Amazing scaling, unique effects
     }
 }

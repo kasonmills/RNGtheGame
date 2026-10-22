@@ -24,7 +24,7 @@ namespace GameLogic.Items
     }
 
     /// <summary>
-    /// Armor class with level system (1-100)
+    /// Armor class with level system (cap set by rarity: Common 10, Uncommon 20, Rare 30, Legendary 40)
     /// </summary>
     public class Armor : Item
     {
@@ -33,9 +33,9 @@ namespace GameLogic.Items
         public ArmorType Type { get; set; }
         public ArmorSlot Slot { get; set; }
 
-        // Level Properties (Armor can level 1-100)
+        // Level Properties - the cap depends on rarity (Common 10, Uncommon 20, Rare 30, Legendary 40)
         public int Level { get; set; }
-        public const int MaxLevel = 100;
+        public int MaxLevel => LevelCaps.ForRarity(Rarity);
 
         // Experience System
         public int Experience { get; set; }
@@ -85,9 +85,7 @@ namespace GameLogic.Items
         /// - Common: 100 XP
         /// - Uncommon: 200 XP
         /// - Rare: 300 XP
-        /// - Epic: 400 XP
         /// - Legendary: 500 XP
-        /// - Mythic: 600 XP
         /// </summary>
         private int CalculateExperienceRequired(int currentLevel)
         {
@@ -114,9 +112,7 @@ namespace GameLogic.Items
                 ItemRarity.Common => 100,
                 ItemRarity.Uncommon => 200,
                 ItemRarity.Rare => 300,
-                ItemRarity.Epic => 400,
                 ItemRarity.Legendary => 500,
-                ItemRarity.Mythic => 600,
                 _ => 100
             };
         }
@@ -173,9 +169,7 @@ namespace GameLogic.Items
                 ItemRarity.Common => 1.0,
                 ItemRarity.Uncommon => 1.5,
                 ItemRarity.Rare => 2.0,
-                ItemRarity.Epic => 3.0,
                 ItemRarity.Legendary => 5.0,
-                ItemRarity.Mythic => 10.0,
                 _ => 1.0
             };
 
@@ -260,9 +254,7 @@ namespace GameLogic.Items
                 ItemRarity.Common => "",
                 ItemRarity.Uncommon => "[U] ",
                 ItemRarity.Rare => "[R] ",
-                ItemRarity.Epic => "[E] ",
                 ItemRarity.Legendary => "[L] ",
-                ItemRarity.Mythic => "[M] ",
                 _ => ""
             };
 

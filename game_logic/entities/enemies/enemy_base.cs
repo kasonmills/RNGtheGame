@@ -97,9 +97,7 @@ namespace GameLogic.Entities.Enemies
                     ItemRarity.Common => 50,      // 50% chance
                     ItemRarity.Uncommon => 25,    // 25% chance
                     ItemRarity.Rare => 10,        // 10% chance
-                    ItemRarity.Epic => 5,         // 5% chance
                     ItemRarity.Legendary => 2,    // 2% chance
-                    ItemRarity.Mythic => 1,       // 1% chance
                     _ => 20                       // Default 20%
                 };
 

@@ -5,7 +5,7 @@ namespace GameLogic.Abilities.EnemyAbilities
 {
     /// <summary>
     /// Rage - Enemy ability that increases damage but reduces defense
-    /// Scales with enemy level (Level 1 = weak rage, Level 100 = powerful rage)
+    /// Scales with enemy level (Level 1 = weak rage, level cap 40 = powerful rage)
     /// Classic berserker mechanic: high risk (reduced defense) for high reward (increased damage)
     /// </summary>
     public class Rage : Ability
@@ -24,7 +24,20 @@ namespace GameLogic.Abilities.EnemyAbilities
 
             // Override level to match enemy level
             Level = enemyLevel;
-            MaxLevel = 100;
+        }
+
+        /// <summary>
+        /// Damage bonus %, defense reduction % and duration for this enemy's level. Same range as
+        /// before, reached at the level cap of 40 instead of 100; bosses above the cap use the cap's numbers.
+        /// Level 1: +20% damage, -10% defense, 3 turns. Level 40: +80% damage, -40% defense, 5 turns.
+        /// </summary>
+        private (int damageBonus, int defenseReduction, int duration) GetRageStats()
+        {
+            int level = Math.Min(_enemyLevel, GameLogic.Items.LevelCaps.MaxLevel);
+            int steps = GameLogic.Items.LevelCaps.MaxLevel - 1;
+            return (20 + ((level - 1) * 60 / steps),    // 20 to 80
+                    10 + ((level - 1) * 30 / steps),    // 10 to 40
+                    3 + (level / 20));                  // 3 to 5 turns
         }
 
         /// <summary>
@@ -34,18 +47,8 @@ namespace GameLogic.Abilities.EnemyAbilities
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
 
-            // Calculate damage increase based on enemy level
-            // Level 1: +20% damage
-            // Level 100: +80% damage
-            int damageBonus = 20 + (_enemyLevel * 60 / 99);  // 20 to 80
-
-            // Calculate defense decrease based on enemy level
-            // Level 1: -10% defense
-            // Level 100: -40% defense
-            int defenseReduction = 10 + (_enemyLevel * 30 / 99);  // 10 to 40
-
-            // Duration scales slightly
-            int duration = 3 + (_enemyLevel / 50);  // 3 to 5 turns
+            // Damage up, defense down and duration all scale with enemy level
+            var (damageBonus, defenseReduction, duration) = GetRageStats();
 
             // Create and apply rage effect
             var rageEffect = new RageEffect(
@@ -67,9 +70,7 @@ namespace GameLogic.Abilities.EnemyAbilities
         /// </summary>
         public override string GetInfo()
         {
-            int damageBonus = 20 + (_enemyLevel * 60 / 99);
-            int defenseReduction = 10 + (_enemyLevel * 30 / 99);
-            int duration = 3 + (_enemyLevel / 50);
+            var (damageBonus, defenseReduction, duration) = GetRageStats();
 
             return $"{Name} (Enemy Lv.{_enemyLevel})\n" +
                    $"{Description}\n" +

@@ -6,7 +6,7 @@ namespace GameLogic.Abilities
     /// <summary>
     /// Executioner - Passive ability that modifies critical hit mechanics
     /// Level 1: -10% crit chance, 1.1x crit multiplier (drawback)
-    /// Level 100: +10% crit chance, 3.0x crit multiplier (powerful)
+    /// Max level: +10% crit chance, 3.0x crit multiplier (powerful)
     /// Linear scaling between levels - transitions from drawback to advantage
     /// Affects PLAYER ONLY, not companions
     /// </summary>
@@ -31,7 +31,7 @@ namespace GameLogic.Abilities
         /// </summary>
         public int GetCritChanceModifier()
         {
-            // Linear scaling: -10% at level 1, +10% at level 100
+            // Linear scaling: -10% at level 1, +10% at max level
             return GetScaledValueInt(-10, 10);
         }
 
@@ -42,7 +42,7 @@ namespace GameLogic.Abilities
         /// </summary>
         public double GetCritMultiplier()
         {
-            // Linear scaling: 1.1x at level 1, 3.0x at level 100
+            // Linear scaling: 1.1x at level 1, 3.0x at max level
             double minMultiplier = 1.1;
             double maxMultiplier = 3.0;
             return GetScaledValue(minMultiplier, maxMultiplier);
@@ -72,8 +72,8 @@ namespace GameLogic.Abilities
                 GameLog.Write($"Your execution technique improves! Crit chance: {chanceText}, Crit multiplier: {critMultiplier:F2}x!");
             }
 
-            // Special message when transitioning from penalty to bonus (around level 51)
-            if (Level == 51)
+            // Special message when transitioning from penalty to bonus (about halfway to the cap)
+            if (critChanceMod >= 0 && (int)Math.Round(GetScaledValueAt(Level - 1, -10, 10)) < 0)
             {
                 GameLog.Write("You've mastered the basics! Your critical hit chance is no longer penalized!");
             }
@@ -87,7 +87,7 @@ namespace GameLogic.Abilities
             int critChanceMod = GetCritChanceModifier();
             double critMultiplier = GetCritMultiplier();
             int nextMilestone = ((Level / 10) + 1) * 10;
-            if (nextMilestone > 100) nextMilestone = 100;
+            if (nextMilestone > MaxLevel) nextMilestone = MaxLevel;
 
             string chanceText = critChanceMod >= 0 ? $"+{critChanceMod}%" : $"{critChanceMod}%";
             string chanceDescription = critChanceMod >= 0 ? "Bonus" : "Penalty";
@@ -99,7 +99,7 @@ namespace GameLogic.Abilities
                          $"Affects: Player only\n" +
                          $"Does NOT affect: Companions";
 
-            if (Level < 100)
+            if (Level < MaxLevel)
             {
                 // Calculate values at next milestone
                 Ability tempAbility = new ExecutionerAbility();

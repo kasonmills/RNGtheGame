@@ -6,7 +6,7 @@ namespace GameLogic.Abilities
     /// <summary>
     /// Iron Will - Passive ability that gives chance to cleanse negative status effects
     /// Level 1: 1% chance to cleanse at end of each round
-    /// Level 100: 25% chance to cleanse at end of each round
+    /// Max level: 25% chance to cleanse at end of each round
     /// Linear scaling between levels
     /// Affects PLAYER ONLY, not companions
     /// Removes: Bleeding, Poison, Burns, Debuffs, Crowd Control
@@ -18,7 +18,7 @@ namespace GameLogic.Abilities
             Name = "Iron Will";
             Description = "Your indomitable willpower allows you to shrug off debilitating effects. At the end of each combat round, you have a chance to cleanse all negative status effects.";
             IsPassive = true;
-            Rarity = AbilityRarity.Epic;
+            Rarity = AbilityRarity.Rare;  // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
 
             // Passive abilities don't have cooldown or targeting
             Cooldown = 0;
@@ -31,7 +31,7 @@ namespace GameLogic.Abilities
         /// </summary>
         public override int GetPassiveBonusValue()
         {
-            // Linear scaling: 1% at level 1, 25% at level 100
+            // Linear scaling: 1% at level 1, 25% at max level
             return GetScaledValueInt(1, 25);
         }
 
@@ -85,7 +85,7 @@ namespace GameLogic.Abilities
         {
             int cleanseChance = GetPassiveBonusValue();
             int nextMilestone = ((Level / 5) + 1) * 5;
-            if (nextMilestone > 100) nextMilestone = 100;
+            if (nextMilestone > MaxLevel) nextMilestone = MaxLevel;
 
             string info = $"{Name} (Lv.{Level}/{MaxLevel}) [PASSIVE]\n" +
                          $"{Description}\n\n" +
@@ -94,7 +94,7 @@ namespace GameLogic.Abilities
                          $"Affects: Player only\n" +
                          $"Removes: Bleeding, Poison, Burns, Debuffs, Crowd Control";
 
-            if (Level < 100)
+            if (Level < MaxLevel)
             {
                 // Calculate chance at next milestone
                 Ability tempAbility = new IronWillAbility();

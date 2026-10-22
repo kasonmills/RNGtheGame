@@ -6,7 +6,7 @@ namespace GameLogic.Abilities
     /// <summary>
     /// Rallying Cry - Passive ability that increases companion attack damage
     /// Level 1: +5% companion attack damage
-    /// Level 100: +90% companion attack damage
+    /// Max level: +90% companion attack damage
     /// Linear scaling between levels
     /// Does NOT affect player damage, only companions
     /// </summary>
@@ -30,7 +30,7 @@ namespace GameLogic.Abilities
         /// </summary>
         public override int GetPassiveBonusValue()
         {
-            // Linear scaling: 5% at level 1, 90% at level 100
+            // Linear scaling: 5% at level 1, 90% at max level
             return GetScaledValueInt(5, 90);
         }
 
@@ -65,7 +65,7 @@ namespace GameLogic.Abilities
         {
             int bonus = GetPassiveBonusValue();
             int nextMilestone = ((Level / 10) + 1) * 10;
-            if (nextMilestone > 100) nextMilestone = 100;
+            if (nextMilestone > MaxLevel) nextMilestone = MaxLevel;
 
             string info = $"{Name} (Lv.{Level}/{MaxLevel}) [PASSIVE]\n" +
                          $"{Description}\n\n" +
@@ -73,7 +73,7 @@ namespace GameLogic.Abilities
                          $"Affects: All companions in your party\n" +
                          $"Does NOT affect: Player damage";
 
-            if (Level < 100)
+            if (Level < MaxLevel)
             {
                 int nextBonus = GetScaledValueInt(5, 90); // Calculate what it would be at next milestone
                 // Calculate bonus at next milestone

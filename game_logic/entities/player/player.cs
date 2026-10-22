@@ -132,7 +132,7 @@ namespace GameLogic.Entities.Player
                 new Abilities.PrecisionTrainingAbility(),   // Passive ability - ally accuracy buff
                 new Abilities.SwiftTacticsAbility(),        // Passive ability - companion speed buff
                 new Abilities.ExecutionerAbility(),         // Passive ability - crit mechanics (Legendary)
-                new Abilities.IronWillAbility(),            // Passive ability - status effect cleanse (Epic)
+                new Abilities.IronWillAbility(),            // Passive ability - status effect cleanse (Rare - was Epic)
                 // Weapon Mastery Abilities
                 new Abilities.WeaponMasteries.SwordMasteryAbility(),    // Passive - sword bonuses
                 new Abilities.WeaponMasteries.AxeMasteryAbility(),      // Passive - axe bonuses
@@ -160,7 +160,7 @@ namespace GameLogic.Entities.Player
                 player.SelectedAbility = CreateAbilityFromName(data.SelectedAbilityName);
                 if (player.SelectedAbility != null)
                 {
-                    player.SelectedAbility.Level = data.SelectedAbilityLevel;
+                    player.SelectedAbility.Level = Math.Clamp(data.SelectedAbilityLevel, 1, player.SelectedAbility.MaxLevel);
                     player.SelectedAbility.Experience = data.SelectedAbilityExperience;
                     Console.WriteLine($"Ability restored: {player.SelectedAbility.Name} (Lv.{player.SelectedAbility.Level})");
                 }
@@ -169,13 +169,18 @@ namespace GameLogic.Entities.Player
             return player;
         }
 
+        /// <summary>
+        /// Highest level the player can reach (overall level cap, decided 2026-10-22)
+        /// </summary>
+        public const int MaxLevel = LevelCaps.MaxLevel;
+
         // Adds experience and handles level ups
         public void AddExperience(int exp)
         {
             Experience += exp;
             Console.WriteLine($"{Name} gained {exp} experience!");
 
-            while (Experience >= ExperienceToLevelUp())
+            while (Level < MaxLevel && Experience >= ExperienceToLevelUp())
             {
                 Experience -= ExperienceToLevelUp();
                 LevelUp();

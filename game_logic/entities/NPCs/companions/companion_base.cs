@@ -36,9 +36,9 @@ namespace GameLogic.Entities.NPCs.Companions
         public Ability UniqueAbility { get; protected set; }  // Each companion has a signature ability
 
         /// <summary>
-        /// Highest level a companion can reach - the same as the player (decided 2026-10-21)
+        /// Highest level a companion can reach - the same as the player (overall cap of 40, decided 2026-10-22)
         /// </summary>
-        public const int MaxLevel = 50;
+        public const int MaxLevel = LevelCaps.MaxLevel;
 
         // Companion-specific bonuses (passive effects) - companions without one leave this out
         public virtual string PassiveBonusDescription => "None";

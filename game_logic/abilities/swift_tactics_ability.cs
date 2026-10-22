@@ -6,7 +6,7 @@ namespace GameLogic.Abilities
     /// <summary>
     /// Swift Tactics - Passive ability that increases companion speed
     /// Level 1: +2% speed for all companions
-    /// Level 100: +50% speed for all companions
+    /// Max level: +50% speed for all companions
     /// Percentage-based scaling - benefits all companion types proportionally
     /// Does NOT affect player speed, only companions
     /// </summary>
@@ -17,7 +17,7 @@ namespace GameLogic.Abilities
             Name = "Swift Tactics";
             Description = "Your tactical expertise and battlefield coordination allow your companions to move and react faster in combat.";
             IsPassive = true;
-            Rarity = AbilityRarity.Epic;
+            Rarity = AbilityRarity.Rare;  // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
 
             // Passive abilities don't have cooldown or targeting
             Cooldown = 0;
@@ -30,7 +30,7 @@ namespace GameLogic.Abilities
         /// </summary>
         public override int GetPassiveBonusValue()
         {
-            // Linear scaling: 2% at level 1, 50% at level 100
+            // Linear scaling: 2% at level 1, 50% at max level
             return GetScaledValueInt(2, 50);
         }
 
@@ -76,7 +76,7 @@ namespace GameLogic.Abilities
         {
             int bonus = GetPassiveBonusValue();
             int nextMilestone = ((Level / 10) + 1) * 10;
-            if (nextMilestone > 100) nextMilestone = 100;
+            if (nextMilestone > MaxLevel) nextMilestone = MaxLevel;
 
             string info = $"{Name} (Lv.{Level}/{MaxLevel}) [PASSIVE]\n" +
                          $"{Description}\n\n" +
@@ -85,7 +85,7 @@ namespace GameLogic.Abilities
                          $"Does NOT affect: Player speed\n" +
                          $"Effect: Companions act earlier in turn order";
 
-            if (Level < 100)
+            if (Level < MaxLevel)
             {
                 // Calculate bonus at next milestone
                 Ability tempAbility = new SwiftTacticsAbility();

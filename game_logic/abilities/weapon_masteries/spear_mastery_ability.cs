@@ -6,7 +6,7 @@ namespace GameLogic.Abilities.WeaponMasteries
     /// <summary>
     /// Spear Mastery - Passive ability that provides bonuses when wielding a spear
     /// Level 1: +1% accuracy, +1% attack damage, +1% crit chance
-    /// Level 100: +40% accuracy, +70% attack damage, +25% crit chance
+    /// Max level: +40% accuracy, +70% attack damage, +25% crit chance
     /// Linear scaling between levels
     /// Only active when wielding a Spear weapon
     /// </summary>
@@ -115,10 +115,10 @@ namespace GameLogic.Abilities.WeaponMasteries
                          $"  Attack Damage: +{damageBonus}%\\n" +
                          $"  Critical Hit Chance: +{critBonus}%\\n";
 
-            if (Level < 100)
+            if (Level < MaxLevel)
             {
                 int nextMilestone = ((Level / 10) + 1) * 10;
-                if (nextMilestone > 100) nextMilestone = 100;
+                if (nextMilestone > MaxLevel) nextMilestone = MaxLevel;
 
                 // Calculate bonuses at next milestone
                 Ability tempAbility = new SpearMasteryAbility();

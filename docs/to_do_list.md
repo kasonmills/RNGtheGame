@@ -13,23 +13,66 @@
 
 **Finished work lives in `done.md` (rule added 2026-10-13, widened 2026-10-15).** When an entry here is completed - built and working in the game - it is moved out of this file into `docs/done.md`. The same goes for anything **resolved with nothing left to do**: a settled decision or question whose follow-up work (if any) is logged elsewhere, a deleted file, a finished cleanup. This file holds only what is still to do. Code that is written but not yet built and tested still counts as something to do: it is marked 🧪 "needs testing", never ✅ or "done", and moves only once it has been tested (confirmed by the user 2026-10-19). An entry with several parts moves when all of them are done; until then, finished parts stay ticked (✅) inside the entry. Item numbers are not reused, so gaps in the numbering are entries that have moved.
 
+**How this file is organized (2026-10-22): by kind of work.** Each top-level section is one kind of work, so you can pick what to do next by what you want to work on:
+
+| Section | What goes there |
+|---|---|
+| 🎨 **DESIGN & STORY** | Decisions and writing that need no code yet: boss mechanics still to design, open story questions, numbers to settle, the story itself. |
+| ⚙️ **BACKEND** | C# work in `game_logic/`: companions, bosses, combat rules, XP, quests, saving, items, tests. Includes decided designs that are now being built. |
+| 🖥️ **FRONTEND** | Godot work in `godot_project/`: scenes, screens, the combat scene, art, maps, learning Godot. |
+| 🧰 **PROJECT UPKEEP** | Docs and tools: the docs/ folder, the SRS, the time tracker, ignored files. |
+| 💼 **BUSINESS & LEGAL** | Marketing, publishing, copyright, the LLC. |
+
+When an entry needs work of more than one kind, it lives where most of its remaining work is and names the other part (for example, a backend entry says what the combat screen still has to show). New entries go in the section for their kind of work. Priority markers (🔴 🟡 🟢) still apply inside each section.
+
 ---
+
+# 🎨 DESIGN & STORY
+_Decisions and writing that come before code. Once one is decided, its follow-up work goes to BACKEND or FRONTEND._
+
+## Bucket A: Open design decisions
+_Part of the story-driven roadmap (see BACKEND → ACTIVE FOCUS). Numbers are shared with the decided Bucket A items in BACKEND (#10-#13, #16, #17)._
+
+2. Librarian-Monk boss - unique mechanic not yet designed.
+3. ✅ **Resolved (2026-10-16)** Giant House Centipede boss - unique mechanic decided (venomous bite, chance-based poison on every attack). Full design under Tier 2 #3 below.
+4. 🚧 Cyclops Brothers boss - **core mechanic decided 2026-10-15 ("they always attack together")**, details still open. Full design under Tier 2 #4/#5.
+5. 🚧 Demon Prince boss - **core mechanic decided 2026-10-22 (every attack that hits applies one of 7+ equally likely status conditions, some unique to him, with lower attack power to balance it)**. Still open: designing his unique conditions, and his damage. Full design under Tier 2 #6.
+7. Slime Dragon fight - does defeating just the main dragon end the fight, or must every spawned dragling be cleared too?
+8. 🚧 **Mostly resolved (2026-10-05)** Army interaction section - an optional, non-story area: an army camp preparing to go to war. The player can talk to the soldiers (dialogue only), or talk to one of the commanders, who offers to have his soldiers "test your strength" - the entry point into the endless combat mode (see Tier 4). Still open: the exact reward structure (gold and/or a prize, scaled by how long the player lasted and/or how many enemies they defeated).
+9. ✅ **Resolved (2026-10-22)** Day/night cycle - **no clock at all.** It is not a true cycle: the player switches between day and night themselves at set places (campfires, inns and similar rest spots), and it stays that way until they switch again. Build work under BACKEND → Tier 4.
+14. **Armor types and the size of the weapon and armor lists - may be reduced (noted 2026-10-09)** - as the MVP scope shrinks, the six armor types and the large item catalog (207 weapons across 9 weapon types, 180 armor sets across 6 armor types in `game_logic/items/item_database.cs`) may need cutting down. The adjusted numbers are not known yet - they depend on the reduced scope (8 boss fights, smaller map, level cap 40, no classes in the MVP). Settle the numbers before doing other work on the catalog: fixing which items random loot can reach, creating the missing Legendary armor, and the nine weapon masteries (one per weapon type) all depend on them.
+    - **MVP target sizes (decided 2026-10-14):** roughly **20-25 unique armor sets** and **50-60 unique weapons**, counted across all weapon/armor types and all rarities together. That is about a quarter of the weapons and an eighth of the armor in the catalog today. Still to settle: how many weapon types and armor types the MVP keeps (fewer types means more items per type), how the items split across rarities, which existing items are kept and which are cut, and what happens to the nine weapon masteries if weapon types are dropped. Cut items should be kept dormant rather than deleted unless decided otherwise.
+    - **Former Epic items and abilities - decide one by one (logged 2026-10-22).** Epic and Mythic rarities were removed (#12). Every Epic item and ability is Rare for now, marked `TODO: was Epic` in the code:
+      - 27 weapons (3 per weapon type) and 30 armor sets (5 per armor type).
+      - The consumables Combat Elixir and Greater Revival Potion.
+      - The abilities Evasion, Iron Will, Swift Tactics, Precision Training, and the Rogue's ability.
+      For each, decide: Rare, Legendary, or cut with the catalog trim. There is still no Legendary armor, so some former Epic armor may fill that gap.
+15. **Difficulty shown through the player's starting stats - DECIDED (idea 2026-10-12, decided 2026-10-14).** On easier difficulties the player starts with higher stats; on harder difficulties, lower. **Why (the user's reasoning):** an easier game means less grinding to get strong, because you start from a stronger point; on a harder game your base stats are lower, so you need the levels. It also makes the gap between difficulties obvious from the first fight. Numbers and details not worked out yet. To settle: which stats (starting health only, or speed and damage too); whether it replaces or adds to scaling the enemies (`difficulty_scaler.cs` scales enemy health, damage, XP and gold and is the kept difficulty system - see `game_logic/systems/` in the code review); whether the gap stays fixed or shrinks as the player levels; and that difficulty is locked once a save is created, so the starting stats are set once at character creation. Goes with the player starting-stats review (to-do 2 under `game_logic/entities/` in the code review) and Bucket A #11. Also check it against the XP rework (#12): the per-boss level targets should allow for players on hard difficulties needing more levels.
+
+## Story writing
+
+### Write Game Story (moved here from Business & Legal 2026-10-22)
+- **Status**: 🚧 In Progress, ongoing (started by the user, noted 2026-10-22). No end date: the full story will be fleshed out over time.
+- **Where the work happens**: outside this repo. Most of the writing won't show up in the code; story pieces reach the code only when a decision lands here (a boss, a companion, a quest) and gets logged in its own entry.
+- **Description**: Create the narrative/lore for the game world
+- **Needed**:
+  - Main storyline
+  - Character backstories
+  - World lore
+  - Quest narratives
+
+---
+
+# ⚙️ BACKEND - game logic (`game_logic/`, C#)
 
 ## ⭐ ACTIVE FOCUS: STORY-DRIVEN FEATURE ROADMAP (added 2026-09-28)
 _This is the living plan for turning the current codebase into what the story needs. It supersedes/extends item 5 (Boss Key Progression System) and item 10 (Replace Procedural Map) below - see those for original context, both are cross-referenced from here._
 
 **How this is organized:**
-- **Bucket A** - story/creative decisions still needed from the designer. This is the actual bottleneck right now - most "code work" below is a mechanical consequence of these, not independent work.
+- **Bucket A** - design decisions, numbered. The ones still open (#2-#9, #14, #15) are under 🎨 DESIGN & STORY at the top of this file. The ones below (#10-#13, #16, #17) are decided, at least in part, and their remaining work is mostly code.
 - **Bucket B** - confirmed features, sorted into tiers by dependency (foundational first), not by size. Tackling Tier 0 first collapses the most downstream uncertainty.
 
-### Bucket A: Open story decisions
-2. Librarian-Monk boss - unique mechanic not yet designed.
-3. ✅ **Resolved (2026-10-16)** Giant House Centipede boss - unique mechanic decided (venomous bite, chance-based poison on every attack). Full design under Tier 2 #3 below.
-4. 🚧 Cyclops Brothers boss - **core mechanic decided 2026-10-15 ("they always attack together")**, details still open. Full design under Tier 2 #4/#5.
-5. Demon Prince boss - mechanic loosely Chaos-magic themed, not finalized.
-7. Slime Dragon fight - does defeating just the main dragon end the fight, or must every spawned dragling be cleared too?
-8. 🚧 **Mostly resolved (2026-10-05)** Army interaction section - an optional, non-story area: an army camp preparing to go to war. The player can talk to the soldiers (dialogue only), or talk to one of the commanders, who offers to have his soldiers "test your strength" - the entry point into the endless combat mode (see Tier 4). Still open: the exact reward structure (gold and/or a prize, scaled by how long the player lasted and/or how many enemies they defeated).
-9. Day/night cycle - what actually drives the clock (real time, in-game turns/actions, travel count, etc.)?
+### Bucket A: Decided, being built
 10. 🚧 Which of the existing companions (Warrior/Mage/Ranger/Rogue/Healer) survive as-is, get adjusted, or get fully replaced? **Roster and rework plan decided 2026-10-19** (below); each companion's own design still has open points.
     - **Companion roster - listed 2026-10-15 to 2026-10-19: six companions for now** (more may be added later): Chance, Risk, Boon, Felicity, Fluke and the Mage (name not decided). Details of each below.
     - **Rework or new - decided 2026-10-19:**
@@ -78,15 +121,15 @@ _This is the living plan for turning the current codebase into what the story ne
         - What to test: about 15% of hits on Risk do no damage (about 30% while he defends); taking his armor off turns it off; a blocked hit that carries an effect (e.g. Skarn's grapple slow) still applies the effect; the percentage goes up on even levels.
       - **Decided 2026-10-21 (follow-up):**
         - **Max level 50**, like the player. **The chance is capped at 70%.** With the formula, defending reaches the cap at level 40 (15 + 20 = 35, doubled); not defending, he reaches 40% at level 50.
+        - **Changed 2026-10-22: the overall level cap is now 40** (Bucket A #12). Defending, he reaches the 70% cap exactly at level 40; not defending, he tops out at 35%.
         - **Keep his +10% max health passive for the player.** More companions may get passives like this later.
         - **Only weapon and other non-magical attacks can be stopped.** The idea: he's armored and a skilled fighter who knows how to brace for a hit. Magic damage goes through as normal.
       - 🧪 **Implemented 2026-10-21, needs testing:**
         - The 70% cap.
         - A new `CombatAction.IsMagical` flag, which skips the check.
-        - The companion level cap: `CompanionBase.MaxLevel = 50` (was 100) for **every** companion, so it matches the player.
+        - The companion level cap: `CompanionBase.MaxLevel = 50` (was 100) for **every** companion, so it matches the player. Now 40 (2026-10-22, Bucket A #12).
         - Nothing sets `IsMagical` yet: no enemy has a magic attack so far. Magic enemies and bosses need to set it when they are built.
       - **Still open:**
-        - The player's level cap of 50 is not in the code yet: `Player` has no cap.
         - The ability name "Royal Guard's Armor" is a placeholder.
         - Whether the armor matters beyond "wearing some" (heavier or better armor = higher chance?).
         - The boss's crit multiplier, and the crit chance per difficulty.
@@ -182,17 +225,33 @@ _This is the living plan for turning the current codebase into what the story ne
       - **"Average" is not a plain average there.** `CalculatePartyLevel()` counts the player as half the total and splits the other half between the companions, and rounds up. Decide: a plain average of everyone in the fighting party, or the player-weighted one. Either way it should count only the **fighting** party, not companions who are recruited but sitting out (to-do 7 under `core/`).
       - **Its boss scaling already multiplies on top** (boss health x3, damage x1.5, XP x5, gold x3-5 over a regular enemy at the same level). With hand-set level-1 stats per boss, those extra multipliers may be redundant - decide whether to keep them.
       - **Its difficulty names do not match the game's.** It uses Easy/Normal/Hard/Nightmare at 0.75x/1x/1.5x/2x; the game's chosen difficulty is Normal/Hard/Difficult/Unfair (`GameSettings`). One set has to go (already logged under `game_logic/systems/`).
-      - **The level cap**: party level + 5 can pass the cap (100 today, 50 planned under #12). Cap the boss's level or let bosses go above it.
+      - **The level cap**: party level + 5 can pass the cap (40 since 2026-10-22, #12). Cap the boss's level or let bosses go above it. Until decided, `GetEffectiveEnemyLevel()` still caps at 100 (its test expects that), and the poison and rage enemy abilities use the level-40 numbers for any enemy above 40.
     - **Decided 2026-10-14 - for the MVP, take out the old boss multipliers and the rematch system, but keep the code for later.** Both are post-MVP ideas - possibly a later update or DLC once the game is out. Handle it the same way as Leadership: switch it off without deleting it, and leave a comment where it was switched off saying how to bring it back.
       - **Old multipliers**: `BossEnemy.ApplyStrengthScaling()` (+15% per boss beaten, +50% per repeat of the same boss, plus the matching reward increases) and `BossManager.ApplyBossScaling()` / `STRENGTH_SCALING_PER_BOSS` / `GetCurrentStrengthMultiplier()`. Stop `CombatManager.StartCombat()` calling it. Boss strength then comes only from the party-level + 5 rule above.
       - **Rematches**: a beaten boss cannot be fought again in the MVP. Pieces to switch off: the repeat-fight warning in `world/boss_encounter.cs`, the `TimesDefeated` count on `BossEnemy` and its saving in `save_data.cs` / `save_manager.cs`, and anything that lets a defeated boss be challenged again. Keep each boss's "defeated" flag - the order-based unlocking depends on it.
       - Also drop the console printout `ApplyStrengthScaling()` makes when it runs, and the `[Strength: x1.15]` label in the boss's display name.
-12. **Level cap and XP system review (decided 2026-10-08: cap drops from 100 to 50; XP rework deliberately deferred)** - the game is now about 8 bosses with roughly 5 combat encounters between each, not the 10+ encounters and 15 bosses the levelling was built for, so level 100 is out of reach in a normal playthrough. Plan: halve the level cap to 50 for abilities, weapons and armor. Do NOT rework XP yet - wait until more of the game is defined (map routes, encounter counts, boss difficulty curve in #11) so it can be scaled against real numbers. Not started in code. Things to cover when this is picked up:
+12. **Level cap and XP system review (decided 2026-10-08: cap drops from 100 to 50; changed 2026-10-22 to 40 with caps per rarity - see below; XP rework deliberately deferred)** - the game is now about 8 bosses with roughly 5 combat encounters between each, not the 10+ encounters and 15 bosses the levelling was built for, so level 100 is out of reach in a normal playthrough. Plan: halve the level cap to 50 for abilities, weapons and armor. Do NOT rework XP yet - wait until more of the game is defined (map routes, encounter counts, boss difficulty curve in #11) so it can be scaled against real numbers. Things to cover when this is picked up:
+    - **Decided 2026-10-22 - the overall level cap is 40, and each rarity has its own cap.** This replaces the cap of 50 below.
+      - **40** for the player, every companion, and Legendary weapons, armor and abilities.
+      - **Common 10, Uncommon 20, Rare 30, Legendary 40** for weapons, armor and abilities.
+      - **Epic and Mythic rarities are removed** - out of scope for the MVP. What becomes of each former Epic item and ability is decided item by item later (#14).
+    - 🧪 **Implemented 2026-10-22, needs testing:**
+      - **Where the caps live:** `LevelCaps` in `items/item.cs`, next to `ItemRarity` - `LevelCaps.MaxLevel` (40) and `LevelCaps.ForRarity()`.
+      - **Who uses them:** `Weapon.MaxLevel`, `Armor.MaxLevel` and `Ability.MaxLevel` now come from the item's or ability's rarity. `Player.MaxLevel` is new - the player had no cap before. `CompanionBase.MaxLevel` is 40.
+      - **Saves:** a loaded player and ability level is clamped to the cap. Weapons and armor were already clamped when they are created.
+      - **Epic and Mythic gone from the code:** removed from `ItemRarity` and `AbilityRarity`, and from every rarity switch (XP cost, upgrade cost, sell price, drop chance, display prefix, the blacksmith's price guide).
+      - **Former Epic items and abilities are Rare for now**, each marked `TODO: was Epic` in the code: 27 weapons, 30 armor sets, Combat Elixir, Greater Revival Potion, and the abilities Evasion, Iron Will, Swift Tactics, Precision Training and the Rogue's ability.
+      - **Loot (my default, to confirm):** each loot table's Epic chance was added to its Rare chance, so good drops are as likely as before; Mythic's 0.1% is gone. A dropped weapon or armor whose rolled rarity has a lower cap than its level is brought down to that cap.
+      - **Abilities:** effects still go from their level-1 value to their top value, but now reach the top at the rarity's cap, so a Common ability gains much faster per level (all 10 levels instead of 100). Text and "next milestone" checks that said level 100 now use the cap.
+      - **Cooldown reductions (my default, to confirm):** they were at levels 25 and 75; now at a quarter and three quarters of the ability's cap (Common: levels 2 and 7; Legendary: 10 and 30). This affects Felicity's heals too - Divine Light (Rare) drops to a 1-turn cooldown from level 7, where it used to be 25.
+      - **Enemy abilities (Poison Attack, Rage):** same top-end numbers, now reached at enemy level 40 instead of 100.
+      - **Left alone:** Leadership (post-MVP) and the Rogue (dormant) still have numbers written for level 100. The difficulty scaler's display-only cap of 100 waits on #11's boss-cap question. Consumable levels (1-10 power tiers) are not a level cap and are unchanged.
+      - What to test: a Common weapon stops at level 10, an Uncommon at 20, a Rare at 30 and a Legendary at 40; the player and companions stop at 40; an ability's info shows its cap (e.g. "Lv.3/10"); former Epic items show as [R]; saves load.
     - Where the cap lives: `Ability.MaxLevel` (`game_logic/abilities/ability.cs`), `Weapon.MaxLevel`, `Armor.MaxLevel`, plus the enemy abilities that set `MaxLevel = 100` or divide by 99 (`rage.cs`, `poison_attack.cs`). Decide whether player/enemy levels follow the same cap.
     - Hard-coded level thresholds that assume 100: ability cooldown reductions at levels 25 and 75, milestone levels 10/25/50/75/100 in `leveling_system.cs`, Leadership's 25/50/75/100 (post-MVP).
     - Ability effects scale linearly from level 1 to `MaxLevel`, so changing the cap alone keeps the same top-end values but doubles the gain per level - confirm that is wanted.
-    - **Level cap 50 for the MVP re-confirmed 2026-10-14** (abilities, and gear up to Legendary).
-    - **Rarity-based level caps for gear - wanted, NOT in the code (checked 2026-10-14).** The plan: each rarity has its own cap, for example Common 20, Rare 30, and so on up to 50 for Legendary. Today `Weapon.MaxLevel` and `Armor.MaxLevel` are a single fixed 100 for every rarity, and abilities are 100 too. What **is** in the code is the other half: rarity sets how much XP each level costs (base 100 Common / 200 Uncommon / 300 Rare / 400 Epic / 500 Legendary / 600 Mythic, x1.035 per level) for weapons, armor and abilities. To do: replace the fixed cap with a cap per rarity, and decide the numbers for Uncommon and Epic (and whether Mythic stays in the MVP).
+    - **Level cap 50 for the MVP re-confirmed 2026-10-14** (abilities, and gear up to Legendary). **Replaced 2026-10-22 by the cap of 40 above.**
+    - **Rarity-based level caps for gear - wanted, NOT in the code (checked 2026-10-14). Now decided and written (2026-10-22, above).** The plan: each rarity has its own cap, for example Common 20, Rare 30, and so on up to 50 for Legendary. Today `Weapon.MaxLevel` and `Armor.MaxLevel` are a single fixed 100 for every rarity, and abilities are 100 too. What **is** in the code is the other half: rarity sets how much XP each level costs (base 100 Common / 200 Uncommon / 300 Rare / 400 Epic / 500 Legendary / 600 Mythic, x1.035 per level) for weapons, armor and abilities. To do: replace the fixed cap with a cap per rarity, and decide the numbers for Uncommon and Epic (and whether Mythic stays in the MVP).
     - **XP estimate run 2026-10-14** (a small script reproducing the current formulas, 1,000 simulated playthroughs; script not saved in the repo). Results with the code as it is:
       - **The player reaches level 50 far too fast: about 16 fights** with one enemy per fight (13-21), about 9 with two, about 7 with three. Level 10 comes after about 7 fights, level 30 after about 12. The planned game is about 40 fights, so the player would hit the cap before the third boss. Cause: an enemy's XP grows in a straight line with its level (level x 30-70, so about 2,500 XP per kill at level 49), while the XP the player needs grows only 3.5% per level (626 XP for level 49 to 50). Enemies are spawned at the player's level, so every level-up makes the next kill worth more - by the 40s one kill gives several levels at once.
       - **Companions use a different, much steeper curve** (`companion_base.cs`: 100 x 1.15 per level, 81,940 XP for level 49 to 50, cap 100) but get the same XP as the player, so they fall far behind: after 40 single-enemy fights a companion who fought every one is around level 35 while the player is at 50.
@@ -200,12 +259,12 @@ _This is the living plan for turning the current codebase into what the story ne
       - **Weapons and armor get no XP at all** - nothing in the game calls their `GainExperience` (already logged), so their curve cannot be tested in play.
     - **What this means for the rework:** the player's curve needs to be much steeper, or enemy XP much flatter (or both), and the two need to be set against the same target. Set the target first - roughly what level the player should be at each boss of the ~40-fight game - then build the curves backwards. The player, companions, abilities and gear should be tuned together, and the encounter-size work (to-do 13 under `core/`) multiplies XP per fight, so settle group sizes before final numbers. Boss XP was not included in the estimate and adds on top.
     - **XP rework to-dos (decided 2026-10-14 - bigger job than first thought).** Numbers still wait for the per-boss level target and group sizes above, but the work itself is confirmed:
-      1. **Rework the player's XP curve** so level 50 lands near the end of the game, not after ~16 fights. Fix the enemy-XP side at the same time (today it grows in a straight line with level while the requirement grows 3.5% per level).
+      1. **Rework the player's XP curve** so level 40 (the cap since 2026-10-22) lands near the end of the game, not after ~16 fights. Fix the enemy-XP side at the same time (today it grows in a straight line with level while the requirement grows 3.5% per level).
       2. **Raise ability XP** so an ability needs roughly the same number of fights to level as the player does (today 1,256+ fights to reach 50). Either give more XP per use or lower the requirement - decide which when the numbers are set.
       3. **Give weapons and armor XP.** Nothing awards it today (`GainExperience` is never called). Decide the source - a share of each fight's XP to the equipped weapon and armor (simplest), or XP from use (hits landed for weapons, hits taken for armor). Either way their curve should feel like the player's and the abilities': a similar number of fights per level, scaled by rarity.
       4. **Random XP rewards: a base amount plus a random amount on top.** Every XP reward is a guaranteed base plus a random bonus rolled on top of it (fits the "RNG is the core mechanic" idea). This matches combat to-do 3 under `game_logic/combat/` (each enemy's `XPValue` becomes the guaranteed base, a roll is added on top) - do them as one job. Still to design: how big the random part is (for example 0-50% of the base), whether the bonus is a flat roll or a few tiers (small/normal/lucky), whether to keep today's 10% chance of +50%, and whether gear and ability XP get the same random top-up.
-      5. **Level cap per rarity for weapons, armor and abilities.** Replace the fixed `MaxLevel = 100` (`weapon.cs`, `armor.cs`, `ability.cs`) with a cap set by rarity - Common 20, Rare 30, up to Legendary 50. Pick the Uncommon and Epic numbers, decide whether Mythic stays in the MVP, and save/load the cap correctly. Decide what happens to XP earned past the cap (lost, or held for a future rarity upgrade).
-      6. **Companions use exactly the player's XP system (decided 2026-10-14).** Same XP curve, same level cap of 50, and the same base-plus-random XP rewards - whatever is built for the player applies to companions too. Today they have their own steep curve (`companion_base.cs`: 100 x 1.15 per level, cap 100); replace it with the player's rather than keeping a second copy, so the two can never drift apart again.
+      5. 🧪 **Level cap per rarity for weapons, armor and abilities - written 2026-10-22, needs testing** (Common 10, Uncommon 20, Rare 30, Legendary 40; Epic and Mythic removed - see above). Still open: what happens to XP earned past the cap (lost, or held for a future rarity upgrade). Today it is simply not gained at the cap.
+      6. **Companions use exactly the player's XP system (decided 2026-10-14).** Same XP curve, same level cap (40 since 2026-10-22; was 50), and the same base-plus-random XP rewards - whatever is built for the player applies to companions too. Today they have their own steep curve (`companion_base.cs`: 100 x 1.15 per level, cap 100); replace it with the player's rather than keeping a second copy, so the two can never drift apart again.
       7. **Save the estimate script in `tools/`** (or rewrite it) so the new numbers can be checked before they go into the code.
     - XP curve: currently base XP by rarity (100/200/300/400/500) x 1.035 per level. Set a target first (what level should a typical player reach by the final boss?) and build the curve backwards from the expected number of fights.
     - XP sources: only active abilities gain XP today (per use in combat). Passive abilities, weapons and armor are never awarded XP anywhere in the code, so they cannot level at all - the "Equipment Leveling System" below is complete except for this.
@@ -217,9 +276,6 @@ _This is the living plan for turning the current codebase into what the story ne
         - Combat has to check cooldowns and "already active this battle" before letting an ability be used (it checks nothing today).
         - Three abilities only affect companions (Rallying Cry, Swift Tactics, and partly Precision Training) - decide what they become.
 13. **Player class system - OUT OF THE MVP, post-MVP idea (decided 2026-10-09)** - the idea is kept, but it is not part of the MVP. The code has five classes (Warrior, Rogue, Mage, Ranger, Paladin), each with stat bonuses and armor bonuses/penalties (`game_logic/entities/player/player_class.cs`, described in `docs/player_class_system.md`). **To do for the MVP:** take the class system out of play without deleting it, the same way Leadership was handled - no class choice at character creation, and no class bonuses or armor penalties applied. Today every `Player` is created with a class (default Warrior), `player.cs` applies it, and the class is written to and read from the save file (`save_data.cs`, `save_manager.cs`), so those are the places to check. Knock-on question for the MVP: the six armor types exist mainly to serve the classes - decide what armor types mean without classes. **Post-MVP:** revisit the design alongside companions (#10) and ability/level balance (#12). Keep `player_class.cs` and `docs/player_class_system.md` as the reference for that.
-14. **Armor types and the size of the weapon and armor lists - may be reduced (noted 2026-10-09)** - as the MVP scope shrinks, the six armor types and the large item catalog (207 weapons across 9 weapon types, 180 armor sets across 6 armor types in `game_logic/items/item_database.cs`) may need cutting down. The adjusted numbers are not known yet - they depend on the reduced scope (8 boss fights, smaller map, level cap 50, no classes in the MVP). Settle the numbers before doing other work on the catalog: fixing which items random loot can reach, creating the missing Legendary armor, and the nine weapon masteries (one per weapon type) all depend on them.
-    - **MVP target sizes (decided 2026-10-14):** roughly **20-25 unique armor sets** and **50-60 unique weapons**, counted across all weapon/armor types and all rarities together. That is about a quarter of the weapons and an eighth of the armor in the catalog today. Still to settle: how many weapon types and armor types the MVP keeps (fewer types means more items per type), how the items split across rarities, which existing items are kept and which are cut, and what happens to the nine weapon masteries if weapon types are dropped. Cut items should be kept dormant rather than deleted unless decided otherwise.
-15. **Difficulty shown through the player's starting stats - DECIDED (idea 2026-10-12, decided 2026-10-14).** On easier difficulties the player starts with higher stats; on harder difficulties, lower. **Why (the user's reasoning):** an easier game means less grinding to get strong, because you start from a stronger point; on a harder game your base stats are lower, so you need the levels. It also makes the gap between difficulties obvious from the first fight. Numbers and details not worked out yet. To settle: which stats (starting health only, or speed and damage too); whether it replaces or adds to scaling the enemies (`difficulty_scaler.cs` scales enemy health, damage, XP and gold and is the kept difficulty system - see `game_logic/systems/` in the code review); whether the gap stays fixed or shrinks as the player levels; and that difficulty is locked once a save is created, so the starting stats are set once at character creation. Goes with the player starting-stats review (to-do 2 under `game_logic/entities/` in the code review) and Bucket A #11. Also check it against the XP rework (#12): the per-boss level targets should allow for players on hard difficulties needing more levels.
 16. **Enemy accuracy: a base per enemy, raised by difficulty (requested 2026-10-14) - half built.** Checked in the code 2026-10-14:
     - **Built:** every enemy has its own base accuracy (`Accuracy` in `enemy_base.cs`, a 1-100 hit chance) - Goblin 75, Bandit 80, Dragon 85, and bosses 75 + half their level (`boss_enemy.cs`). `CalculateEnemyAttackDamage()` in `damage_calculator.cs` rolls 1-100 against it.
     - **Not built:** difficulty never changes it. Nothing in `difficulty_scaler.cs`, `GameSettings` or combat touches enemy accuracy, and difficulty has no effect on anything yet (see "Difficulty selection has zero mechanical effect").
@@ -295,7 +351,22 @@ _This is the living plan for turning the current codebase into what the story ne
     - **A bonus turn added at the end of a round.** `BuildTurnOrder()` makes a fixed set of slots when the round starts; this needs a slot that can be added at the end of the round, after everyone else, when its condition is met.
     - **Rewards only when the whole fight is won.** Today a fallen enemy is marked defeated the moment it hits 0 health, and rewards are paid per defeated enemy when combat ends. Check that a brother who falls and is revived is not counted twice and that `DefeatBoss` is only called once both are down. Today combat also ends the moment every enemy is down, which already gives "both fall in the same round = win".
     - **Combat only skips empty slots today** - a fight with two enemies already leaves the other two opponent slots empty and skipped, so the 6-slot round needs nothing new.
-- #6 Demon Prince (Chaos-magic themed, TBD)
+- #6 Demon Prince (Chaos-magic themed)
+  - **Unique mechanic - decided 2026-10-22: every attack he makes puts a random status condition on its target.** The condition is guaranteed; only which one is random.
+  - **Lower attack power to balance it.** Because the condition always lands, his attack damage is set lower than a normal boss at his level would have.
+  - **Also decided 2026-10-22:**
+    - **7 or more conditions, each equally likely.** Some are **unique to the Demon Prince**: nobody else in the game can apply them. The user will design these. **Why (the user's reasoning):** with 7+ equally likely conditions, it is much less likely he lands the same one twice on a target that already has it.
+    - **Only on a hit.** A missed attack applies nothing.
+    - **A target can carry several conditions at once.** Each has its own timer and its own effect, e.g. a player who is burned and slowed takes the burn and the slow separately, and each wears off on its own schedule. (The code already works this way: `Entity.ActiveEffects` is a list, and each effect counts down its own duration.)
+  - **Still open (2026-10-22):**
+    - **The unique conditions themselves** - names and what each does (user to design).
+    - **Which existing conditions join the pool** to make up the 7+. Harmful ones in the code today: Poisoned, Burn, Bleed, Grappled (slow) and Pinned (Boon's).
+    - **The same condition again on a target that already has it** (rarer now, but still possible): stack, refresh, or reroll. Ties in with the stacking question under the Centipede (#3).
+    - **How much lower his attack power is** - for another time. Also what sets each condition's strength and duration (his level, the difficulty, or both, like the Centipede's poison).
+    - Ties in with the story: he casts the chaos magic that briefly turns Chance human (Bucket A #10, Chance).
+  - **Code note (found 2026-10-22):** an attack's condition is only applied if the hit does more than 0 damage (`ProcessAttack` in `combat_manager.cs`), apart from Risk's blocked hits, which still apply it. With his attack power lowered, a hit that armor brings down to 0 would land but skip the condition. **Decided 2026-10-22: a 0-damage hit still counts as a hit for him** - the condition applies. Building him needs that rule in `ProcessAttack` (for his attacks at least).
+  - **Two same-type conditions don't sit side by side:** `AddEffect` matches on the effect's class, so a second Burn stacks/refreshes the first one rather than adding a second timer. Different conditions are independent, as intended.
+  - **What it needs from the code** (nothing built): a mechanic class like Skarn's `EagleBearMechanic` that attacks with a random effect attached (`AppliesEffect` on the attack, as Skarn's grapple does), and his entry in `BossDefinitions.GetAllBosses()` with the lower damage.
 - #7 Slime Dragon - reactive "spawns draglings whenever hit" mechanic. Needs `IBossMechanic` to grow a new on-damage/reactive hook (today it only supports "decide my own turn"), and `CombatManager` to support enemies joining a fight already in progress - a real engine change, bigger than a typical new-boss addition.
 - #8 Captain of the Royal Guard (Risk) - signature is very high crit chance (about 55%, possibly higher on harder difficulties) + a really high crit multiplier. The crit multiplier is now a value on each attacker (`Entity.CritMultiplier`, combat code pass 2026-10-14, needs testing). Companion side and open points under Bucket A #10.
 - #9 Princess (final boss) - Tier 0's order-based progression is already in place, so this boss needs no key/gate work - just registering her last in `BossDefinitions.GetAllBosses()`. She no longer borrows other bosses' mechanics, but her guard summon needs the same "enemies join mid-fight" engine change as the Slime Dragon (#7), so build that first.
@@ -340,7 +411,10 @@ _This is the living plan for turning the current codebase into what the story ne
   - Commander NPC: talking to him offers the challenge, which throws the player into back-to-back combat encounters with no healing between fights, until they fall.
   - Reward on exit: gold and/or a prize based on how long the player lasted and/or how many enemies they defeated (exact structure still open).
   - The combat loop itself is mostly additive and can be built/tested before the camp exists. "No healing between fights" already falls out for free from how `Player.Health` persists across separate fights today. Needs deciding at build time: what losing here means (it shouldn't be a normal game over, since the point is to last as long as possible).
-- Day/night cycle affecting enemy spawns - needs its own clock mechanism (Bucket A #9); may interact with the already-flagged-broken difficulty-scaling gap (see the "Difficulty selection has zero mechanical effect" item under Code Cleanup below).
+- Day/night affecting enemy spawns - **decided 2026-10-22 (Bucket A #9): no clock.** The player switches between day and night at set places (campfires, inns and so on); it stays as chosen until they switch again.
+  - Needs: a day/night value in the game state, saved with the game; a "switch to day/night" option at campfires, inns and the like (goes with the inn-based `Rest()` change below - possibly the same menu); and the spawn system reading it.
+  - Still open: what actually changes at night (which enemies, how many, how aggressive - see `OverworldEnemySpawn`), whether anything else changes (shops closed, NPCs, the look of the map), what the player starts in, and which places count as switch points beyond campfires and inns.
+  - May interact with the already-flagged-broken difficulty-scaling gap (see the "Difficulty selection has zero mechanical effect" item under Code Cleanup below).
 - `Rest()` → inn-based, location-gated mechanic (unrelated to the story list above, but already an agreed-on change - carried over so it doesn't get lost).
 
 **Deferred - post-MVP (not needed to ship the MVP; revisit once there's time for features beyond it):**
@@ -553,14 +627,25 @@ _This is the living plan for turning the current codebase into what the story ne
 
 ---
 
+## BACKEND WORK THE FRONTEND IS WAITING ON
+_`game_logic` changes the Godot screens need before they can work._
+
+### 🔴 Replace all console output with output the Godot frontend can show (added 2026-10-12)
+- **Status**: ❌ Not Started
+- **Description**: `game_logic` prints straight to the console in about 1,290 places, and a Godot screen never sees any of it. Count by folder (2026-10-12): `entities` 436, `menus` 433, `abilities` 113, `core` 96, `items` 71, `world` 68, `quests` 37, `progression` 12, `data` 10, `systems` 8, `combat` 4. The 433 in `menus/` are reference-only files and do not need converting, which leaves about 855.
+- **Goal**: every one is removed and replaced by something the frontend is wired to - none left printing.
+- **Three kinds, handled differently**:
+  - **Things that happen in a fight** (damage taken, healing, an ability used, an effect starting, ticking or ending, a companion attacking, an item used): send them through the combat log, the way `CombatManager.Log()` / `CombatMessage` already does for the lines `CombatManager` writes itself. This is the biggest group and the one the combat scene needs first.
+  - **Things that happen outside a fight** (level up, item added to the inventory, gear equipped, quest progress, boss defeated): raise an event the frontend can show as a popup or message. The same events are what the statistics tracker and the quests need to listen to (see "Quests, statistics and settings are built but not connected").
+  - **Whole console screens** (typed input, "press any key", menus): not converted line by line - rebuilt as Godot screens (see "Rebuild the shop keeper, blacksmith and quest giver screens in Godot" under FRONTEND and `game_logic/menus/` in the code review).
+- 🧪 **Progress (2026-10-19, needs testing)**: the fight-time group is written except `player.cs` and `NPC_base.cs` - new `GameLog` channel, see "Combat code pass, part 2" under `game_logic/combat/`. Outside-fight messages from abilities (levelling up) also go through `GameLog` now, so they print to the console or to whoever listens.
+- **Also remove**: the three `Console.Clear()` calls in `combat_manager.cs`, the likely cause of the combat scene's dead Attack button (see "Combat scene MVP" under FRONTEND), and waits such as `Console.ReadKey()` and the blacksmith's one-second pause.
+- **Order**: combat first (it unblocks the combat scene), then the rest folder by folder.
+
+---
+
 ## CODE CLEANUP / REFACTORING
 _Tracking spots found while going through the codebase to build a better understanding of it and remove what isn't necessary._
-
-### 🟡 Finish the docs/ folder cleanup (started 2026-10-08)
-- **Status**: 🚧 Nearly done - boss docs (6 files down to 1), ability docs (8 files down to `abilities.md`), item docs (3 removed) and the six "implementation complete" write-ups (removed; unfinished work moved into this file) are done
-- **Goal**: Get `docs/` down to a small set of files that reflect the current scope. For each group: read it against the current code, keep what is still true, merge or delete the rest.
-- **Still to review**:
-  - `player_class_system.md` - kept as it is, as the reference for a post-MVP feature (Bucket A #13). It describes code that is not part of the MVP; add a note at the top of the file saying so.
 
 ### 🟡 Folder-by-folder code review (started 2026-10-09)
 _Big-picture pass over every folder to see where the code is at before the Godot frontend. Findings are logged here only - no code is changed during the review. Fixing/wiring happens in later sessions._
@@ -593,7 +678,7 @@ _Big-picture pass over every folder to see where the code is at before the Godot
   - **Original intent**: a helper to `GameManager` for random events and spawning - e.g. laying out a city, placing quest givers around the map.
   - **What changed**: much of that is no longer random. Towns and areas will have set locations for the quest giver, blacksmith, magic shop and so on.
   - **Question for the review**: is this another case of a mechanic built twice with only one copy in use (compare `GameManager.Explore`/loot events, `OverworldEnemySpawn`, `MapNode.AvailableEvents`)? Or should it become the one central handler for every non-combat event, with event code that is currently scattered across separate files moved into it? Combat keeps its own event handling in `CombatManager`.
-  - **Possible use (idea, 2026-10-09)**: the day/night cycle could be run from here. It fits what the file already does - events with durations that start, expire and can be checked as "currently active". Ties in with Bucket A #9 (what drives the clock).
+  - **Possible use (idea, 2026-10-09)**: the day/night cycle could be run from here. It fits what the file already does - events with durations that start, expire and can be checked as "currently active". Ties in with Bucket A #9 (what drives the clock). **Less likely now:** #9 was decided 2026-10-22 with no clock (the player switches day/night at campfires and inns), so there is no duration to track - a single saved day/night value is enough.
   - **Outcome to reach**: either remove it, or reshape it into that central non-combat event handler.
 
 #### `game_logic/world/`
@@ -686,7 +771,7 @@ _Big-picture pass over every folder to see where the code is at before the Godot
 
 #### `game_logic/items/` (first pass 2026-10-12 - 6 files, about 6,700 lines, 5,400 of them `item_database.cs`)
 _Found by reading the code only - nothing was built or run._
-- `item.cs` - base class, in use. Never used: `IsTradeable` (nothing reads it), `ModifyStat()` (every item type has to implement it, all four leave it empty, nothing calls it), the `Material` and `Treasure` item categories (no class, nothing creates them), and the `Mythic` rarity (no item in the database is Mythic).
+- `item.cs` - base class, in use. Never used: `IsTradeable` (nothing reads it), `ModifyStat()` (every item type has to implement it, all four leave it empty, nothing calls it), the `Material` and `Treasure` item categories (no class, nothing creates them), and the `Mythic` rarity (no item in the database is Mythic - removed 2026-10-22 with Epic, Bucket A #12).
 - `weapon.cs`, `armor.cs` - in use for damage and defense. The XP/upgrade half is the "built, not connected" system already logged in item 1. New points:
   - **The three-way weapon upgrade choice cannot be reached, even through the Blacksmith.** `Weapon.GetPlayerUpgradeChoice()` has no callers. `blacksmith.cs` calls `weapon.CompleteUpgrade()` with no arguments, which always applies the default "Balanced" path (+1 min, +1 max). Item 1 lists "Player-choice upgrade paths" as 🧪 - it is written but not wired.
   - **A weapon's level does not change its stats; an armor's does.** A weapon created at level 20 has level-1 damage, shows as "+20", and asks for level-20 XP and gold to upgrade. Armor gains 1% defense per level. Random loot creates gear at the player's/area's level, so this shows up as soon as loot drops. Decide which behaviour is wanted (goes with Bucket A #12).
@@ -717,7 +802,7 @@ _Found by reading the code only - nothing was built or run._
   - **Combat does not check whether an ability can be used.** `CombatManager.ProcessAbility()` runs whatever it is handed: an ability still on cooldown fires anyway, and a passive one prints a message and costs the turn. `Ability.CanUse()` exists for this and nothing calls it. The combat screen needs this check to grey out the button (already on the list of things `CombatManager` cannot tell a screen).
   - Never called: `CanUse()`, `TickCooldown()` and `ReduceCooldown()` (the last two are the same method twice - combat lowers the cooldown number directly). `TargetType` (self, single enemy, all allies...) is set on every ability and combat never reads it.
   - Levelling up throws away any XP beyond what the level needed.
-  - Level cap of 100 is built in here (`MaxLevel`, cooldown reductions at 25 and 75) and in the text of most abilities ("Level 100", `Level < 100`, a message at level 51 in Executioner, `/ 99` in `rage.cs`) - Bucket A #12.
+  - Level cap of 100 is built in here (`MaxLevel`, cooldown reductions at 25 and 75) and in the text of most abilities ("Level 100", `Level < 100`, a message at level 51 in Executioner, `/ 99` in `rage.cs`) - Bucket A #12. 🧪 **Replaced 2026-10-22 by the caps per rarity** (except dormant Leadership).
 - **Passive abilities and masteries are stuck at level 1, where they do almost nothing or do harm.** Only active abilities gain XP (10 per use), as already logged under Bucket A #12. What that means in play: a mastery gives +1% accuracy, damage and crit; Evasion gives its level-1 value; and **Executioner, the Legendary choice, is a permanent downgrade** - -10% crit chance and a 1.1x crit multiplier against the normal 1.5x - because it is designed to start as a penalty and grow out of it. 15 of the 19 choices are affected.
 - **Active abilities start very weak too**: Attack Boost at level 1 is +1% damage for 3 turns on a 5-turn cooldown; Heal is 10-20 HP, less than a Minor Health Potion (25). The numbers assume a long climb to level 100. To settle with the level cap and XP review (Bucket A #12).
 - **Ability and status-effect text will not show in the Godot combat log** - same problem as items. 113 console calls in this folder: using an ability, an effect being applied, ticking each turn (poison damage, regeneration) and wearing off all print to the console, not through the combat log.
@@ -753,12 +838,12 @@ _Found by reading the code only - nothing was built or run. The three items mark
 - **Companion attacks skip the damage rules.** `CompanionBase.AttackEnemy()` rolls weapon damage and applies it directly: enemy defense is ignored, and so are any effects on the enemy. It is handed the damage calculator and does not use it.
 - **Companions are not saved.** Nothing in `game_logic/data/` mentions companions, so the party is lost on load (already a ❌ line under Save System item 15 - noting that it is a full gap, not a partial one). The new control toggle (Tier 1) would be lost the same way.
 - No way to remove a companion: `LeaveParty()` and `RemovePassiveBonus()` exist and are never called (Tier 1 already lists the leave-party trigger).
-- Companion levelling uses its own curve (100 XP, +15% per level) with a comment saying it matches the player's (120 XP, +3.5% per level). Level cap of 100 written in. Goes with Bucket A #12. **Decided 2026-10-14: companions use exactly the player's XP system (XP rework to-do 6).**
+- Companion levelling uses its own curve (100 XP, +15% per level) with a comment saying it matches the player's (120 XP, +3.5% per level). Level cap of 100 written in (now 40, 2026-10-22). Goes with Bucket A #12. **Decided 2026-10-14: companions use exactly the player's XP system (XP rework to-do 6).**
 - `NPCBase.EquipWeapon()`/`EquipArmor()` exist for companions - the starting point for the party menu's "swap gear on a companion". Like the player's, they do not touch the inventory.
 - `party_manager.cs` - small and clean. Fixed party of 4, with the dormant Leadership check left in place as decided.
 
 **Player (`player/`)**
-- `player.cs` - in use. Starts at 20 health (before the class bonus), gains a random 1-6 health per level using its own random number source instead of the game's `RNGManager`. No level cap on the player.
+- `player.cs` - in use. Starts at 20 health (before the class bonus), gains a random 1-6 health per level using its own random number source instead of the game's `RNGManager`. No level cap on the player (🧪 cap of 40 added 2026-10-22, Bucket A #12).
 - **Most of the class system is already not applied.** `GetEffectiveDefense()`, `GetEffectiveAccuracy()` and `GetEffectiveAbilityPower()` are never called, and combat calls the general speed method, not the player's class-aware one. What a class actually does today: the health and speed bonus when the character is created (everyone is a Warrior by default), and the bonus/penalty messages printed when armor is equipped. Useful for Bucket A #13: taking classes out of the MVP is a smaller job than expected - those two spots plus the save file.
 - `player_inventory.cs` - in use. Holds 100 items; listing, sorting and filtering are fine as the data source for the party menu. `DisplayInventory()` and `AddItem()` print to the console.
 - `player_class.cs` - post-MVP reference, left alone (Bucket A #13).
@@ -782,7 +867,7 @@ _Found by reading the code only - nothing was built or run. The three items mark
   5. **One combat decision-maker ("AI") for everything the computer controls.** Enemies and companions both need their actions chosen by the computer; companions can have it switched off per companion (the control toggle, Tier 1), enemies cannot. Today it is in three disconnected places: `CombatManager.DetermineEnemyAction()` decides for enemies from a general behaviour setting; each enemy type's own `DecideAction()` is written and never used; and `CompanionBase.DecideCombatAction()` returns a bare number (0/1/2) that `CombatManager` then acts on. Build one decision step that combat asks for any computer-controlled combatant, returning the same kind of action the player submits, with the per-enemy and per-companion behaviour plugged into it. `enemy_ai.cs` is an empty class today and is the obvious home. Do this together with the control toggle work, since both change the same part of `CombatManager`.
      - **Targeting is part of the decision (added 2026-10-12).** Who a combatant attacks is governed by a targeting behaviour inside the decision-maker, not by a random pick. Each enemy type (and each companion on auto) gets a targeting pattern alongside its action pattern - for example: go for the most wounded, go for the weakest defense, focus whoever hit it last, protect or avoid a particular party member, spread attacks out. Randomness can be one ingredient of a pattern, not the rule. Today there are two fixed rules that apply to everyone: enemies go for the most wounded party member 70% of the time and pick at random otherwise (`CombatManager.SelectEnemyTarget()`), and companions always go for the lowest-health enemy (`SelectCompanionAttackTarget()`). Both move into the decision-maker and become per-type behaviours. Enemies sharing a turn slot each choose their own target this way (to-do 9 under `game_logic/combat/`). The patterns themselves still need designing.
   6. **Companions that fail to create** (gear names missing from the item database - see `items/`): fix the names so a companion can exist at all. Small, and it blocks testing to-dos 4 and 5. 🧪 **Needs testing (written 2026-10-19)** - see "Combat code pass, part 2" under `combat/`.
-- Godot-side to-dos from this review are logged under "FUTURE PHASE - GUI & Game Engine": more enemy types, replacing the console output, and rebuilding the shop keeper / blacksmith / quest giver screens.
+- Godot-related to-dos from this review: more enemy types (CONTENT CREATION, below), replacing the console output (BACKEND WORK THE FRONTEND IS WAITING ON, above), and rebuilding the shop keeper / blacksmith / quest giver screens (FRONTEND).
 - `entities/` has been presented and discussed.
 
 #### `game_logic/combat/` (first pass 2026-10-12 - 4 files, about 1,750 lines)
@@ -884,7 +969,7 @@ _Found by reading the code only - nothing was built or run._
 - **Ideas noted, not decided (2026-10-12)**:
   - **Percentage bonuses that do not always round down.** Instead of dropping the fraction, use it as a chance to round up: +10% on a 5-damage hit is 5.5, so the hit lands as 5 or 6. Adds a little randomness and keeps the ability's strength curve meaningful at low numbers. Applies wherever a percentage is applied to damage, defense or healing.
   - **Or (also) raise the whole numbers** - bigger health and damage values so the effect of an ability is easier for the player to see. Goes with the player starting-stats review (to-do 2 under `entities/`) and the ability redesign (Bucket A #12).
-- Godot-side to-dos from this review are logged under "FUTURE PHASE - GUI & Game Engine" in "Combat scene - what the screen has to show".
+- Godot-side to-dos from this review are logged under FRONTEND in "Combat scene - what the screen has to show".
 - `combat/` has been presented and discussed.
 
 #### `game_logic/core/` (first pass 2026-10-12 - 4 files, about 1,250 lines)
@@ -946,25 +1031,12 @@ _Found by reading the code only - nothing was built or run._
      - **Ranged weapons and position - idea from the user, 2026-10-15 (with Boon, the Sharpshooter, Bucket A #10).** Each side has areas where someone using a ranged weapon gets an accuracy penalty. The same applies the other way: a ranged attack aimed at an enemy in one of the farther-back positions is less likely to land. To settle with the position layout: which positions carry the penalty for the attacker (too close to the enemy?), how big each penalty is, which weapon types count as ranged (bow and crossbow; wand and staff?), and whether melee attacks have their own position rules.
 - `core/` has been presented and discussed.
 
-#### `godot_project/` (first pass 2026-10-13 - 2 scenes, 3 scripts with code, 9 empty scripts)
-_Found by reading the files only - nothing was built or opened in Godot._
-- **What this folder is**: the real Godot project. Only the combat test scene has anything in it.
-- **Nine script files are completely empty** (0 lines): `UI/UIManager.cs`, `UI/HUD/CombatHUD.cs`, `HealthBar.cs`, `InventoryHUD.cs`, `UI/menus/MainMenu.cs`, `PauseMenu.cs`, `SettingsMenu.cs`, `scripts/EnemyController.cs`, `PlayerController.cs`. They are name placeholders carried over from `godot_integration/`. Their names already disagree with decisions made since (one party menu instead of an inventory screen; the health bar lives inside `EntitySlot`). **Decided 2026-10-13: leave everything in `godot_project/` as it is.** A full planning session for the Godot frontend comes first ("Plan the Godot frontend file structure and file contents" under FUTURE PHASE); what stays and what goes is decided once that design is final.
-- **The project has no starting scene.** `project.godot` sets no main scene, so pressing Play (F5) asks which scene to run; only "run this scene" (F6) works. Fine while there is one test scene; set it when a main menu exists.
-- **Nothing connects Godot to `GameManager`.** There is no single shared game object (Godot calls this an autoload) that creates the `GameManager` and keeps it alive between scenes. Every screen needs it; it is the first building block, and the home for the scene switcher (to-do 14 under `core/`).
-- **The combat scene builds its own fight and bypasses `GameManager`.** `CombatSceneController` creates its own player ("Hero" with a Rusty Sword), two goblins and its own `CombatManager`. Right for a first test; it means the scene knows nothing about the real party, inventory, game state, tutorial rules or what happens after the fight. When the shared game object exists, the scene should receive the fight from `GameManager` and submit actions through the tutorial check during the tutorial.
-- **The dead Attack button - probable cause (logged under `combat/`, not confirmed).** `CombatManager.StartCombat` calls `Console.Clear()` before its first message (`combat_manager.cs` line 182). Without a console window that call fails, which would stop the fight before it starts and leave the log empty - both symptoms from one cause. Check Godot's Output panel for the error.
-- **The scene has Attack, Defend and Flee only** - no Ability or Item button, no way to start another fight when one ends, and nothing from the "what the screen has to show" list. It redraws health only after the whole chain of computer turns has finished (the timing issue already logged).
-- **Combat text is shown as formatted text.** The log treats square brackets as formatting codes, so any message containing them (boss labels such as "[BOSS]") may lose that part. Goes away when combat sends structured events instead of finished sentences.
-- **`MapController.cs` is out of date.** It starts a fight when the player steps on a map square marked as having an enemy - the old chance-per-square model that the overworld spawn work replaced (enemies walk around and a fight starts on touch, `OnOverworldEnemyHitboxCollision`). It is also never given a `GameManager`, so it does nothing. Rewrite with the map scene.
-- `EntitySlot` is a reasonable reusable piece (name, health bar, hover details, select). Its comment says a fight can have "1-8 allies"; the party is 4.
-
 #### Root files and `tests/` (first pass 2026-10-13)
 _Found by reading the files only._
 - **The console program can no longer run the game.** `Program.cs` calls `GameManager.Run()`, the old console loop, which now spins forever because the menus it calls are empty (logged under `core/`). `Program.cs` and the root `RNGTheGame.csproj` exist only for that. **Decided 2026-10-13: keep `Program.cs`, but cut it down** - it is no longer the main way into the game. To do: stop it calling `Run()`, and settle what the small version does (for example start a new game and run one test fight, or just print that the game is played through Godot). The root `RNGTheGame.csproj` stays with it. Update the README's "dotnet run" instructions to say what it now does.
-- **Five of the eleven test files are switched off** in `tests/GameLogicTests.csproj` because they no longer compile against the current code: `DamageCalculatorTests`, `PlayerTests`, `QuestManagerTests`, `TurnManagerTests`, `SaveManagerTests`. The note beside them says "see conversation/memory" for the reasons, which is not a place anyone else can read - the reasons should be written down here as each is repaired. A sixth, `CombatManagerTests`, compiles but is known-broken. So only five files really test anything today: RNG, leveling, difficulty scaler, game settings, statistics tracker. Two of those five cover systems the game does not use yet (difficulty scaler) or barely feeds (statistics). "Unit tests still missing" above lists 11 files without saying this.
+- **Five of the eleven test files are switched off** in `tests/GameLogicTests.csproj` because they no longer compile against the current code: `DamageCalculatorTests`, `PlayerTests`, `QuestManagerTests`, `TurnManagerTests`, `SaveManagerTests`. The note beside them says "see conversation/memory" for the reasons, which is not a place anyone else can read - the reasons should be written down here as each is repaired. A sixth, `CombatManagerTests`, compiles but is known-broken. So only five files really test anything today: RNG, leveling, difficulty scaler, game settings, statistics tracker. Two of those five cover systems the game does not use yet (difficulty scaler) or barely feeds (statistics). "Unit tests still missing" below lists 11 files without saying this.
 - `TurnManagerTests` tests `turn_manager.cs`, which combat does not use (logged under `combat/`). Delete both together or revive both with the 8-slot turn order.
-- **`README.md` is out of date** - it marks whole systems as implemented (difficulty scaling, "comprehensive testing") that this review found unconnected or switched off, and its folder listing predates the Godot project and the `GameLogic.csproj` split. `SRS.md` is the original 2025 requirements document and describes a different game in places (weapon toggle key, gameplay speed keys). Neither was part of the docs clean-up of 2026-10-08. **SRS decided 2026-10-13: keep it, leave it alone for now, and rewrite it once the game is finished so it describes the final product** - a properly documented SRS for this project's history and a detailed reference for the second game. Logged as its own to-do under BUSINESS & LEGAL. **README decided 2026-10-13: its "Project Structure" listing is kept in line with the real file structure** - brought up to date the same day, and to be updated whenever files are added, moved or removed. The rest of the README (the "Key Features Implemented" and "Current Status" sections, the "411 unit tests" figure, "dotnet run") was left as it was and still overstates what works; rewrite those when the game is closer to done.
+- **`README.md` is out of date** - it marks whole systems as implemented (difficulty scaling, "comprehensive testing") that this review found unconnected or switched off, and its folder listing predates the Godot project and the `GameLogic.csproj` split. `SRS.md` is the original 2025 requirements document and describes a different game in places (weapon toggle key, gameplay speed keys). Neither was part of the docs clean-up of 2026-10-08. **SRS decided 2026-10-13: keep it, leave it alone for now, and rewrite it once the game is finished so it describes the final product** - a properly documented SRS for this project's history and a detailed reference for the second game. Logged as its own to-do under PROJECT UPKEEP. **README decided 2026-10-13: its "Project Structure" listing is kept in line with the real file structure** - brought up to date the same day, and to be updated whenever files are added, moved or removed. The rest of the README (the "Key Features Implemented" and "Current Status" sections, the "411 unit tests" figure, "dotnet run") was left as it was and still overstates what works; rewrite those when the game is closer to done.
 - **Combat positions** (how many there are, front/back row or a line of four) - put off by the user on 2026-10-13, to be addressed later (to-do 18 under `core/`).
 - The three projects and the solution file are set up correctly as far as reading can tell: `GameLogic` is a library with no Godot dependency, and the console program, the tests and the Godot project each reference it. Small naming inconsistency: `RNGTheGame.csproj` versus `RNGtheGame.sln`.
 - `game_logic` has strict "may be empty" checking switched on while most of the code was written without it, so a build probably prints a large number of warnings that bury real ones. Confirm on a build; if so, either switch the check off for that project or clean the warnings up folder by folder.
@@ -999,10 +1071,6 @@ _Found by reading the files only._
   - `GetAllArmor()` lists 150 armor sets and leaves out all 30 Epic ones.
 - **Also open**: the armor plan called for 30 Legendary armor sets (5 per armor type) that were never created - there is no Legendary armor in the game. Decide whether they are still wanted at the reduced scope.
 - **Check first**: the catalog itself may be reduced for the MVP (Bucket A #14). Settle those numbers before bringing the lists up to date, so the work is not done for items that get cut.
-
-### 🟢 Ignore stray generated files
-- **Status**: ❌ Not Started
-- **Description**: `coding_sessions.json` at the repo root (written when `tools/git_time_tracker.py` is run from the root instead of from `tools/`) and `tools/__pycache__/` show up as untracked files. Add both to `.gitignore` and delete the stray root copy.
 
 ### 🟢 Leadership ability disabled for the MVP (2026-10-08)
 - **Files**: `game_logic/entities/player/player.cs`, `game_logic/abilities/leadership_ability.cs`, `game_logic/entities/NPCs/companions/party_manager.cs`
@@ -1094,6 +1162,13 @@ _Found by reading the files only._
   - More armor variety
   - Set items (future)
 
+### 🔴 Add more enemy types (added 2026-10-12)
+- **Status**: ❌ Not Started
+- **Description**: there are three regular enemies today (Goblin, Bandit, Dragon), picked by one fixed roll for the whole game (70% / 25% / 5%). More enemy types are planned, some limited to a specific area or part of the world. The chance of each enemy per area will be worked out later.
+- **`game_logic` side**: new enemy classes; a per-area list of which enemies can appear and how often, replacing the single fixed roll in `GameManager.SpawnEnemy()` (the map node already carries a location type; areas arrive with the routes-and-towns map); each type's behaviour plugged into the shared combat decision-maker (to-do 5 under `game_logic/entities/`); random names per encounter (to-do 3 there).
+- **Godot side**: a sprite and an overworld/combat appearance for each enemy type, and showing the random name with the enemy type in the combat scene.
+- **Note**: the Dragon being a 5% random encounter is known and accepted for now; it gets sorted out when the per-area lists exist.
+
 ---
 
 ## SAVE SYSTEM ENHANCEMENTS
@@ -1113,7 +1188,10 @@ _Found by reading the files only._
 
 ---
 
-## FUTURE PHASE - GUI & Game Engine
+# 🖥️ FRONTEND - Godot (`godot_project/`)
+_`godot_project/` stays as it is until the frontend planning session below is done (decided 2026-10-13)._
+
+## Planning and screens
 
 ### 🔴 Plan the Godot frontend file structure and file contents (added 2026-10-09)
 - **Status**: 🚧 Superseded by starting implementation directly (2026-10-10) - the full written plan below was never produced; building started iteratively instead. Still worth doing once the MVP combat scene settles, so structure stops being invented ad hoc screen-by-screen.
@@ -1161,18 +1239,6 @@ _Found by reading the files only._
 - **Needed from `game_logic` first**: `CombatManager` only sends lines of text, so the screen cannot tell a damage number from a heading. It has to report what happened - who acted, on whom, hit / miss / critical, how much, which effect - as it happens, one event at a time, so items 2-5 can be shown at the right moment. It also has to expose whose turn it is, the turn order, the round number, who is defending, what can be used, and the end-of-fight result. Listed under `game_logic/combat/` in the code review ("What the combat screen cannot get").
 - **Timing**: today `CombatManager` runs every computer-controlled turn in one go, before the screen gets control back. For hits, numbers and health bars to play one after another, the screen has to queue the events and play them in order, or combat has to advance one turn at a time. Decide which when this is built.
 
-### 🔴 Replace all console output with output the Godot frontend can show (added 2026-10-12)
-- **Status**: ❌ Not Started
-- **Description**: `game_logic` prints straight to the console in about 1,290 places, and a Godot screen never sees any of it. Count by folder (2026-10-12): `entities` 436, `menus` 433, `abilities` 113, `core` 96, `items` 71, `world` 68, `quests` 37, `progression` 12, `data` 10, `systems` 8, `combat` 4. The 433 in `menus/` are reference-only files and do not need converting, which leaves about 855.
-- **Goal**: every one is removed and replaced by something the frontend is wired to - none left printing.
-- **Three kinds, handled differently**:
-  - **Things that happen in a fight** (damage taken, healing, an ability used, an effect starting, ticking or ending, a companion attacking, an item used): send them through the combat log, the way `CombatManager.Log()` / `CombatMessage` already does for the lines `CombatManager` writes itself. This is the biggest group and the one the combat scene needs first.
-  - **Things that happen outside a fight** (level up, item added to the inventory, gear equipped, quest progress, boss defeated): raise an event the frontend can show as a popup or message. The same events are what the statistics tracker and the quests need to listen to (see "Quests, statistics and settings are built but not connected").
-  - **Whole console screens** (typed input, "press any key", menus): not converted line by line - rebuilt as Godot screens (see the entry below and `game_logic/menus/` in the code review).
-- 🧪 **Progress (2026-10-19, needs testing)**: the fight-time group is written except `player.cs` and `NPC_base.cs` - new `GameLog` channel, see "Combat code pass, part 2" under `game_logic/combat/`. Outside-fight messages from abilities (levelling up) also go through `GameLog` now, so they print to the console or to whoever listens.
-- **Also remove**: the three `Console.Clear()` calls in `combat_manager.cs`, the likely cause of the combat scene's dead Attack button (see "Combat scene MVP" above), and waits such as `Console.ReadKey()` and the blacksmith's one-second pause.
-- **Order**: combat first (it unblocks the combat scene), then the rest folder by folder.
-
 ### 🔴 Rebuild the shop keeper, blacksmith and quest giver screens in Godot (added 2026-10-12)
 - **Status**: ❌ Not Started
 - **Description**: `shop_keeper.cs`, `blacksmith.cs` and `quest_giver.cs` each mix the rules with a console menu. Keep the rules in `game_logic` and rebuild each menu as a Godot screen, following the rule decided under `game_logic/menus/` (logic in `game_logic`, screen in `godot_project/UI/`, nothing built twice).
@@ -1182,12 +1248,33 @@ _Found by reading the files only._
   - **Quest giver**: available, active and finished boss quests; accept; claim reward. The whole of `QuestGiver.Interact()` is a console menu. Depends on the quest to-dos (rewards actually given, story-order unlocking) under `game_logic/quests/`.
 - **Depends on**: a shop keeper and a blacksmith actually existing somewhere in the world (none is ever created today), which depends on towns (`city.cs`, the fixed map).
 
-### 🔴 Add more enemy types (added 2026-10-12)
-- **Status**: ❌ Not Started
-- **Description**: there are three regular enemies today (Goblin, Bandit, Dragon), picked by one fixed roll for the whole game (70% / 25% / 5%). More enemy types are planned, some limited to a specific area or part of the world. The chance of each enemy per area will be worked out later.
-- **`game_logic` side**: new enemy classes; a per-area list of which enemies can appear and how often, replacing the single fixed roll in `GameManager.SpawnEnemy()` (the map node already carries a location type; areas arrive with the routes-and-towns map); each type's behaviour plugged into the shared combat decision-maker (to-do 5 under `game_logic/entities/`); random names per encounter (to-do 3 there).
-- **Godot side**: a sprite and an overworld/combat appearance for each enemy type, and showing the random name with the enemy type in the combat scene.
-- **Note**: the Dragon being a 5% random encounter is known and accepted for now; it gets sorted out when the per-area lists exist.
+## Code review findings for the Godot project
+
+### `godot_project/` (first pass 2026-10-13 - 2 scenes, 3 scripts with code, 9 empty scripts)
+_Part of the folder-by-folder code review under BACKEND → CODE CLEANUP; moved here 2026-10-22 because it is about the Godot project._
+_Found by reading the files only - nothing was built or opened in Godot._
+- **What this folder is**: the real Godot project. Only the combat test scene has anything in it.
+- **Nine script files are completely empty** (0 lines): `UI/UIManager.cs`, `UI/HUD/CombatHUD.cs`, `HealthBar.cs`, `InventoryHUD.cs`, `UI/menus/MainMenu.cs`, `PauseMenu.cs`, `SettingsMenu.cs`, `scripts/EnemyController.cs`, `PlayerController.cs`. They are name placeholders carried over from `godot_integration/`. Their names already disagree with decisions made since (one party menu instead of an inventory screen; the health bar lives inside `EntitySlot`). **Decided 2026-10-13: leave everything in `godot_project/` as it is.** A full planning session for the Godot frontend comes first ("Plan the Godot frontend file structure and file contents" in this section); what stays and what goes is decided once that design is final.
+- **The project has no starting scene.** `project.godot` sets no main scene, so pressing Play (F5) asks which scene to run; only "run this scene" (F6) works. Fine while there is one test scene; set it when a main menu exists.
+- **Nothing connects Godot to `GameManager`.** There is no single shared game object (Godot calls this an autoload) that creates the `GameManager` and keeps it alive between scenes. Every screen needs it; it is the first building block, and the home for the scene switcher (to-do 14 under `core/`).
+- **The combat scene builds its own fight and bypasses `GameManager`.** `CombatSceneController` creates its own player ("Hero" with a Rusty Sword), two goblins and its own `CombatManager`. Right for a first test; it means the scene knows nothing about the real party, inventory, game state, tutorial rules or what happens after the fight. When the shared game object exists, the scene should receive the fight from `GameManager` and submit actions through the tutorial check during the tutorial.
+- **The dead Attack button - probable cause (logged under `combat/`, not confirmed).** `CombatManager.StartCombat` calls `Console.Clear()` before its first message (`combat_manager.cs` line 182). Without a console window that call fails, which would stop the fight before it starts and leave the log empty - both symptoms from one cause. Check Godot's Output panel for the error.
+- **The scene has Attack, Defend and Flee only** - no Ability or Item button, no way to start another fight when one ends, and nothing from the "what the screen has to show" list. It redraws health only after the whole chain of computer turns has finished (the timing issue already logged).
+- **Combat text is shown as formatted text.** The log treats square brackets as formatting codes, so any message containing them (boss labels such as "[BOSS]") may lose that part. Goes away when combat sends structured events instead of finished sentences.
+- **`MapController.cs` is out of date.** It starts a fight when the player steps on a map square marked as having an enemy - the old chance-per-square model that the overworld spawn work replaced (enemies walk around and a fight starts on touch, `OnOverworldEnemyHitboxCollision`). It is also never given a `GameManager`, so it does nothing. Rewrite with the map scene.
+- `EntitySlot` is a reasonable reusable piece (name, health bar, hover details, select). Its comment says a fight can have "1-8 allies"; the party is 4.
+
+## Frontend pieces logged inside backend entries
+_Pointers only, so the Godot side of backend work is not missed. The details stay in the backend entries._
+- **Party menu** (player, inventory and companions in one menu) - the screen table under `game_logic/menus/` in the code review.
+- **Companion control toggle** in combat and in the party menu - Bucket B, Tier 1.
+- **Felicity's abilities** - the combat screen only shows a companion's first ability; it needs to list `GetAbilities()` (Bucket A #10, Felicity).
+- **Boon's bolt picker** - choosing a bolt type for Special Shot, using `CombatManager.GetBoltCounts()` (Bucket A #10, Boon).
+- **Risk's blocked hits** - showing the `AttackBlocked` combat event (Bucket A #10, Risk).
+- **Enemy sprites and random names** - the Godot side of "Add more enemy types" (BACKEND → CONTENT CREATION).
+- **A Godot scene switcher and the shared game object (autoload)** - to-do 14 under `core/` and the `godot_project/` review below.
+
+## Art, maps and learning
 
 ### 🔵 4. Figure Out Sprites
 - **Status**: ❌ Not Started
@@ -1215,22 +1302,27 @@ _Found by reading the files only._
 
 ---
 
-## BUSINESS & LEGAL
+# 🧰 PROJECT UPKEEP - docs and tools
 
-### 💼 2. Write Game Story
+### 🟡 Finish the docs/ folder cleanup (started 2026-10-08)
+- **Status**: 🚧 Nearly done - boss docs (6 files down to 1), ability docs (8 files down to `abilities.md`), item docs (3 removed) and the six "implementation complete" write-ups (removed; unfinished work moved into this file) are done
+- **Goal**: Get `docs/` down to a small set of files that reflect the current scope. For each group: read it against the current code, keep what is still true, merge or delete the rest.
+- **Still to review**:
+  - `player_class_system.md` - kept as it is, as the reference for a post-MVP feature (Bucket A #13). It describes code that is not part of the MVP; add a note at the top of the file saying so.
+
+### 🟢 Ignore stray generated files
 - **Status**: ❌ Not Started
-- **Description**: Create the narrative/lore for the game world
-- **Needed**:
-  - Main storyline
-  - Character backstories
-  - World lore
-  - Quest narratives
+- **Description**: `coding_sessions.json` at the repo root (written when `tools/git_time_tracker.py` is run from the root instead of from `tools/`) and `tools/__pycache__/` show up as untracked files. Add both to `.gitignore` and delete the stray root copy.
 
-### 💼 Rewrite the SRS to match the finished game (added 2026-10-13)
+### ⏸ Rewrite the SRS to match the finished game (added 2026-10-13)
 - **File**: `SRS.md`
 - **Status**: ⏸ Waiting until the game is complete
 - **Description**: the SRS is the original 2025 requirements document and no longer matches the game. Do not edit it piecemeal. When the game is finished, rewrite it from the final product so the project has a properly documented, well-made SRS - for the record, and as a detailed reference when starting the second game.
 - **Helps later**: decisions are already dated in this file; keeping that habit gives the rewrite its source material.
+
+---
+
+# 💼 BUSINESS & LEGAL
 
 ### 💼 7. Marketing Strategy
 - **Status**: ❌ Not Started
@@ -1263,6 +1355,8 @@ _Found by reading the files only._
 
 ---
 
+# 📋 SUMMARY AND NOTES
+
 ## SUMMARY BY STATUS
 
 _Corrected 2026-10-09 after checking each item against the code. "Built, not connected" means the classes exist but the game never uses them - these are NOT done._
@@ -1288,12 +1382,13 @@ _Corrected 2026-10-09 after checking each item against the code. "Built, not con
 - Custom map loading
 - Player Execute method
 
-**Ongoing**: 2
+**Ongoing**: 3
 - Create more abilities
 - Expand loot tables
+- Write the game story (in progress outside the repo, no end date)
 
-**Future/GUI Phase**: 5
-**Business/Legal**: 5
+**Frontend (Godot)**: 8 - frontend planning, the combat scene (2 entries), the shop / blacksmith / quest giver screens, sprites, learning Godot, learning game engines, maps
+**Business/Legal**: 4 (the story moved to DESIGN & STORY and the SRS rewrite to PROJECT UPKEEP, 2026-10-22)
 
 ---
 

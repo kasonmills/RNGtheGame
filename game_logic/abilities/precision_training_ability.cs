@@ -6,7 +6,7 @@ namespace GameLogic.Abilities
     /// <summary>
     /// Precision Training - Passive ability that increases accuracy for all allies
     /// Level 1: +1% accuracy for all allies (including player)
-    /// Level 100: +30% accuracy for all allies (including player)
+    /// Max level: +30% accuracy for all allies (including player)
     /// Linear scaling between levels
     /// Affects both player and companions
     /// </summary>
@@ -17,7 +17,7 @@ namespace GameLogic.Abilities
             Name = "Precision Training";
             Description = "Your expertise in combat techniques improves the accuracy of you and your allies, making attacks more likely to hit.";
             IsPassive = true;
-            Rarity = AbilityRarity.Epic;
+            Rarity = AbilityRarity.Rare;  // TODO: was Epic (removed 2026-10-22) - rarity to decide per item
 
             // Passive abilities don't have cooldown or targeting
             Cooldown = 0;
@@ -30,7 +30,7 @@ namespace GameLogic.Abilities
         /// </summary>
         public override int GetPassiveBonusValue()
         {
-            // Linear scaling: 1% at level 1, 30% at level 100
+            // Linear scaling: 1% at level 1, 30% at max level
             return GetScaledValueInt(1, 30);
         }
 
@@ -65,7 +65,7 @@ namespace GameLogic.Abilities
         {
             int bonus = GetPassiveBonusValue();
             int nextMilestone = ((Level / 5) + 1) * 5;
-            if (nextMilestone > 100) nextMilestone = 100;
+            if (nextMilestone > MaxLevel) nextMilestone = MaxLevel;
 
             string info = $"{Name} (Lv.{Level}/{MaxLevel}) [PASSIVE]\n" +
                          $"{Description}\n\n" +
@@ -73,7 +73,7 @@ namespace GameLogic.Abilities
                          $"Affects: You and all companions in your party\n" +
                          $"Effect: Increases hit chance for all attacks";
 
-            if (Level < 100)
+            if (Level < MaxLevel)
             {
                 // Calculate bonus at next milestone
                 Ability tempAbility = new PrecisionTrainingAbility();
