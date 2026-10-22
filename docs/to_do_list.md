@@ -24,7 +24,7 @@ _This is the living plan for turning the current codebase into what the story ne
 ### Bucket A: Open story decisions
 1. ✅ **Resolved (2026-10-05)** Character-creation Gender selection has no stat/mechanical difference between genders - purely cosmetic/narrative.
 2. Librarian-Monk boss - unique mechanic not yet designed.
-3. Giant House Centipede boss - unique mechanic not yet designed.
+3. ✅ **Resolved (2026-10-16)** Giant House Centipede boss - unique mechanic decided (venomous bite, chance-based poison on every attack). Full design under Tier 2 #3 below.
 4. Cyclops Brothers boss - unique mechanic not yet designed.
 5. Demon Prince boss - mechanic loosely Chaos-magic themed, not finalized.
 6. ✅ **Resolved (2026-10-14)** Princess (final boss) - her unique mechanic is decided, and it replaces the earlier "randomly use one of the other bosses' mechanics" idea. Full design under Tier 2 #9 below.
@@ -113,7 +113,16 @@ _This is the living plan for turning the current codebase into what the story ne
 **Tier 2 - new bosses, in confirmed story order (corrected 2026-09-30, supersedes the earlier tentative order below this list used to describe):**
 - #1 Skarn the Eagle Bear - ✅ done (tutorial fight).
 - #2 Librarian-Monk (mechanic TBD)
-- #3 Giant House Centipede (mechanic TBD)
+- #3 Giant House Centipede - **unique mechanic decided 2026-10-16:**
+  1. **Every normal bite has a chance to poison the target** - not a separate cooldown-gated ability like the existing generic `PoisonAttack`, the proc rides on its regular attack.
+  2. **Poison chance scales with difficulty, rolled fresh per bite within a band** (not a flat number, so even Unfair never guarantees it):
+     - Normal 25-35%, Hard 35-45%, Difficult 45-55%, Unfair 55-65%.
+  3. **Poison duration also scales with difficulty, same banded-random approach:**
+     - Normal 2-3 turns, Hard 3-4, Difficult 3-5, Unfair 4-6.
+  4. **Poison damage-per-turn is driven by the centipede's level, not difficulty** - reuses the existing level-scaled formula in `PoisonAttack`/`PoisonedEffect` (`game_logic/abilities/enemy_abilities/poison_attack.cs`). Split of responsibilities: difficulty controls how _likely and persistent_ the poison is, level controls how much it _hurts_.
+  5. **Stacking, with a capped duration add:** repeated procs on an already-poisoned target stack (existing `PoisonedEffect.CanStack`), but a restack adds only the _difficulty band's minimum_ duration to whatever time is left, instead of refreshing to a fresh full roll - stops a target getting locked into poison forever while still letting damage compound. See the engine note below - this is not how stacking currently works for any effect.
+  6. **Weighted targeting, not strict priority:** the centipede strongly favors biting targets that aren't poisoned yet (discussed as roughly 3-4x the selection weight of an already-poisoned target), but it's a weight, not a hard rule - an already-poisoned target can still get bitten again. A strict "poison everyone before double-dipping" rule was considered and rejected: since the proc isn't guaranteed, it could get stuck hammering one unpoisoned target over and over waiting for the roll, ignoring everyone else, which read as too robotic.
+  - **Engine note (found 2026-10-16):** today, restacking _any_ `CanStack` effect (`entity.cs` `AddEffect`) calls `RefreshDuration()`, which resets `Duration` to the new application's full `MaxDuration` - there is no "add" behavior anywhere. Implementing rule 5 needs a small override. Open question: should "restack adds only the minimum instead of refreshing" become the rule for every stacking DoT (`PoisonedEffect`, `BurnEffect`, `BleedEffect`, `BleedingEffect` - all four already stack this way today), or should it be bespoke to the centipede's poison only? Logged for a decision under `game_logic/abilities/` in the code review below.
 - #4/#5 Cyclops Brothers (mechanic TBD) - already fits the multi-enemy combat engine (two bosses, one fight) with no new architecture needed for that part.
 - #6 Demon Prince (Chaos-magic themed, TBD)
 - #7 Slime Dragon - reactive "spawns draglings whenever hit" mechanic. Needs `IBossMechanic` to grow a new on-damage/reactive hook (today it only supports "decide my own turn"), and `CombatManager` to support enemies joining a fight already in progress - a real engine change, bigger than a typical new-boss addition.
@@ -510,6 +519,7 @@ _Found by reading the code only - nothing was built or run._
 - `enemy_abilities/` - **no enemy has an ability.** `poison_attack.cs` and `rage.cs` are complete, and combat checks whether an enemy has a special ability, but nothing ever gives one to an enemy (`EnemyBase.SpecialAbility` is never set). "2 Enemy abilities ✅" under Content Creation means written, not used. `grapple.cs` is only the Grappled slow effect, used by the Eagle Bear boss - in use.
 - `consumable_effects.cs` - **nothing in this file can happen in the game today.** Strength Boost, Resistance and Regeneration are only created by the Buff Potion type, which has no item (see `items/`). Haste, Burn and Bleed are never created by anything, and Haste has no effect even if applied.
 - **Same effect written twice**: Regeneration exists here and again in `companion_healer.cs`; Bleed exists here and as "Bleeding" in `companion_rogue.cs`. The base class `AbilityEffect` has two ways to create an effect that take duration and strength in opposite order, which is how the two Regeneration copies ended up with their numbers the other way round from each other.
+- **Stacking DoTs always refresh duration to the new roll, never add (found 2026-10-16, needed for the centipede boss - Tier 2 #3 above).** `Entity.AddEffect()` (`entities/entity.cs`) handles every `CanStack` effect the same way: increment `StackCount`, then `RefreshDuration()` sets `Duration` back to the newly-applied instance's full `MaxDuration`. There's no "add" option anywhere. All four existing stacking DoTs work this way today: `PoisonedEffect` (here), `BurnEffect` and `BleedEffect` (`consumable_effects.cs`), `BleedingEffect` (`companion_rogue.cs`). The centipede's poison needs a restack to add only its difficulty band's minimum duration instead of refreshing to a fresh roll. **Decide:** make that the rule for every stacking DoT (one shared change in `AbilityEffect`/`Entity.AddEffect`), or give the centipede's poison its own override and leave the generic refresh-on-stack behavior as-is for Burn/Bleed.
 - **For the companion control decision (Tier 1)**: active abilities are written for "whoever uses it", so a directly controlled companion using its ability should work. Passive abilities are all tied to the player's one chosen ability.
 - **Tests**: none for this folder.
 - `abilities/` has been presented. Outcome so far: the ability redesign idea logged under Bucket A #12 (not decided).
