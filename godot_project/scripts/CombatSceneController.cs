@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using GameLogic.Combat;
 using GameLogic.Entities;
@@ -28,6 +29,7 @@ namespace RNGtheGame.Godot.Scripts
         private RNGManager _rng = null!;
         private CombatManager _combatManager = null!;
         private readonly Dictionary<Entity, EntitySlot> _slots = new();
+        private bool _lastLogLineBlank = true;
 
         private EnemyBase? _selectedTarget;
 
@@ -55,6 +57,7 @@ namespace RNGtheGame.Godot.Scripts
             foreach (Node child in _enemyRow.GetChildren()) child.QueueFree();
             _selectedTarget = null;
             _log.Clear();
+            _lastLogLineBlank = true;
 
             var player = new Player("Hero", PlayerClass.Warrior);
             player.EquipWeapon(ItemDatabase.GetWeapon("Rusty Sword", 1));
@@ -116,19 +119,24 @@ namespace RNGtheGame.Godot.Scripts
 
         private void OnAttackPressed()
         {
+            var actor = _combatManager.CurrentActor;
             var target = ResolveTarget();
-            if (target == null) return;
-            Submit(GameLogic.Combat.CombatAction.Attack(_combatManager.Player, target));
+            if (actor == null || target == null) return;
+            Submit(GameLogic.Combat.CombatAction.Attack(actor, target));
         }
 
         private void OnDefendPressed()
         {
-            Submit(GameLogic.Combat.CombatAction.Defend(_combatManager.Player));
+            var actor = _combatManager.CurrentActor;
+            if (actor == null) return;
+            Submit(GameLogic.Combat.CombatAction.Defend(actor));
         }
 
         private void OnFleePressed()
         {
-            Submit(GameLogic.Combat.CombatAction.Flee(_combatManager.Player));
+            var actor = _combatManager.CurrentActor;
+            if (actor == null) return;
+            Submit(GameLogic.Combat.CombatAction.Flee(actor));
         }
 
         private void Submit(GameLogic.Combat.CombatAction action)
@@ -167,9 +175,58 @@ namespace RNGtheGame.Godot.Scripts
             }
         }
 
+        // CombatManager.Log() also feeds the console text game, so it includes lines the
+        // Godot log doesn't want (round banners, per-turn HP summaries - hovering an
+        // EntitySlot already shows HP). Filtered here, not in CombatManager, so the
+        // console/test experience stays unchanged.
         private void AppendLog(string bbcodeLine)
         {
-            _log.AppendText(bbcodeLine + "\n");
+            var keptLines = new List<string>();
+            foreach (var rawLine in bbcodeLine.Split('\n'))
+            {
+                string trimmed = rawLine.Trim();
+                bool isRoundBanner = trimmed.Length > 0 && trimmed.All(c => c == '=');
+                bool isRoundNumber = trimmed.StartsWith("ROUND ");
+                bool isTurnOrderHeader = trimmed == "Turn Order (by Speed):";
+                // The turn order itself already shows relative speed (fastest to slowest),
+                // so the numeric listing and per-turn speed-change lines are redundant.
+                bool isSpeedListing = trimmed.Contains("(Speed:") || trimmed.Contains("'s speed ");
+                bool isHpSummary = trimmed.Contains("'s HP:") || trimmed.StartsWith("Enemies: ");
+                bool isRoundFooter = trimmed == "--- End of Round ---" || trimmed == "--- Speed Adjustments for Next Round ---";
+                // "X attacks Y!" - who-attacked-who will be shown visually (animation/effect)
+                // in a later pass instead of as log text.
+                bool isAttackAnnouncement = trimmed.Contains(" attacks ") && trimmed.EndsWith("!");
+                // "X took Y damage!" - the exact number will be a floating damage number as
+                // part of battle animations later; hovering an EntitySlot shows current HP now.
+                bool isDamageAmount = trimmed.Contains(" took ") && trimmed.EndsWith(" damage!");
+                // Miss/crit will be shown visually later (0 damage = miss; a planned
+                // damage-reduction display will show the full roll then subtract what was
+                // blocked, on screen) instead of as log text.
+                bool isMissOrCrit = trimmed == "The attack missed!" || trimmed == "CRITICAL HIT!";
+
+                if (isRoundBanner || isRoundNumber || isTurnOrderHeader || isSpeedListing || isHpSummary
+                    || isRoundFooter || isAttackAnnouncement || isDamageAmount || isMissOrCrit)
+                    continue;
+
+                keptLines.Add(rawLine);
+            }
+
+            if (keptLines.Count == 0) return;
+
+            // Collapse any run of blank lines (within this batch or carried over from the
+            // previous AppendLog call) down to at most one, so removing lines above doesn't
+            // leave stacks of blank lines behind.
+            var finalLines = new List<string>();
+            foreach (var line in keptLines)
+            {
+                bool isBlank = line.Trim().Length == 0;
+                if (isBlank && _lastLogLineBlank) continue;
+                finalLines.Add(line);
+                _lastLogLineBlank = isBlank;
+            }
+
+            if (finalLines.Count == 0) return;
+            _log.AppendText(string.Join("\n", finalLines) + "\n");
         }
     }
 }
