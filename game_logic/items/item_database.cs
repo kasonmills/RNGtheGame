@@ -5552,17 +5552,6 @@ namespace GameLogic.Items
                     value: 200
                 ),
 
-                // Bombs
-                "fire bomb" => new Consumable(
-                    "Fire Bomb",
-                    "An explosive device that deals fire damage.",
-                    ConsumableType.Bomb,
-                    effectPower: 40,
-                    ItemRarity.Uncommon,
-                    level,
-                    value: 30
-                ),
-
                 // Antidotes
                 "antidote" => new Consumable(
                     "Antidote",
@@ -5629,7 +5618,6 @@ namespace GameLogic.Items
                 ("Cooked Meat", ConsumableType.Food, ItemRarity.Common),
                 ("Elixir of Vitality", ConsumableType.Elixir, ItemRarity.Rare),
                 ("Combat Elixir", ConsumableType.Elixir, ItemRarity.Epic),
-                ("Fire Bomb", ConsumableType.Bomb, ItemRarity.Uncommon),
                 ("Minor Revival Potion", ConsumableType.RevivePotion, ItemRarity.Uncommon),
                 ("Revival Potion", ConsumableType.RevivePotion, ItemRarity.Rare),
                 ("Greater Revival Potion", ConsumableType.RevivePotion, ItemRarity.Epic),

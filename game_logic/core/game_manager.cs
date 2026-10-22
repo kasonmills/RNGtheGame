@@ -167,6 +167,10 @@ namespace GameLogic.Core
         {
             var eagleBear = _tutorialManager.CreateEagleBearEncounter(_bossManager);
 
+            // A new player starts with no items, so give one for the tutorial's "use an item"
+            // step (core/ to-do 1, decided 2026-10-13)
+            _player.Inventory.AddItem(Items.ItemDatabase.GetConsumable("minor health potion"));
+
             ChangeState(GameState.Combat);
 
             void OnCombatFinished(CombatResult result)

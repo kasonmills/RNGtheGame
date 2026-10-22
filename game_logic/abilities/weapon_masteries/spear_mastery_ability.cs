@@ -95,7 +95,7 @@ namespace GameLogic.Abilities.WeaponMasteries
             // Notify every 10 levels about progress
             if (Level % 10 == 0)
             {
-                Console.WriteLine($"Your spear mastery improves! Now: +{accuracyBonus}% accuracy, +{damageBonus}% damage, +{critBonus}% crit chance!");
+                GameLog.Write($"Your spear mastery improves! Now: +{accuracyBonus}% accuracy, +{damageBonus}% damage, +{critBonus}% crit chance!");
             }
         }
 
@@ -151,9 +151,9 @@ namespace GameLogic.Abilities.WeaponMasteries
             int damageBonus = GetAttackDamageBonus();
             int critBonus = GetCritChanceBonus();
 
-            Console.WriteLine($"{Name} is a passive ability providing bonuses when wielding a spear.");
-            Console.WriteLine($"Current bonuses: +{accuracyBonus}% accuracy, +{damageBonus}% damage, +{critBonus}% crit chance");
-            Console.WriteLine("It is always active and cannot be manually used.");
+            GameLog.Write($"{Name} is a passive ability providing bonuses when wielding a spear.");
+            GameLog.Write($"Current bonuses: +{accuracyBonus}% accuracy, +{damageBonus}% damage, +{critBonus}% crit chance");
+            GameLog.Write("It is always active and cannot be manually used.");
         }
     }
 }

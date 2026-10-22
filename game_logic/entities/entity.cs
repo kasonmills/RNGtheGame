@@ -117,7 +117,7 @@ namespace GameLogic.Entities
                 // New effect - add it
                 ActiveEffects.Add(effect);
                 effect.OnApplied(this);
-                Console.WriteLine($"{Name} is affected by {effect.Name}!");
+                GameLog.Write($"{Name} is affected by {effect.Name}!");
             }
         }
 
@@ -130,7 +130,7 @@ namespace GameLogic.Entities
             {
                 effect.OnExpired(this);
                 ActiveEffects.Remove(effect);
-                Console.WriteLine($"{effect.Name} wore off from {Name}.");
+                GameLog.Write($"{effect.Name} wore off from {Name}.");
             }
         }
 
@@ -142,7 +142,7 @@ namespace GameLogic.Entities
         {
             if (ActiveEffects.Count == 0) return;
 
-            Console.WriteLine($"\n--- {Name}'s Status Effects ---");
+            GameLog.Write($"\n--- {Name}'s Status Effects ---");
 
             // Create a copy to avoid modification during iteration
             var effectsToProcess = new List<AbilityEffect>(ActiveEffects);
@@ -224,7 +224,7 @@ namespace GameLogic.Entities
 
             if (negativeEffects.Count == 0)
             {
-                Console.WriteLine($"{Name} has no negative effects to remove.");
+                GameLog.Write($"{Name} has no negative effects to remove.");
                 return;
             }
 
@@ -233,7 +233,7 @@ namespace GameLogic.Entities
             {
                 effect.OnExpired(this);
                 ActiveEffects.Remove(effect);
-                Console.WriteLine($"{effect.Name} was cured from {Name}!");
+                GameLog.Write($"{effect.Name} was cured from {Name}!");
             }
         }
 

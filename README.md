@@ -46,7 +46,7 @@ RNGtheGame/
 │   │           ├── companion_warrior.cs
 │   │           ├── companion_mage.cs
 │   │           ├── companion_rogue.cs
-│   │           ├── companion_healer.cs
+│   │           ├── companion_felicity.cs    # Felicity, the Healer (reworked from the Healer)
 │   │           ├── companion_ranger.cs
 │   │           └── party_manager.cs     # Party roster and size rules
 │   │
@@ -117,6 +117,7 @@ RNGtheGame/
 │   │   ├── RNG_manager.cs               # All randomness (seeded, reproducible)
 │   │   ├── difficulty_scaler.cs
 │   │   ├── event_system.cs
+│   │   ├── game_log.cs                  # One channel for text messages (fed into the combat log during a fight)
 │   │   ├── game_settings.cs
 │   │   └── statistics_tracker.cs
 │   │

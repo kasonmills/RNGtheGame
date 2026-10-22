@@ -38,8 +38,8 @@ namespace GameLogic.Entities.NPCs.Companions
             UniqueAbility = new MultishotAbility(this);
 
             // Equip starting weapon (bow for rangers)
-            EquippedWeapon = Items.ItemDatabase.GetWeapon("old bow");
-            EquippedArmor = Items.ItemDatabase.GetArmor("worn leather");
+            EquippedWeapon = Items.ItemDatabase.GetWeapon("hunting bow");
+            EquippedArmor = Items.ItemDatabase.GetArmor("worn leather armor");
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace GameLogic.Entities.NPCs.Companions
         /// </summary>
         public override void ApplyPassiveBonus(Player.Player player)
         {
-            Console.WriteLine($"{Name}'s keen eye steadies your aim! (+{_accuracyBonus}% Accuracy)");
+            GameLog.Write($"{Name}'s keen eye steadies your aim! (+{_accuracyBonus}% Accuracy)");
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace GameLogic.Entities.NPCs.Companions
         /// </summary>
         public override void RemovePassiveBonus(Player.Player player)
         {
-            Console.WriteLine($"{Name}'s guidance fades. (-{_accuracyBonus}% Accuracy)");
+            GameLog.Write($"{Name}'s guidance fades. (-{_accuracyBonus}% Accuracy)");
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace GameLogic.Entities.NPCs.Companions
             if (Level % 2 == 0)
             {
                 Speed++;
-                Console.WriteLine($"{Name}'s reflexes sharpened! Speed increased to {Speed}!");
+                GameLog.Write($"{Name}'s reflexes sharpened! Speed increased to {Speed}!");
             }
         }
     }
@@ -104,8 +104,7 @@ namespace GameLogic.Entities.NPCs.Companions
 
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{_ranger.Name} uses {Name}!");
-            Console.WriteLine($"🏹 {_ranger.Name} draws multiple arrows at once!");
+            GameLog.Write($"🏹 {_ranger.Name} draws multiple arrows at once!");
 
             // Calculate number of arrows (scales with level)
             int arrowCount = 3 + (_ranger.Level / 20);  // 3-8 arrows at max level
@@ -137,10 +136,10 @@ namespace GameLogic.Entities.NPCs.Companions
                 totalDamage += damage;
                 target.TakeDamage(damage);
 
-                Console.WriteLine($"  🎯 Arrow {i + 1}: {damage} damage{(rng.Roll(1, 100) <= critChance ? " (CRIT!)" : "")}");
+                GameLog.Write($"  🎯 Arrow {i + 1}: {damage} damage{(rng.Roll(1, 100) <= critChance ? " (CRIT!)" : "")}");
             }
 
-            Console.WriteLine($"🏹 Total damage: {totalDamage} HP ({arrowCount} arrows, {critCount} crits!)");
+            GameLog.Write($"🏹 Total damage: {totalDamage} HP ({arrowCount} arrows, {critCount} crits!)");
 
             // Chance to apply marked effect for extra damage
             if (_ranger.Level >= 10)
@@ -150,7 +149,7 @@ namespace GameLogic.Entities.NPCs.Companions
                 {
                     var markEffect = new MarkedEffect(2, 15);
                     target.AddEffect(markEffect);
-                    Console.WriteLine($"🎯 {target.Name} is marked! (+15% damage taken for 2 turns)");
+                    GameLog.Write($"🎯 {target.Name} is marked! (+15% damage taken for 2 turns)");
                 }
             }
 
@@ -179,7 +178,7 @@ namespace GameLogic.Entities.NPCs.Companions
 
         protected override void OnLevelUp()
         {
-            Console.WriteLine($"{Name} becomes more precise!");
+            GameLog.Write($"{Name} becomes more precise!");
         }
     }
 
@@ -203,7 +202,7 @@ namespace GameLogic.Entities.NPCs.Companions
         public override void ApplyEffect(Entity target, RNGManager rng)
         {
             // Passive effect - damage increase is checked during damage calculation
-            Console.WriteLine($"  🎯 {Name}: {target.Name} is vulnerable! ({Duration} turns left)");
+            GameLog.Write($"  🎯 {Name}: {target.Name} is vulnerable! ({Duration} turns left)");
         }
 
         /// <summary>
@@ -217,12 +216,12 @@ namespace GameLogic.Entities.NPCs.Companions
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"🎯 {target.Name} has been marked!");
+            GameLog.Write($"🎯 {target.Name} has been marked!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"🎯 The mark on {target.Name} fades.");
+            GameLog.Write($"🎯 The mark on {target.Name} fades.");
         }
 
         public override string GetDisplayInfo()

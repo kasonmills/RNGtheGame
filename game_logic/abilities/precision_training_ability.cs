@@ -54,7 +54,7 @@ namespace GameLogic.Abilities
             // Notify every 5 levels about progress (since gains are smaller)
             if (Level % 5 == 0)
             {
-                Console.WriteLine($"Your precision training improves! Ally accuracy bonus is now {newBonus}%!");
+                GameLog.Write($"Your precision training improves! Ally accuracy bonus is now {newBonus}%!");
             }
         }
 
@@ -98,8 +98,8 @@ namespace GameLogic.Abilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"{Name} is a passive ability providing a permanent +{GetPassiveBonusValue()}% accuracy bonus to all allies.");
-            Console.WriteLine("It is always active and cannot be used in combat.");
+            GameLog.Write($"{Name} is a passive ability providing a permanent +{GetPassiveBonusValue()}% accuracy bonus to all allies.");
+            GameLog.Write("It is always active and cannot be used in combat.");
         }
     }
 }

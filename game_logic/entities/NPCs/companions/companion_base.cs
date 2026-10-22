@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GameLogic.Abilities;
 using GameLogic.Combat;
 using GameLogic.Entities.Enemies;
@@ -34,8 +35,8 @@ namespace GameLogic.Entities.NPCs.Companions
         public CompanionAIStyle AIStyle { get; set; }
         public Ability UniqueAbility { get; protected set; }  // Each companion has a signature ability
 
-        // Companion-specific bonuses (passive effects)
-        public abstract string PassiveBonusDescription { get; }
+        // Companion-specific bonuses (passive effects) - companions without one leave this out
+        public virtual string PassiveBonusDescription => "None";
 
         /// <summary>
         /// Constructor for companions
@@ -64,7 +65,7 @@ namespace GameLogic.Entities.NPCs.Companions
         public void GainExperience(int amount)
         {
             Experience += amount;
-            Console.WriteLine($"{Name} gained {amount} XP!");
+            GameLog.Write($"{Name} gained {amount} XP!");
 
             // Check for level up
             while (Experience >= ExperienceToNextLevel && Level < 100)
@@ -124,7 +125,7 @@ namespace GameLogic.Entities.NPCs.Companions
             if (hitRoll > accuracy)
             {
                 result.Missed = true;
-                Console.WriteLine($"{Name}'s attack missed!");
+                GameLog.Write($"{Name}'s attack missed!");
                 return result;
             }
 
@@ -148,7 +149,7 @@ namespace GameLogic.Entities.NPCs.Companions
 
                 if (bonusDamage > 0)
                 {
-                    Console.WriteLine($"Rallying Cry increased damage by {bonusDamage}! (+{rallyingCry.GetPassiveBonusValue()}%)");
+                    GameLog.Write($"Rallying Cry increased damage by {bonusDamage}! (+{rallyingCry.GetPassiveBonusValue()}%)");
                 }
             }
 
@@ -159,7 +160,7 @@ namespace GameLogic.Entities.NPCs.Companions
             target.TakeDamage(baseDamage);
 
             string critText = result.IsCritical ? " Critical hit!" : "";
-            Console.WriteLine($"{Name} attacks {target.Name} for {baseDamage} damage!{critText}");
+            GameLog.Write($"{Name} attacks {target.Name} for {baseDamage} damage!{critText}");
 
             return result;
         }
@@ -171,13 +172,13 @@ namespace GameLogic.Entities.NPCs.Companions
         {
             if (UniqueAbility == null)
             {
-                Console.WriteLine($"{Name} has no unique ability!");
+                GameLog.Write($"{Name} has no unique ability!");
                 return;
             }
 
             if (UniqueAbility.IsOnCooldown())
             {
-                Console.WriteLine($"{Name}'s {UniqueAbility.Name} is on cooldown! ({UniqueAbility.CurrentCooldown} turns left)");
+                GameLog.Write($"{Name}'s {UniqueAbility.Name} is on cooldown! ({UniqueAbility.CurrentCooldown} turns left)");
                 return;
             }
 
@@ -186,10 +187,28 @@ namespace GameLogic.Entities.NPCs.Companions
         }
 
         /// <summary>
+        /// Every ability this companion can use in a fight. Most have only their unique
+        /// ability; a companion that learns more overrides this.
+        /// </summary>
+        public virtual List<Ability> GetCombatAbilities()
+        {
+            return UniqueAbility == null ? new List<Ability>() : new List<Ability> { UniqueAbility };
+        }
+
+        /// <summary>
+        /// Which ability to use when the AI decides to use one (allies = the standing party).
+        /// </summary>
+        public virtual Ability ChooseCombatAbility(List<Entity> allies)
+        {
+            return UniqueAbility;
+        }
+
+        /// <summary>
         /// Decide what action to take during combat based on AI style
+        /// (allies = the standing party, this companion included).
         /// Returns action type: 0 = Attack, 1 = Ability, 2 = Defend
         /// </summary>
-        public virtual int DecideCombatAction(Enemy target, RNGManager rng)
+        public virtual int DecideCombatAction(Enemy target, List<Entity> allies, RNGManager rng)
         {
             // Calculate health percentage for decision-making
             float healthPercent = (float)Health / MaxHealth;
@@ -273,24 +292,28 @@ namespace GameLogic.Entities.NPCs.Companions
         /// </summary>
         public void TickCooldowns()
         {
-            if (UniqueAbility != null)
+            foreach (var ability in GetCombatAbilities())
             {
-                UniqueAbility.TickCooldown();
+                ability.TickCooldown();
             }
         }
 
         /// <summary>
         /// Apply companion's passive bonus
         /// This is called by the game manager to apply persistent bonuses
-        /// Each companion subclass implements their own passive
+        /// Companions with a passive override this; by default there is none
         /// </summary>
-        public abstract void ApplyPassiveBonus(Entities.Player.Player player);
+        public virtual void ApplyPassiveBonus(Entities.Player.Player player)
+        {
+        }
 
         /// <summary>
         /// Remove companion's passive bonus
         /// Called when companion leaves party
         /// </summary>
-        public abstract void RemovePassiveBonus(Entities.Player.Player player);
+        public virtual void RemovePassiveBonus(Entities.Player.Player player)
+        {
+        }
 
         /// <summary>
         /// Get detailed companion info
@@ -331,7 +354,7 @@ namespace GameLogic.Entities.NPCs.Companions
                 return;
             }
 
-            Console.WriteLine($"{Name} is ready to fight!");
+            GameLog.Write($"{Name} is ready to fight!");
         }
     }
 }

@@ -25,7 +25,6 @@ namespace GameLogic.Abilities.PlayerAbilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{user.Name} uses {Name}!");
 
             // Get scaled crit chance percentage based on ability level
             double critChanceBonus = GetScaledValue(1.0, 50.0);  // 1% to 50%
@@ -38,7 +37,7 @@ namespace GameLogic.Abilities.PlayerAbilities
 
             user.AddEffect(effect);
 
-            Console.WriteLine($"Critical hit chance increased by {critChanceBonus:F1}% for 3 turns!");
+            GameLog.Write($"Critical hit chance increased by {critChanceBonus:F1}% for 3 turns!");
 
             // Set cooldown (uses level-based reduction)
             CurrentCooldown = GetEffectiveCooldown();
@@ -73,7 +72,7 @@ namespace GameLogic.Abilities.PlayerAbilities
         /// </summary>
         protected override void OnLevelUp()
         {
-            Console.WriteLine($"Critical strike chance increased to +{GetScaledValue(1.0, 50.0):F1}%!");
+            GameLog.Write($"Critical strike chance increased to +{GetScaledValue(1.0, 50.0):F1}%!");
         }
     }
 
@@ -98,7 +97,7 @@ namespace GameLogic.Abilities.PlayerAbilities
         {
             // This effect is passive - the bonus is checked during damage calculation
             // No per-turn action needed
-            Console.WriteLine($"  {Name}: +{Potency}% crit chance ({Duration} turns left)");
+            GameLog.Write($"  {Name}: +{Potency}% crit chance ({Duration} turns left)");
         }
 
         /// <summary>
@@ -111,12 +110,12 @@ namespace GameLogic.Abilities.PlayerAbilities
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"⚡ {target.Name}'s strikes are deadly precise!");
+            GameLog.Write($"⚡ {target.Name}'s strikes are deadly precise!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"⚡ {target.Name}'s critical strike focus faded.");
+            GameLog.Write($"⚡ {target.Name}'s critical strike focus faded.");
         }
     }
 }

@@ -69,13 +69,13 @@ namespace GameLogic.Abilities
             if (Level % 10 == 0)
             {
                 string chanceText = critChanceMod >= 0 ? $"+{critChanceMod}%" : $"{critChanceMod}%";
-                Console.WriteLine($"Your execution technique improves! Crit chance: {chanceText}, Crit multiplier: {critMultiplier:F2}x!");
+                GameLog.Write($"Your execution technique improves! Crit chance: {chanceText}, Crit multiplier: {critMultiplier:F2}x!");
             }
 
             // Special message when transitioning from penalty to bonus (around level 51)
             if (Level == 51)
             {
-                Console.WriteLine("You've mastered the basics! Your critical hit chance is no longer penalized!");
+                GameLog.Write("You've mastered the basics! Your critical hit chance is no longer penalized!");
             }
         }
 
@@ -137,9 +137,9 @@ namespace GameLogic.Abilities
             double critMultiplier = GetCritMultiplier();
             string chanceText = critChanceMod >= 0 ? $"+{critChanceMod}%" : $"{critChanceMod}%";
 
-            Console.WriteLine($"{Name} is a passive ability modifying critical hit mechanics.");
-            Console.WriteLine($"Current effects: {chanceText} crit chance, {critMultiplier:F2}x crit multiplier");
-            Console.WriteLine("It is always active and cannot be used in combat.");
+            GameLog.Write($"{Name} is a passive ability modifying critical hit mechanics.");
+            GameLog.Write($"Current effects: {chanceText} crit chance, {critMultiplier:F2}x crit multiplier");
+            GameLog.Write("It is always active and cannot be used in combat.");
         }
     }
 }

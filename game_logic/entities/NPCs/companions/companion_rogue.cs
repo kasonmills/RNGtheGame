@@ -38,8 +38,8 @@ namespace GameLogic.Entities.NPCs.Companions
             UniqueAbility = new BackstabAbility(this);
 
             // Equip starting weapon (daggers for rogues)
-            EquippedWeapon = Items.ItemDatabase.GetWeapon("worn dagger");
-            EquippedArmor = Items.ItemDatabase.GetArmor("worn leather");
+            EquippedWeapon = Items.ItemDatabase.GetWeapon("rusty dagger");
+            EquippedArmor = Items.ItemDatabase.GetArmor("worn leather armor");
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace GameLogic.Entities.NPCs.Companions
         /// </summary>
         public override void ApplyPassiveBonus(Player.Player player)
         {
-            Console.WriteLine($"{Name}'s keen eyes spot hidden treasure! (+25% Gold drops)");
+            GameLog.Write($"{Name}'s keen eyes spot hidden treasure! (+25% Gold drops)");
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace GameLogic.Entities.NPCs.Companions
         /// </summary>
         public override void RemovePassiveBonus(Player.Player player)
         {
-            Console.WriteLine($"{Name}'s treasure sense fades. (-25% Gold drops)");
+            GameLog.Write($"{Name}'s treasure sense fades. (-25% Gold drops)");
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace GameLogic.Entities.NPCs.Companions
             if (Level % 2 == 0)
             {
                 Speed++;
-                Console.WriteLine($"{Name} moved with incredible grace! Speed increased to {Speed}!");
+                GameLog.Write($"{Name} moved with incredible grace! Speed increased to {Speed}!");
             }
         }
     }
@@ -104,8 +104,7 @@ namespace GameLogic.Entities.NPCs.Companions
 
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{_rogue.Name} uses {Name}!");
-            Console.WriteLine($"🗡️  {_rogue.Name} vanishes into the shadows...");
+            GameLog.Write($"🗡️  {_rogue.Name} vanishes into the shadows...");
 
             // Calculate backstab damage (weapon damage x high multiplier)
             int weaponMin = _rogue.EquippedWeapon != null ? _rogue.EquippedWeapon.MinDamage : 1;
@@ -121,7 +120,7 @@ namespace GameLogic.Entities.NPCs.Companions
             int finalDamage = (int)(baseDamage * critMultiplier);
 
             target.TakeDamage(finalDamage);
-            Console.WriteLine($"⚔️  CRITICAL BACKSTAB! {target.Name} takes {finalDamage} damage! ({critMultiplier:F1}x multiplier)");
+            GameLog.Write($"⚔️  CRITICAL BACKSTAB! {target.Name} takes {finalDamage} damage! ({critMultiplier:F1}x multiplier)");
 
             // Chance to apply bleeding effect
             int bleedChance = 40 + _rogue.Level / 2;  // 40-90% chance
@@ -130,7 +129,7 @@ namespace GameLogic.Entities.NPCs.Companions
                 int bleedDamage = _rogue.Level + 5;
                 var bleedEffect = new BleedingEffect(3, bleedDamage);
                 target.AddEffect(bleedEffect);
-                Console.WriteLine($"🩸 {target.Name} is bleeding! ({bleedDamage} dmg/turn for 3 turns)");
+                GameLog.Write($"🩸 {target.Name} is bleeding! ({bleedDamage} dmg/turn for 3 turns)");
             }
 
             // Set cooldown (uses level-based reduction)
@@ -155,7 +154,7 @@ namespace GameLogic.Entities.NPCs.Companions
 
         protected override void OnLevelUp()
         {
-            Console.WriteLine($"{Name} becomes deadlier!");
+            GameLog.Write($"{Name} becomes deadlier!");
         }
     }
 
@@ -179,17 +178,17 @@ namespace GameLogic.Entities.NPCs.Companions
         public override void ApplyEffect(Entity target, RNGManager rng)
         {
             target.TakeDamage(_damagePerTurn);
-            Console.WriteLine($"  🩸 {Name}: {target.Name} loses {_damagePerTurn} HP from bleeding! ({Duration} turns left)");
+            GameLog.Write($"  🩸 {Name}: {target.Name} loses {_damagePerTurn} HP from bleeding! ({Duration} turns left)");
         }
 
         public override void OnApplied(Entity target)
         {
-            Console.WriteLine($"🩸 {target.Name} is bleeding!");
+            GameLog.Write($"🩸 {target.Name} is bleeding!");
         }
 
         public override void OnExpired(Entity target)
         {
-            Console.WriteLine($"🩸 {target.Name}'s bleeding stops.");
+            GameLog.Write($"🩸 {target.Name}'s bleeding stops.");
         }
 
         public override string GetDisplayInfo()

@@ -54,9 +54,18 @@ namespace GameLogic.Abilities
         {
             if (IsPassive)
             {
-                Console.WriteLine($"{Name} is a passive ability and cannot be activated.");
+                GameLog.Write($"{Name} is a passive ability and cannot be activated.");
                 return;
             }
+        }
+
+        /// <summary>
+        /// Execute a whole-party ability (TargetType AllAllies) on every standing ally at once.
+        /// By default it runs Execute on the user; abilities that affect the group override this.
+        /// </summary>
+        public virtual void ExecuteOnGroup(Entity user, System.Collections.Generic.List<Entity> targets, RNGManager rng)
+        {
+            Execute(user, user, rng);
         }
 
         /// <summary>
@@ -113,7 +122,7 @@ namespace GameLogic.Abilities
         {
             if (Level >= MaxLevel)
             {
-                Console.WriteLine($"{Name} is already at max level!");
+                GameLog.Write($"{Name} is already at max level!");
                 return;
             }
 
@@ -121,7 +130,7 @@ namespace GameLogic.Abilities
             Experience = 0;
             ExperienceToNextLevel = CalculateNextLevelXP();
 
-            Console.WriteLine($"{Name} leveled up to Level {Level}!");
+            GameLog.Write($"{Name} leveled up to Level {Level}!");
             OnLevelUp();
         }
 
@@ -223,11 +232,11 @@ namespace GameLogic.Abilities
 
             if (CombatUsageCount == 1)
             {
-                Console.WriteLine($"{Name} gained {xpGained} XP!");
+                GameLog.Write($"{Name} gained {xpGained} XP!");
             }
             else
             {
-                Console.WriteLine($"{Name} gained {xpGained} XP! (Combat use #{CombatUsageCount})");
+                GameLog.Write($"{Name} gained {xpGained} XP! (Combat use #{CombatUsageCount})");
             }
         }
 

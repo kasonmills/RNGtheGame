@@ -26,7 +26,6 @@ namespace GameLogic.Abilities.PlayerAbilities
         /// </summary>
         public override void Execute(Entity user, Entity target, RNGManager rng)
         {
-            Console.WriteLine($"\n{user.Name} uses {Name}!");
 
             // Get scaled healing range based on ability level
             int minHeal = GetScaledValueInt(10, 100);   // 10 HP at lv1, 100 HP at lv100
@@ -44,11 +43,11 @@ namespace GameLogic.Abilities.PlayerAbilities
             // Calculate actual healing (in case max HP limit)
             int actualHealing = user.Health - healthBefore;
 
-            Console.WriteLine($"Restored {actualHealing} HP! ({user.Health}/{user.MaxHealth})");
+            GameLog.Write($"Restored {actualHealing} HP! ({user.Health}/{user.MaxHealth})");
 
             if (actualHealing < healAmount)
             {
-                Console.WriteLine($"(Healed to full health!)");
+                GameLog.Write($"(Healed to full health!)");
             }
 
             // Set cooldown (uses level-based reduction)
@@ -87,7 +86,7 @@ namespace GameLogic.Abilities.PlayerAbilities
         protected override void OnLevelUp()
         {
             var (min, max) = GetHealingRange();
-            Console.WriteLine($"Healing power increased to {min}-{max} HP!");
+            GameLog.Write($"Healing power increased to {min}-{max} HP!");
         }
     }
 }
