@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/CombatSceneController.cs" id="1_script"]
+[ext_resource type="Script" path="res://scripts/DebugGridOverlay.cs" id="2_griddbg"]
 
 [node name="CombatScene" type="Control" unique_id=371184536]
 layout_mode = 3
@@ -9,66 +10,76 @@ script = ExtResource("1_script")
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Margin" type="MarginContainer" parent="." unique_id=770130190]
+[node name="CombatLog" type="RichTextLabel" parent="." unique_id=2089829562]
+unique_name_in_owner = true
 layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
-
-[node name="Layout" type="VBoxContainer" parent="Margin" unique_id=2040615104]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="TitleLabel" type="Label" parent="Margin/Layout" unique_id=595478481]
-layout_mode = 2
-text = "Combat"
-
-[node name="EnemyLabel" type="Label" parent="Margin/Layout" unique_id=184988709]
-layout_mode = 2
-text = "Enemies"
-
-[node name="EnemyRow" type="HFlowContainer" parent="Margin/Layout" unique_id=1414808400]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 150)
-layout_mode = 2
-theme_override_constants/h_separation = 16
-
-[node name="PartyLabel" type="Label" parent="Margin/Layout" unique_id=813835443]
-layout_mode = 2
-text = "Your Party"
-
-[node name="PartyRow" type="HFlowContainer" parent="Margin/Layout" unique_id=2120295804]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 150)
-layout_mode = 2
-theme_override_constants/h_separation = 16
-
-[node name="CombatLog" type="RichTextLabel" parent="Margin/Layout" unique_id=2089829562]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 140)
-layout_mode = 2
-size_flags_vertical = 3
+offset_left = 400.0
+offset_top = 25.0
+offset_right = 900.0
+offset_bottom = 300.0
 bbcode_enabled = true
 scroll_following = true
 
-[node name="ButtonsRow" type="HBoxContainer" parent="Margin/Layout" unique_id=408540828]
-layout_mode = 2
+[node name="PartyRow" type="GridContainer" parent="." unique_id=2120295804]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 50.0
+offset_top = 100.0
+offset_right = 600.0
+offset_bottom = 550.0
+columns = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 16
+
+[node name="EnemyRow" type="HFlowContainer" parent="." unique_id=1414808400]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 700.0
+offset_top = 50.0
+offset_right = 1250.0
+offset_bottom = 550.0
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 16
+
+[node name="ButtonsRow" type="HBoxContainer" parent="." unique_id=408540828]
+layout_mode = 0
+offset_left = 500.0
+offset_top = 550.0
+offset_right = 800.0
+offset_bottom = 800.0
+alignment = 1
 theme_override_constants/separation = 12
 
-[node name="AttackButton" type="Button" parent="Margin/Layout/ButtonsRow" unique_id=707792048]
+[node name="AttackButton" type="Button" parent="ButtonsRow" unique_id=707792048]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 4
 text = "Attack"
 
-[node name="DefendButton" type="Button" parent="Margin/Layout/ButtonsRow" unique_id=1028773556]
+[node name="DefendButton" type="Button" parent="ButtonsRow" unique_id=1028773556]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 4
 text = "Defend"
 
-[node name="FleeButton" type="Button" parent="Margin/Layout/ButtonsRow" unique_id=250450303]
+[node name="FleeButton" type="Button" parent="ButtonsRow" unique_id=250450303]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 4
 text = "Flee"
+
+[node name="ResetButton" type="Button" parent="." unique_id=103284756]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 170.0
+offset_bottom = 55.0
+text = "Reset Fight"
+
+[node name="DebugGrid" type="Control" parent="." unique_id=103284755]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_griddbg")

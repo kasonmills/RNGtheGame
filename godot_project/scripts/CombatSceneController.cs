@@ -5,6 +5,7 @@ using GameLogic.Combat;
 using GameLogic.Entities;
 using GameLogic.Entities.Enemies;
 using GameLogic.Entities.Enemies.EnemyTypes;
+using GameLogic.Entities.NPCs.Companions;
 using GameLogic.Entities.Player;
 using GameLogic.Items;
 using GameLogic.Systems;
@@ -19,12 +20,13 @@ namespace RNGtheGame.Godot.Scripts
         private static readonly PackedScene EntitySlotScene =
             GD.Load<PackedScene>("res://scenes/entity_slot.tscn");
 
-        private HFlowContainer _partyRow = null!;
+        private GridContainer _partyRow = null!;
         private HFlowContainer _enemyRow = null!;
         private RichTextLabel _log = null!;
         private Button _attackButton = null!;
         private Button _defendButton = null!;
         private Button _fleeButton = null!;
+        private Button _resetButton = null!;
 
         private RNGManager _rng = null!;
         private CombatManager _combatManager = null!;
@@ -35,16 +37,18 @@ namespace RNGtheGame.Godot.Scripts
 
         public override void _Ready()
         {
-            _partyRow = GetNode<HFlowContainer>("%PartyRow");
+            _partyRow = GetNode<GridContainer>("%PartyRow");
             _enemyRow = GetNode<HFlowContainer>("%EnemyRow");
             _log = GetNode<RichTextLabel>("%CombatLog");
             _attackButton = GetNode<Button>("%AttackButton");
             _defendButton = GetNode<Button>("%DefendButton");
             _fleeButton = GetNode<Button>("%FleeButton");
+            _resetButton = GetNode<Button>("%ResetButton");
 
             _attackButton.Pressed += OnAttackPressed;
             _defendButton.Pressed += OnDefendPressed;
             _fleeButton.Pressed += OnFleePressed;
+            _resetButton.Pressed += StartNewFight;
 
             StartNewFight();
         }
@@ -63,6 +67,15 @@ namespace RNGtheGame.Godot.Scripts
             player.EquipWeapon(ItemDatabase.GetWeapon("Rusty Sword", 1));
             AddSlot(player, _partyRow, new Color(0.3f, 0.5f, 0.9f));
 
+            // Testing companions so far: Chance (aggressive, unarmed), Felicity (supportive
+            // healer), Risk (defensive tank) - covers the three AI styles currently in use.
+            var companions = new List<CompanionBase> { new CompanionChance(1), new CompanionFelicity(1), new CompanionRisk(1) };
+            foreach (var companion in companions)
+            {
+                companion.JoinParty();
+                AddSlot(companion, _partyRow, new Color(0.4f, 0.7f, 0.6f));
+            }
+
             var enemies = new List<EnemyBase> { new Goblin(1), new Goblin(1) };
             foreach (var enemy in enemies)
             {
@@ -75,12 +88,12 @@ namespace RNGtheGame.Godot.Scripts
             _combatManager.CombatEnded += OnCombatEnded;
 
             SetActionButtonsEnabled(true);
-            _combatManager.StartCombat(player, enemies);
+            _combatManager.StartCombat(player, enemies, companions.Cast<Entity>().ToList());
             RefreshAllSlots();
             UpdateActionAvailability();
         }
 
-        private EntitySlot AddSlot(Entity entity, HFlowContainer row, Color color)
+        private EntitySlot AddSlot(Entity entity, Container row, Color color)
         {
             var slot = EntitySlotScene.Instantiate<EntitySlot>();
             slot.HitboxColor = color;
