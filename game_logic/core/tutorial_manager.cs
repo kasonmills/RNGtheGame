@@ -8,9 +8,12 @@ namespace GameLogic.Core
 {
     /// <summary>
     /// Owns the opening tutorial's content and its "try every action once" combat gate.
-    /// TODO-GODOT: an intro/story scene reads GetIntroStoryText(), then calls
-    /// GameManager.RecruitStarterCompanion() and GameManager.BeginEagleBearEncounter().
-    /// During that fight, submit actions via TrySubmitAction() instead of calling
+    /// Flow (decided 2026-10-28): the intro plays in the Cutscene state, reading
+    /// GetIntroStoryText(); finishing it calls GameManager.FinishIntro(), which starts the
+    /// Skarn fight in Combat with the Tutorial state pushed on top as an overlay. When the
+    /// lessons are done (ActionLessonsFinished) the overlay pops back to plain Combat, and the
+    /// end of the fight goes to Playing.
+    /// TODO-GODOT: during that fight, submit actions via TrySubmitAction() instead of calling
     /// CombatManager.SubmitPlayerAction() directly - it's safe to always route through this
     /// even after the gate lifts, since it just forwards once the checklist is complete.
     /// </summary>
@@ -31,6 +34,12 @@ namespace GameLogic.Core
         /// TODO-GODOT: subscribe to this alongside CombatManager.CombatMessage during the tutorial fight.
         /// </summary>
         public event Action<string> TutorialMessage;
+
+        /// <summary>
+        /// Fired once, when the last required action type is tried for the first time.
+        /// GameManager listens to drop the Tutorial overlay back to plain Combat.
+        /// </summary>
+        public event Action ActionLessonsFinished;
 
         /// <summary>
         /// True until every required action type has been tried at least once this fight.
@@ -118,6 +127,7 @@ namespace GameLogic.Core
             if (wasTeaching && !IsTeachingActions)
             {
                 TutorialMessage?.Invoke("You've learned the basics - now finish off the Eagle Bear!");
+                ActionLessonsFinished?.Invoke();
             }
 
             return true;

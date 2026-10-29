@@ -57,6 +57,59 @@ namespace GameLogic.Core
         /// </summary>
         public TutorialManager Tutorial => _tutorialManager;
 
+        // === Read access for Godot screens ===
+        // Screens read and act on these directly and keep no copy of the data (frontend rule
+        // decided 2026-10-12). Player, Quests, QuestGiver and Bosses are null until
+        // StartNewGame() or a successful LoadGame().
+
+        /// <summary>
+        /// The state the game is in right now. Read this on start-up and after a load to pick
+        /// the scene; listen to StateChanged for every change after that.
+        /// </summary>
+        public GameState CurrentState => _currentState;
+
+        /// <summary>
+        /// The player: stats, equipped gear, ability, gold and inventory (Player.Inventory).
+        /// </summary>
+        public Player Player => _player;
+
+        /// <summary>
+        /// The party: the companions travelling with the player (ActiveCompanions).
+        /// </summary>
+        public Entities.NPCs.Companions.PartyManager Party => _partyManager;
+
+        /// <summary>
+        /// The world map: nodes, connections and the player's current node.
+        /// </summary>
+        public MapManager Map => _mapManager;
+
+        /// <summary>
+        /// Every quest, the tracked quest, and accept/complete/claim.
+        /// </summary>
+        public QuestManager Quests => _questManager;
+
+        /// <summary>
+        /// The NPC who hands out the boss quests.
+        /// </summary>
+        public QuestGiver QuestGiver => _questGiver;
+
+        /// <summary>
+        /// The bosses, which ones are beaten, and which one is next in the story order.
+        /// </summary>
+        public Entities.Enemies.Bosses.BossManager Bosses => _bossManager;
+
+        /// <summary>
+        /// The current settings. Replaced by the save's settings on LoadGame(), so read it
+        /// through this property each time instead of keeping a reference.
+        /// </summary>
+        public GameSettings Settings => _gameSettings;
+
+        /// <summary>
+        /// The statistics for this save file (read only on screen). Replaced on LoadGame(),
+        /// same as Settings.
+        /// </summary>
+        public StatisticsTracker Statistics => _statistics;
+
         /// <summary>
         /// Fired whenever the game state changes (old state, new state) via ChangeState/PushState/PopState.
         /// TODO-GODOT: subscribe to this instead of polling the current state.
@@ -136,8 +189,19 @@ namespace GameLogic.Core
             _questGiver = result.QuestGiver;
             _combatManager.Difficulty = difficulty; // Harder difficulties lower the party's hit chance
 
-            ChangeState(GameState.Tutorial); // Opening tutorial before the player is free to roam
+            ChangeState(GameState.Cutscene); // Opening intro; FinishIntro() then starts the tutorial fight
             _isRunning = true;
+        }
+
+        /// <summary>
+        /// End the opening intro cutscene: the starter companion joins and the tutorial fight
+        /// against Skarn begins.
+        /// TODO-GODOT: call this when the intro scene finishes (or is skipped).
+        /// </summary>
+        public void FinishIntro()
+        {
+            RecruitStarterCompanion();
+            BeginEagleBearEncounter();
         }
 
         /// <summary>
@@ -158,10 +222,12 @@ namespace GameLogic.Core
         }
 
         /// <summary>
-        /// Begin the tutorial's first boss fight (Skarn, the Eagle Bear), with the tutorial's
-        /// action-teaching gate active.
-        /// TODO-GODOT: call this once the intro story/companion recruitment scene finishes.
-        /// During this fight, submit actions via GameManager.Instance.Tutorial.TrySubmitAction(...)
+        /// Begin the tutorial's first boss fight (Skarn, the Eagle Bear). The game goes into
+        /// Combat with the Tutorial state pushed on top while the lessons run; once every
+        /// action has been tried the overlay pops back to plain Combat, and the end of the
+        /// fight goes to Playing (decided 2026-10-28).
+        /// Normally reached through FinishIntro().
+        /// TODO-GODOT: during this fight, submit actions via GameManager.Instance.Tutorial.TrySubmitAction(...)
         /// instead of Combat.SubmitPlayerAction(...) directly.
         /// </summary>
         public void BeginEagleBearEncounter()
@@ -173,26 +239,46 @@ namespace GameLogic.Core
             _player.Inventory.AddItem(Items.ItemDatabase.GetConsumable("minor health potion"));
 
             ChangeState(GameState.Combat);
+            PushState(GameState.Tutorial);
+
+            void OnLessonsFinished()
+            {
+                _tutorialManager.ActionLessonsFinished -= OnLessonsFinished;
+                if (_currentState == GameState.Tutorial)
+                {
+                    PopState(); // Back to plain Combat - the fight carries on
+                }
+            }
 
             void OnCombatFinished(CombatResult result)
             {
                 _combatManager.CombatFinished -= OnCombatFinished;
+                _tutorialManager.ActionLessonsFinished -= OnLessonsFinished;
+
+                // The fight can end before every lesson is done (e.g. Chance lands the last hit)
+                if (_currentState == GameState.Tutorial)
+                {
+                    PopState();
+                }
 
                 // Tutorial complete (or lost) - the tutorial refuses Flee, so only win/lose happen
                 ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
             }
 
+            _tutorialManager.ActionLessonsFinished += OnLessonsFinished;
             _combatManager.CombatFinished += OnCombatFinished;
 
             _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { eagleBear }, _partyManager.ActiveCompanions, _bossManager);
         }
 
         /// <summary>
-        /// Load an existing saved game
+        /// Load a saved game from the given slot. Returns false if there is no save there or it
+        /// could not be read, and the game stays on the main menu - the load screen shows the
+        /// message. Data.SaveManager.SaveExists()/GetSaveFileInfo() list what is in each slot.
         /// </summary>
-        public void LoadGame()
+        public bool LoadGame(string saveSlotName = "save1")
         {
-            var result = _gameStartup.LoadGame("save1", _rngManager, _mapManager); // Default save slot
+            var result = _gameStartup.LoadGame(saveSlotName, _rngManager, _mapManager);
 
             if (result.Success)
             {
@@ -206,14 +292,11 @@ namespace GameLogic.Core
 
                 ChangeState(GameState.Playing);
                 _isRunning = true;
+                return true;
             }
-            else
-            {
-                // TODO-GODOT: load-failure feedback -> error dialog/toast
-                Console.WriteLine("\nNo save file found or load failed.");
-                Console.WriteLine("Returning to main menu...\n");
-                ChangeState(GameState.MainMenu);
-            }
+
+            ChangeState(GameState.MainMenu);
+            return false;
         }
 
         /// <summary>
@@ -618,14 +701,12 @@ namespace GameLogic.Core
         }
 
         /// <summary>
-        /// Save the current game
+        /// Save the current game to the given slot. Returns success/failure instead of
+        /// printing or blocking on a keypress, so the save screen can show the result.
+        /// TODO-GODOT: call this from the save screen at a save point (saving is only
+        /// allowed at save points - to-do 10 under core/; nothing enforces that yet).
         /// </summary>
-        /// <summary>
-        /// Save the current game. Returns success/failure instead of blocking on a
-        /// keypress, so a Godot save button/toast can react to the result directly.
-        /// TODO-GODOT: call this from a save button (world HUD or pause panel).
-        /// </summary>
-        public bool SaveGame()
+        public bool SaveGame(string saveSlotName = "save1")
         {
             // Update statistics before saving
             _statistics.UpdatePlayTime(_player.PlayTime);
@@ -633,11 +714,7 @@ namespace GameLogic.Core
             _statistics.UpdateCurrentLevel(_player.Level);
             _statistics.RecordGameSave();
 
-            bool success = Data.SaveManager.SaveGame(_player, "save1", _bossManager, _mapManager, _questManager, _gameSettings, _statistics);
-
-            Console.WriteLine(success ? "Game saved successfully!" : "Failed to save game.");
-
-            return success;
+            return Data.SaveManager.SaveGame(_player, saveSlotName, _bossManager, _mapManager, _questManager, _gameSettings, _statistics);
         }
 
         /// <summary>

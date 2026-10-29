@@ -8,7 +8,7 @@ namespace GameLogic.Core
     public enum GameState
     {
         MainMenu,    // Title screen, new game, load game
-        Tutorial,    // Opening story/setup + first boss fight (Playing before it's unlocked)
+        Tutorial,    // Overlay pushed on top of Combat during the first boss fight's lessons; pops back to Combat when they are done
         Playing,     // Exploring the world, navigating map
         Combat,      // In battle with an enemy
         Paused,      // Game paused (can resume)
@@ -17,7 +17,7 @@ namespace GameLogic.Core
         Inventory,   // Managing inventory
         Stats,       // Viewing character stats
         Dialogue,    // In conversation with NPC
-        Cutscene,     // Watching a cutscene
+        Cutscene,     // Watching a cutscene (the opening intro before the first boss fight; later the ending)
         Settings,      // Adjusting game settings
         Loading       // Loading game assets
     }
