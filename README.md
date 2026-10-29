@@ -127,28 +127,43 @@ RNGtheGame/
 │       ├── save_data.cs                 # Save file structure (JSON)
 │       └── save_manager.cs              # Save/load
 │
-├── godot_project/                       # The Godot frontend (early - one test scene so far)
+├── godot_project/                       # The Godot frontend - structure from docs/godot_frontend_plan.md;
+│   │                                    #   most .cs files are empty placeholders until each screen is built
 │   ├── project.godot
 │   ├── RNGtheGameGodot.csproj           # References game_logic/GameLogic.csproj
+│   ├── autoload/                        # Game.cs, SceneRouter.cs, Notifier.cs
 │   ├── scenes/
-│   │   ├── combat_scene.tscn            # First combat test scene
-│   │   └── entity_slot.tscn             # One combatant (name, health bar, select)
-│   ├── scripts/
-│   │   ├── CombatSceneController.cs
-│   │   ├── EntitySlot.cs
-│   │   ├── MapController.cs
-│   │   ├── EnemyController.cs           # Empty placeholder
-│   │   └── PlayerController.cs          # Empty placeholder
-│   └── UI/                              # Empty placeholders until the frontend is planned
-│       ├── UIManager.cs
-│       ├── HUD/
-│       │   ├── CombatHUD.cs
-│       │   ├── HealthBar.cs
-│       │   └── InventoryHUD.cs
-│       └── menus/
-│           ├── MainMenu.cs
-│           ├── PauseMenu.cs
-│           └── SettingsMenu.cs
+│   │   ├── boot/                        # Boot.cs
+│   │   ├── main_menu/                   # MainMenu.cs, NewGamePanel.cs, LoadPanel.cs
+│   │   ├── tutorial/                    # IntroStory.cs
+│   │   ├── world/                       # World.cs, WorldHud.cs, WorldMap.cs, MapController.cs (out of date)
+│   │   │   ├── areas/                   # Area.cs; routes/, towns/, camps/ (empty)
+│   │   │   ├── actors/                  # PlayerActor.cs, OverworldEnemy.cs, NpcActor.cs
+│   │   │   └── interactables/           # Chest.cs, SavePoint.cs, AreaExit.cs, BossTrigger.cs
+│   │   ├── combat/
+│   │   │   ├── combat_scene.tscn        # The combat test scene (works)
+│   │   │   ├── CombatSceneController.cs
+│   │   │   ├── CombatResult.cs
+│   │   │   └── components/              # entity_slot.tscn + EntitySlot.cs (work); ActionBar, TurnOrderBar,
+│   │   │                                #   AbilityPicker, ItemPicker, TargetPicker, FloatingText,
+│   │   │                                #   CompanionToggle, BossBanner, CombatLog
+│   │   ├── overlays/
+│   │   │   ├── pause/                   # PauseMenu.cs
+│   │   │   ├── party/                   # PartyMenu.cs, MemberTab.cs, InventoryTab.cs, RosterTab.cs
+│   │   │   ├── quests/                  # QuestLog.cs, QuestGiverScreen.cs, JobBoardScreen.cs
+│   │   │   ├── shop/                    # ShopScreen.cs
+│   │   │   ├── blacksmith/              # BlacksmithScreen.cs
+│   │   │   ├── dialogue/                # DialogueBox.cs
+│   │   │   ├── settings/                # SettingsMenu.cs
+│   │   │   ├── statistics/              # StatisticsScreen.cs
+│   │   │   └── save/                    # SaveScreen.cs
+│   │   ├── popups/                      # LootPopup.cs, Toast.cs, ConfirmDialog.cs
+│   │   ├── endings/                     # GameOver.cs, Ending.cs
+│   │   └── debug/                       # DebugGridOverlay.cs (works), TestFight.cs
+│   ├── ui/
+│   │   ├── theme/                       # (empty)
+│   │   └── components/                  # HealthBar.cs, ItemSlot.cs, ItemTooltip.cs, StatRow.cs
+│   └── assets/                          # (empty) sprites/, tiles/, maps/, ui/, fonts/, audio/
 │
 ├── tests/                               # Unit tests (xUnit)
 │   ├── GameLogicTests.csproj            # Lists the test files currently switched off
@@ -168,6 +183,7 @@ RNGtheGame/
 ├── docs/
 │   ├── to_do_list.md                    # What is still to do, and the decision log
 │   ├── done.md                          # What is finished (entries move here from to_do_list.md)
+│   ├── godot_frontend_plan.md           # Planned folder/file structure of the Godot frontend
 │   ├── abilities.md
 │   ├── boss_ideas_archive.md
 │   └── player_class_system.md

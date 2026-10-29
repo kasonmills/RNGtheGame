@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scripts/CombatSceneController.cs" id="1_script"]
-[ext_resource type="Script" path="res://scripts/DebugGridOverlay.cs" id="2_griddbg"]
+[ext_resource type="Script" path="res://scenes/combat/CombatSceneController.cs" id="1_script"]
+[ext_resource type="Script" path="res://scenes/debug/DebugGridOverlay.cs" id="2_griddbg"]
 
 [node name="CombatScene" type="Control" unique_id=371184536]
 layout_mode = 3

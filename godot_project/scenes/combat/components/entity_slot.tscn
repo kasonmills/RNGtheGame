@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/EntitySlot.cs" id="1_script"]
+[ext_resource type="Script" path="res://scenes/combat/components/EntitySlot.cs" id="1_script"]
 
 [node name="EntitySlot" type="Control" unique_id=715078024]
 custom_minimum_size = Vector2(110, 150)

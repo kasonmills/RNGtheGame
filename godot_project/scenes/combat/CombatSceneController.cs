@@ -18,7 +18,7 @@ namespace RNGtheGame.Godot.Scripts
     public partial class CombatSceneController : Control
     {
         private static readonly PackedScene EntitySlotScene =
-            GD.Load<PackedScene>("res://scenes/entity_slot.tscn");
+            GD.Load<PackedScene>("res://scenes/combat/components/entity_slot.tscn");
 
         private GridContainer _partyRow = null!;
         private HFlowContainer _enemyRow = null!;
