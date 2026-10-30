@@ -68,7 +68,8 @@ namespace GameLogic.Items
         QuestItem,
         Material,
         Treasure,
-        Ammunition
+        Ammunition,
+        SpellComponent
     }
 
     /// <summary>

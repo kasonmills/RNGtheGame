@@ -17,8 +17,10 @@ namespace GameLogic.Core
         Inventory,   // Managing inventory
         Stats,       // Viewing character stats
         Dialogue,    // In conversation with NPC
-        Cutscene,     // Watching a cutscene (the opening intro before the first boss fight; later the ending)
+        Cutscene,     // Watching a cutscene (the opening intro before the first boss fight)
         Settings,      // Adjusting game settings
-        Loading       // Loading game assets
+        Loading,      // Loading game assets
+        Ending,       // The ending, after the final boss is beaten; goes to Credits
+        Credits       // The credits roll after the ending; goes back to the main menu
     }
 }

@@ -37,6 +37,9 @@ namespace GameLogic.Data
 
         // Ammunition-specific
         public string BoltType { get; set; }
+
+        // Spell component-specific
+        public string ComponentType { get; set; }
     }
 
     /// <summary>
@@ -108,6 +111,10 @@ namespace GameLogic.Data
         public int CurrentMapNodeId { get; set; }
         public int MapSeed { get; set; } // For regenerating the same map
         
+        // The final boss has been beaten on this save (the save itself is from just before
+        // that fight, so loading lets the player keep playing or fight the final boss again)
+        public bool GameCompleted { get; set; }
+
         // Timestamps
         public DateTime SaveDate { get; set; }
         public TimeSpan PlayTime { get; set; }

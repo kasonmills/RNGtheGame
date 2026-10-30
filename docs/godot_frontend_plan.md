@@ -100,7 +100,8 @@ godot_project/
 │   │
 │   ├── endings/
 │   │   ├── game_over.tscn / GameOver.cs            # Defeat screen -> load / main menu
-│   │   └── ending.tscn / Ending.cs                 # Ending cutscene + credits -> main menu
+│   │   ├── ending.tscn / Ending.cs                 # Ending cutscene -> FinishEnding() -> credits
+│   │   └── credits.tscn / Credits.cs               # Credits roll -> FinishCredits() -> main menu
 │   │
 │   └── debug/
 │       ├── debug_grid_overlay.tscn / DebugGridOverlay.cs   # The x/y coordinate grid for placing things
@@ -160,7 +161,9 @@ project starts
 | GameState | Kind | Scene |
 |---|---|---|
 | `MainMenu` | fixed | `scenes/main_menu/main_menu.tscn` |
-| `Cutscene` | fixed | `scenes/tutorial/intro_story.tscn` for the opening intro (calls `FinishIntro()` when done); later also `scenes/endings/ending.tscn` |
+| `Cutscene` | fixed | `scenes/tutorial/intro_story.tscn` for the opening intro (calls `FinishIntro()` when done) |
+| `Ending` | fixed | `scenes/endings/ending.tscn` - shows `GetEndingText()`, calls `FinishEnding()` when done (added 2026-10-30) |
+| `Credits` | fixed | `scenes/endings/credits.tscn` - shows `GetCreditsText()`, calls `FinishCredits()` when done -> main menu (added 2026-10-30) |
 | `Tutorial` | overlay | Tutorial layer over the combat scene (lesson hints, `TutorialMessage`). Pushed on top of `Combat` when the Skarn fight starts, popped back to `Combat` once every action has been tried (decided 2026-10-28) |
 | `Playing` | fixed | `scenes/world/world.tscn` |
 | `Combat` | fixed | `scenes/combat/combat_scene.tscn` |
@@ -172,7 +175,6 @@ project starts
 | `Settings` | overlay | `scenes/overlays/settings/settings_menu.tscn` |
 | `Loading` | - | probably not needed as a screen; decide with to-do 17 under `core/` |
 | _missing_ | overlay | party menu, statistics, quest log, quest giver / job board, blacksmith, save screen |
-| _missing_ | fixed | ending |
 
 ---
 
@@ -199,7 +201,8 @@ project starts
 | Save | `overlays/save/` | `SaveGame`, save-point check |
 | Loot popup | `popups/loot_popup` | result of `TriggerLootEvent` |
 | Game over | `endings/game_over` | `GameManager` state |
-| Ending + credits | `endings/ending` | ending state (not built) |
+| Ending | `endings/ending` | `GetEndingText`, `FinishEnding` |
+| Credits | `endings/credits` | `GetCreditsText`, `FinishCredits` |
 
 ---
 
@@ -238,7 +241,7 @@ project starts
 
 **`game_logic` hook-ups the frontend needs (most already logged in `to_do_list.md`):**
 - 🧪 **Written 2026-10-28, needs testing**: `GameManager.CurrentState`, and read access to `Player`, `Party`, `Map`, `Quests`, `QuestGiver`, `Bosses`, `Settings`, `Statistics`. `LoadGame(slot)` returns true/false and `SaveGame(slot)` takes a slot, neither prints. `SaveManager` is static, so the load screen calls `SaveManager.SaveExists()` / `GetSaveFileInfo()` directly.
-- **Missing `GameState` values**: party menu, statistics, quest log, quest giver / job board, blacksmith, save screen, ending (to-do 17 under `core/`).
+- **Missing `GameState` values**: party menu, statistics, quest log, quest giver / job board, blacksmith, save screen (to-do 17 under `core/`). `Ending` and `Credits` added 2026-10-30.
 - **Current area**: which `MapNode` the player is in and where they entered from, so `World` can load the right area scene and spawn point.
 - **Can-save-here check** tied to save points (to-do 10 under `core/`).
 - **Loot returned, not printed** (to-do 15 under `core/`).

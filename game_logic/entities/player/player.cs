@@ -237,9 +237,9 @@ namespace GameLogic.Entities.Player
         }
 
         // Add item to inventory
-        public void AddToInventory(Item item)
+        public bool AddToInventory(Item item)
         {
-            Inventory.AddItem(item);
+            return Inventory.AddItem(item);
         }
 
         // Equip weapon

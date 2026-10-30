@@ -34,7 +34,6 @@ namespace GameLogic.Data
             if (!Directory.Exists(SaveDirectory))
             {
                 Directory.CreateDirectory(SaveDirectory);
-                Console.WriteLine($"Created save directory: {SaveDirectory}");
             }
         }
 
@@ -48,15 +47,42 @@ namespace GameLogic.Data
         /// <param name="questManager">Quest manager containing quest progression state</param>
         /// <param name="gameSettings">Game settings to save</param>
         /// <param name="statistics">Statistics tracker to save</param>
+        /// <param name="errorMessage">Why the save failed (for a pop-up), or null on success</param>
+        /// <param name="gameCompleted">Whether the final boss has been beaten on this save</param>
         /// <returns>True if save was successful</returns>
-        public static bool SaveGame(Player player, string saveSlotName, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null)
+        public static bool SaveGame(Player player, string saveSlotName, out string errorMessage, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false)
         {
+            SaveData saveData;
             try
             {
-                Initialize();
+                saveData = CreateSaveData(player, bossManager, mapManager, questManager, gameSettings, statistics, gameCompleted);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Could not save the game: {ex.Message}";
+                return false;
+            }
 
+            return WriteSaveData(saveData, saveSlotName, out errorMessage);
+        }
+
+        /// <summary>
+        /// Save without asking why it failed (tests, auto-save, quick-save)
+        /// </summary>
+        public static bool SaveGame(Player player, string saveSlotName, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false)
+        {
+            return SaveGame(player, saveSlotName, out _, bossManager, mapManager, questManager, gameSettings, statistics, gameCompleted);
+        }
+
+        /// <summary>
+        /// Build a SaveData of the current game in memory without writing it - e.g. the
+        /// snapshot taken when the final boss fight starts, written later with WriteSaveData.
+        /// </summary>
+        public static SaveData CreateSaveData(Player player, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false)
+        {
                 // Create SaveData from player
                 SaveData saveData = CreateSaveDataFromPlayer(player, mapManager);
+                saveData.GameCompleted = gameCompleted;
 
                 // Save boss progression data
                 if (bossManager != null)
@@ -111,6 +137,19 @@ namespace GameLogic.Data
                     SaveStatisticsToSaveData(saveData, statistics);
                 }
 
+                return saveData;
+        }
+
+        /// <summary>
+        /// Write an already-built SaveData to a save slot. On failure, errorMessage says why
+        /// (for a pop-up); null on success.
+        /// </summary>
+        public static bool WriteSaveData(SaveData saveData, string saveSlotName, out string errorMessage)
+        {
+            try
+            {
+                Initialize();
+
                 // Serialize to JSON
                 string json = JsonSerializer.Serialize(saveData, new JsonSerializerOptions
                 {
@@ -121,12 +160,12 @@ namespace GameLogic.Data
                 string filePath = GetSaveFilePath(saveSlotName);
                 File.WriteAllText(filePath, json);
 
-                Console.WriteLine($"Game saved successfully to: {filePath}");
+                errorMessage = null;
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving game: {ex.Message}");
+                errorMessage = $"Could not save the game: {ex.Message}";
                 return false;
             }
         }
@@ -217,6 +256,13 @@ namespace GameLogic.Data
                 {
                     data.InventoryItems.Add(SerializeItem(item));
                 }
+
+                // The component pouch saves in the same list; loading routes them back
+                // to the pouch through Inventory.AddItem
+                foreach (var component in player.Inventory.Pouch.Stacks)
+                {
+                    data.InventoryItems.Add(SerializeItem(component));
+                }
             }
 
             return data;
@@ -270,6 +316,11 @@ namespace GameLogic.Data
             {
                 serialized.ItemType = "Ammunition";
                 serialized.BoltType = ammo.Type.ToString();
+            }
+            else if (item is SpellComponent component)
+            {
+                serialized.ItemType = "SpellComponent";
+                serialized.ComponentType = component.Type.ToString();
             }
             else if (item is QuestItem)
             {
@@ -341,6 +392,12 @@ namespace GameLogic.Data
                 case "Ammunition":
                     item = Enum.TryParse(serialized.BoltType, out BoltType boltType)
                         ? new Ammunition(boltType, serialized.Quantity)
+                        : null;
+                    break;
+
+                case "SpellComponent":
+                    item = Enum.TryParse(serialized.ComponentType, out SpellComponentType componentType)
+                        ? new SpellComponent(componentType, serialized.Quantity)
                         : null;
                     break;
 

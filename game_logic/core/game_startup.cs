@@ -36,6 +36,7 @@ namespace GameLogic.Core
         public QuestGiver QuestGiver { get; set; }
         public GameSettings GameSettings { get; set; }
         public StatisticsTracker Statistics { get; set; }
+        public bool GameCompleted { get; set; }
     }
 
     /// <summary>
@@ -193,7 +194,8 @@ namespace GameLogic.Core
                 QuestManager = questManager,
                 QuestGiver = questGiver,
                 GameSettings = gameSettings,
-                Statistics = statistics
+                Statistics = statistics,
+                GameCompleted = saveData.GameCompleted
             };
         }
 

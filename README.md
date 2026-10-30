@@ -21,7 +21,8 @@ RNGtheGame/
 │   │   ├── player/
 │   │   │   ├── player.cs                # Player (stats, gold, equipment, ability)
 │   │   │   ├── player_class.cs          # Player classes (post-MVP, dormant)
-│   │   │   └── player_inventory.cs      # Inventory
+│   │   │   ├── player_inventory.cs      # Inventory (100 slots)
+│   │   │   └── component_pouch.cs       # Spell component pouch (no slots, 99 per component)
 │   │   │
 │   │   ├── enemies/
 │   │   │   ├── enemy_base.cs            # Base enemy
@@ -87,6 +88,7 @@ RNGtheGame/
 │   │   ├── armor.cs
 │   │   ├── consumable.cs                # Potions and other usable items
 │   │   ├── ammunition.cs                # Special crossbow bolts (Boon's special shots)
+│   │   ├── spell_component.cs           # Spell components (crystals, lucky/unlucky items, mushrooms, fruits, bugs, herbs)
 │   │   ├── quest_item.cs
 │   │   └── item_database.cs             # Every item definition
 │   │
@@ -158,7 +160,7 @@ RNGtheGame/
 │   │   │   ├── statistics/              # StatisticsScreen.cs
 │   │   │   └── save/                    # SaveScreen.cs
 │   │   ├── popups/                      # LootPopup.cs, Toast.cs, ConfirmDialog.cs
-│   │   ├── endings/                     # GameOver.cs, Ending.cs
+│   │   ├── endings/                     # GameOver.cs, Ending.cs, Credits.cs
 │   │   └── debug/                       # DebugGridOverlay.cs (works), TestFight.cs
 │   ├── ui/
 │   │   ├── theme/                       # (empty)

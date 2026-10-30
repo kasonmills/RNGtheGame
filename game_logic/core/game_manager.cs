@@ -39,6 +39,14 @@ namespace GameLogic.Core
         // === Overworld Encounters ===
         private List<World.OverworldEnemySpawn> _activeOverworldEnemies;
 
+        // The final boss has been beaten on this save (kept on every later save)
+        private bool _gameCompleted;
+        // The slot this game was last loaded from or saved to - the final-boss win writes here
+        private string _currentSaveSlot = "save1";
+        // The game exactly as it was when the final boss fight started; written to the save,
+        // marked completed, if the fight is won
+        private Data.SaveData _preFinalBossSnapshot;
+
         /// <summary>
         /// The single running GameManager instance. Minimum viable access pattern for a
         /// Godot script to reach GameManager.Instance.Combat, etc.
@@ -109,6 +117,18 @@ namespace GameLogic.Core
         /// same as Settings.
         /// </summary>
         public StatisticsTracker Statistics => _statistics;
+
+        /// <summary>
+        /// Whether the final boss has been beaten on this save. A completed save loads to just
+        /// before the final boss, so the player can keep playing or fight it again.
+        /// </summary>
+        public bool IsGameCompleted => _gameCompleted;
+
+        /// <summary>
+        /// Why the last save failed, for a pop-up (null if it worked). Set by SaveGame() and by
+        /// the save written when the final boss is beaten.
+        /// </summary>
+        public string LastSaveError { get; private set; }
 
         /// <summary>
         /// Fired whenever the game state changes (old state, new state) via ChangeState/PushState/PopState.
@@ -188,6 +208,8 @@ namespace GameLogic.Core
             _questManager = result.QuestManager;
             _questGiver = result.QuestGiver;
             _combatManager.Difficulty = difficulty; // Harder difficulties lower the party's hit chance
+            _gameCompleted = false;
+            _preFinalBossSnapshot = null;
 
             ChangeState(GameState.Cutscene); // Opening intro; FinishIntro() then starts the tutorial fight
             _isRunning = true;
@@ -289,6 +311,9 @@ namespace GameLogic.Core
                 _bossManager = result.BossManager;
                 _questManager = result.QuestManager;
                 _questGiver = result.QuestGiver;
+                _gameCompleted = result.GameCompleted;
+                _currentSaveSlot = saveSlotName;
+                _preFinalBossSnapshot = null;
 
                 ChangeState(GameState.Playing);
                 _isRunning = true;
@@ -560,14 +585,15 @@ namespace GameLogic.Core
         }
 
         /// <summary>
-        /// Trigger a loot event - called by Explore() or MapManager
-        /// Works for both text-based AND Godot versions
+        /// Open a treasure chest - called by Explore() or MapManager. Rolls the chest loot
+        /// table, adds the gold and every item that fits to the bag, and returns what
+        /// happened so the frontend can show a loot popup. Items that don't fit (bag full)
+        /// come back in ItemsLeftBehind and stay in the chest.
+        /// TODO-GODOT: show the returned loot in a popup; keep ItemsLeftBehind on the chest
+        /// so the player can come back for them.
         /// </summary>
-        public void TriggerLootEvent()
+        public Progression.LootResult TriggerLootEvent()
         {
-            // TODO-GODOT: loot event flavor text + item found messages -> loot popup
-            Console.WriteLine("You found a treasure chest!");
-
             // Chest loot rolls through RNGManager (via the adapter) so it respects the
             // player's chosen RNG algorithm and counts toward RNG statistics, same as
             // every other roll in the game.
@@ -577,23 +603,19 @@ namespace GameLogic.Core
             var loot = lootGenerator.GenerateLoot(lootTable, _player.Level);
 
             _player.Gold += loot.Gold;
-            Console.WriteLine($"You gained {loot.Gold} gold!");
 
-            if (loot.Items.Count > 0)
+            foreach (var item in loot.Items.ToList())
             {
-                foreach (var item in loot.Items)
+                // All or nothing - anything that doesn't fit (bag full, or a stack would go
+                // over 99) stays in the chest; the inventory's ItemNotAdded event tells the player
+                if (!_player.AddToInventory(item))
                 {
-                    _player.AddToInventory(item);
-                    Console.WriteLine($"Found: {item.GetDisplayName()}");
+                    loot.Items.Remove(item);
+                    loot.ItemsLeftBehind.Add(item);
                 }
             }
-            else
-            {
-                Console.WriteLine("The chest held only gold.");
-            }
 
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
+            return loot;
         }
 
         /// <summary>
@@ -714,7 +736,11 @@ namespace GameLogic.Core
             _statistics.UpdateCurrentLevel(_player.Level);
             _statistics.RecordGameSave();
 
-            return Data.SaveManager.SaveGame(_player, saveSlotName, _bossManager, _mapManager, _questManager, _gameSettings, _statistics);
+            bool saved = Data.SaveManager.SaveGame(_player, saveSlotName, out string error, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, _gameCompleted);
+            LastSaveError = error;
+            if (saved)
+                _currentSaveSlot = saveSlotName;
+            return saved;
         }
 
         /// <summary>
@@ -873,6 +899,11 @@ namespace GameLogic.Core
                 return;
             }
 
+            // Snapshot the game as it is right now, before the fight changes anything. A win
+            // writes this to the save marked completed, so loading it puts the player back
+            // here - free to keep playing or fight the final boss again (decided 2026-10-30).
+            _preFinalBossSnapshot = Data.SaveManager.CreateSaveData(_player, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, gameCompleted: true);
+
             ChangeState(GameState.Combat);
 
             void OnCombatFinished(CombatResult result)
@@ -881,16 +912,25 @@ namespace GameLogic.Core
 
                 if (result.Outcome == CombatOutcome.Lost)
                 {
+                    _preFinalBossSnapshot = null;
                     ChangeState(GameState.GameOver);
                     return;
                 }
 
-                // TODO-GODOT: a win goes to the ending cutscene/credits state once it exists
-                // (to-do 16 under core/) - back to Playing until then
                 if (result.Outcome == CombatOutcome.Won)
                 {
-                    Console.WriteLine("\n🎉 YOU HAVE COMPLETED THE GAME! 🎉");
+                    _gameCompleted = true;
+                    // TODO-GODOT: if this fails, show LastSaveError in a pop-up on the ending screen
+                    Data.SaveManager.WriteSaveData(_preFinalBossSnapshot, _currentSaveSlot, out string error);
+                    LastSaveError = error;
+                    _preFinalBossSnapshot = null;
+
+                    // Ending, then credits (FinishEnding / FinishCredits), then the main menu
+                    ChangeState(GameState.Ending);
+                    return;
                 }
+
+                _preFinalBossSnapshot = null;
                 ChangeState(GameState.Playing);
             }
 
@@ -901,6 +941,46 @@ namespace GameLogic.Core
                 _bossManager,
                 _combatManager,
                 _partyManager.ActiveCompanions);
+        }
+
+        /// <summary>
+        /// Text for the ending scene. PLACEHOLDER - the story content isn't written yet.
+        /// </summary>
+        public string GetEndingText()
+        {
+            return "The final battle is won. (Ending not written yet.)";
+        }
+
+        /// <summary>
+        /// Text for the credits roll. PLACEHOLDER - to be filled in before release.
+        /// </summary>
+        public string GetCreditsText()
+        {
+            return "RNG the Game\n\n(Credits not written yet.)";
+        }
+
+        /// <summary>
+        /// The ending has finished playing - roll the credits.
+        /// TODO-GODOT: call this when the ending scene finishes or the player skips it.
+        /// </summary>
+        public void FinishEnding()
+        {
+            if (_currentState != GameState.Ending)
+                return;
+
+            ChangeState(GameState.Credits);
+        }
+
+        /// <summary>
+        /// The credits have finished - back to the main menu.
+        /// TODO-GODOT: call this when the credits scene finishes or the player skips it.
+        /// </summary>
+        public void FinishCredits()
+        {
+            if (_currentState != GameState.Credits)
+                return;
+
+            QuitToMainMenu();
         }
 
         /// <summary>

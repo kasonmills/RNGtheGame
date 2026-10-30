@@ -15,20 +15,39 @@ namespace GameLogic.Entities.Player
         public List<Item> Items { get; private set; }
         public int MaxCapacity { get; set; }
 
+        /// <summary>
+        /// Spell components live here, not in Items, and take no inventory slots
+        /// </summary>
+        public ComponentPouch Pouch { get; private set; }
+
         public PlayerInventory(int maxCapacity = 100)
         {
             Items = new List<Item>();
             MaxCapacity = maxCapacity;
+            Pouch = new ComponentPouch();
         }
 
         /// <summary>
-        /// Add an item to inventory with smart stacking
+        /// Fired when an item can't be added, with the message to show the player (bag full,
+        /// or a stack would go over 99). Nothing is added in that case - the item stays where
+        /// it was found.
+        /// TODO-GODOT: Notifier shows the message as a toast/pop-up.
+        /// </summary>
+        public event Action<Item, string> ItemNotAdded;
+
+        /// <summary>
+        /// Add an item to inventory with smart stacking. Spell components go to the pouch.
+        /// All or nothing: if the bag is full, or a stack (bolts, components, potions...) would
+        /// go over 99, nothing is added, ItemNotAdded fires and it returns false.
         /// </summary>
         public bool AddItem(Item item)
         {
-            if (Items.Count >= MaxCapacity && !CanStack(item))
+            if (item is SpellComponent component)
             {
-                Console.WriteLine($"Inventory full! Cannot add {item.Name}.");
+                if (Pouch.Add(component))
+                    return true;
+
+                ItemNotAdded?.Invoke(item, $"You can only carry {ComponentPouch.MaxPerComponent} {item.Name}. Nothing more can be added - it was left behind.");
                 return false;
             }
 
@@ -38,15 +57,22 @@ namespace GameLogic.Entities.Player
                 Item existingStack = FindStackableMatch(item);
                 if (existingStack != null)
                 {
-                    existingStack.AddToStack(item.Quantity);
-                    Console.WriteLine($"{item.Name} x{item.Quantity} added to existing stack.");
-                    return true;
+                    if (existingStack.AddToStack(item.Quantity))
+                        return true;
+
+                    ItemNotAdded?.Invoke(item, $"You can only carry {existingStack.MaxStackSize} {item.Name}. Nothing more can be added - it was left behind.");
+                    return false;
                 }
+            }
+
+            if (Items.Count >= MaxCapacity)
+            {
+                ItemNotAdded?.Invoke(item, $"Your bag is full. {item.Name} was left behind.");
+                return false;
             }
 
             // Add as new item
             Items.Add(item);
-            Console.WriteLine($"{item.GetDisplayName()} added to inventory.");
             return true;
         }
 
@@ -106,14 +132,6 @@ namespace GameLogic.Entities.Player
             }
 
             return null;
-        }
-
-        /// <summary>
-        /// Check if an item can stack with existing items
-        /// </summary>
-        private bool CanStack(Item item)
-        {
-            return item.IsStackable && FindStackableMatch(item) != null;
         }
 
         /// <summary>
@@ -305,7 +323,7 @@ namespace GameLogic.Entities.Player
         public void Clear()
         {
             Items.Clear();
-            Console.WriteLine("Inventory cleared.");
+            Pouch.Clear();
         }
     }
 }

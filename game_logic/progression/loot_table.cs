@@ -101,10 +101,14 @@ namespace GameLogic.Progression
         public List<Item> Items { get; set; }
         public int Gold { get; set; }
 
+        // Items that didn't fit in the bag (chests leave them behind)
+        public List<Item> ItemsLeftBehind { get; set; }
+
         public LootResult()
         {
             Items = new List<Item>();
             Gold = 0;
+            ItemsLeftBehind = new List<Item>();
         }
 
         public void AddItem(Item item)
@@ -210,14 +214,21 @@ namespace GameLogic.Progression
                 if (!string.IsNullOrEmpty(selectedEntry.SpecificItem))
                 {
                     item = ItemDatabase.GetItemByName(selectedEntry.SpecificItem, itemLevel);
-                    item.Rarity = rarity; // Override rarity
+                }
+                else if (selectedEntry.Category == ItemCategory.SpellComponent)
+                {
+                    // Components keep their fixed rarity - the roll picks which one drops.
+                    // Shops only stock components flagged as purchasable.
+                    item = ItemDatabase.GetRandomSpellComponent(_rng, rarity, purchasableOnly: table.SourceType == LootSourceType.Shop);
                 }
                 else
                 {
                     // Generate random item of the selected category
                     item = ItemDatabase.GetRandomItem(selectedEntry.Category, _rng, itemLevel);
-                    item.Rarity = rarity; // Override rarity
                 }
+
+                if (!(item is SpellComponent))
+                    item.Rarity = rarity; // Override rarity
 
                 // A lower rolled rarity can drop the item's level cap below its level
                 if (item is Weapon weapon && weapon.Level > weapon.MaxLevel)
@@ -357,6 +368,7 @@ namespace GameLogic.Progression
             table.AddEntry(new LootEntry(ItemCategory.Consumable, weight: 50, maxLevel: 10));
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 20, maxRarity: ItemRarity.Uncommon));
             table.AddEntry(new LootEntry(ItemCategory.Armor, weight: 20, maxRarity: ItemRarity.Uncommon));
+            table.AddEntry(new LootEntry(ItemCategory.SpellComponent, weight: 30, minQuantity: 1, maxQuantity: 2)); // placeholder weight
 
             return table;
         }
@@ -382,6 +394,7 @@ namespace GameLogic.Progression
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 35, maxRarity: ItemRarity.Rare));
             table.AddEntry(new LootEntry(ItemCategory.Armor, weight: 35, maxRarity: ItemRarity.Rare));
             table.AddEntry(new LootEntry(ItemCategory.Consumable, weight: 30, maxLevel: 10, minQuantity: 1, maxQuantity: 3));
+            table.AddEntry(new LootEntry(ItemCategory.SpellComponent, weight: 25, minQuantity: 1, maxQuantity: 3)); // placeholder weight
 
             return table;
         }
@@ -407,6 +420,7 @@ namespace GameLogic.Progression
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 40, minRarity: ItemRarity.Uncommon));
             table.AddEntry(new LootEntry(ItemCategory.Armor, weight: 40, minRarity: ItemRarity.Uncommon));
             table.AddEntry(new LootEntry(ItemCategory.Consumable, weight: 20, minLevel: 5, maxLevel: 10, minQuantity: 2, maxQuantity: 5));
+            table.AddEntry(new LootEntry(ItemCategory.SpellComponent, weight: 15, minQuantity: 2, maxQuantity: 4)); // placeholder weight
 
             return table;
         }
@@ -432,6 +446,7 @@ namespace GameLogic.Progression
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 30));
             table.AddEntry(new LootEntry(ItemCategory.Armor, weight: 30));
             table.AddEntry(new LootEntry(ItemCategory.Consumable, weight: 40, minQuantity: 1, maxQuantity: 5));
+            table.AddEntry(new LootEntry(ItemCategory.SpellComponent, weight: 30, minQuantity: 1, maxQuantity: 3)); // placeholder weight
 
             return table;
         }
@@ -473,6 +488,8 @@ namespace GameLogic.Progression
             table.AddEntry(new LootEntry(ItemCategory.Weapon, weight: 35));
             table.AddEntry(new LootEntry(ItemCategory.Armor, weight: 35));
             table.AddEntry(new LootEntry(ItemCategory.Consumable, weight: 30, minQuantity: 1, maxQuantity: 5));
+            // Only purchasable components - LootGenerator filters on the Shop source type
+            table.AddEntry(new LootEntry(ItemCategory.SpellComponent, weight: 20, minQuantity: 1, maxQuantity: 5)); // placeholder weight
 
             return table;
         }

@@ -5841,6 +5841,10 @@ namespace GameLogic.Items
             try { return GetQuestItem(itemName); }
             catch (ArgumentException) { }
 
+            // Try spell components
+            try { return GetSpellComponent(itemName, quantity); }
+            catch (ArgumentException) { }
+
             throw new ArgumentException($"Item '{itemName}' not found in the database.");
         }
 
@@ -5854,8 +5858,50 @@ namespace GameLogic.Items
                 ItemCategory.Weapon => GetRandomWeapon(rng, level),
                 ItemCategory.Armor => GetRandomArmor(rng, level),
                 ItemCategory.Consumable => GetRandomConsumable(rng, level),
+                ItemCategory.SpellComponent => GetRandomSpellComponent(rng),
                 _ => throw new ArgumentException($"Cannot generate random item for category {category}")
             };
+        }
+
+        /// <summary>
+        /// Get a spell component by its display name
+        /// </summary>
+        public static SpellComponent GetSpellComponent(string componentName, int quantity = 1)
+        {
+            var type = SpellComponent.FindByName(componentName);
+            if (type == null)
+                throw new ArgumentException($"Spell component '{componentName}' not found in database.");
+            return new SpellComponent(type.Value, quantity);
+        }
+
+        /// <summary>
+        /// Get a random spell component. Components have fixed rarities, so a rolled rarity
+        /// picks among components of that rarity; if none exist at it, the nearest lower
+        /// rarity is used (then the nearest higher). No rarity = any component.
+        /// purchasableOnly limits the pick to components a trader can stock.
+        /// </summary>
+        public static SpellComponent GetRandomSpellComponent(Random rng, ItemRarity? rarity = null, bool purchasableOnly = false)
+        {
+            var pool = SpellComponent.GetAllTypes(purchasableOnly);
+            if (pool.Count == 0)
+                throw new ArgumentException("No spell components available to generate.");
+
+            if (rarity != null)
+            {
+                var byRarity = Enum.GetValues(typeof(ItemRarity)).Cast<ItemRarity>()
+                    .OrderBy(r => r <= rarity.Value ? rarity.Value - r : 100 + (r - rarity.Value));
+                foreach (var r in byRarity)
+                {
+                    var matches = pool.Where(t => SpellComponent.GetRarity(t) == r).ToList();
+                    if (matches.Count > 0)
+                    {
+                        pool = matches;
+                        break;
+                    }
+                }
+            }
+
+            return new SpellComponent(pool[rng.Next(pool.Count)]);
         }
 
         private static Weapon GetRandomWeapon(Random rng, int level)
