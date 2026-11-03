@@ -195,7 +195,7 @@ RNGtheGame/
 │
 ├── .githooks/                           # Shared git hooks (post-merge, pre-push)
 ├── .vscode/
-├── Program.cs                           # Console entry point (to be cut down - Godot is the way in)
+├── Program.cs                           # Console entry point - only says the game is played through Godot
 ├── RNGTheGame.csproj                    # Console project
 ├── RNGtheGame.sln                       # Solution: console app, game_logic, tests, Godot project
 ├── SRS.md                               # Original requirements document (to be rewritten at the end)
@@ -279,9 +279,11 @@ dotnet test -v detailed
 # Build the project
 dotnet build
 
-# Run console version
+# The console program only prints that the game is played through Godot
 dotnet run
 ```
+
+To play, open `godot_project/` in Godot.
 
 ## Design Principles
 

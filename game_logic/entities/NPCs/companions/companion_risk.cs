@@ -18,6 +18,13 @@ namespace GameLogic.Entities.NPCs.Companions
 
         private int _playerMaxHealthBonus = 0; // Track the bonus we applied
 
+        // The max health he added to the player - saved so a load can still take it off later
+        public override int PassiveBonusState
+        {
+            get => _playerMaxHealthBonus;
+            set => _playerMaxHealthBonus = value;
+        }
+
         public RoyalGuardArmorAbility ArmorAbility { get; }
 
         public CompanionRisk(int startingLevel = 1)

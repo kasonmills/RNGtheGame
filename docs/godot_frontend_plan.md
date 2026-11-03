@@ -85,7 +85,7 @@ godot_project/
 │   │   ├── quests/
 │   │   │   ├── quest_log.tscn / QuestLog.cs                    # All quests, set tracked quest
 │   │   │   ├── quest_giver_screen.tscn / QuestGiverScreen.cs   # Boss quests: accept, claim
-│   │   │   └── job_board_screen.tscn / JobBoardScreen.cs       # Side jobs: accept, claim
+│   │   │   └── (no job board in the MVP - decided 2026-11-03; NPCs give their own unlock quests)
 │   │   ├── shop/shop_screen.tscn / ShopScreen.cs               # Stock + prices, buy, sell, player gold
 │   │   ├── blacksmith/blacksmith_screen.tscn / BlacksmithScreen.cs  # Upgradable gear, cost, weapon upgrade-path choice
 │   │   ├── dialogue/dialogue_box.tscn / DialogueBox.cs         # NPC / story text box (GameState.Dialogue)
@@ -168,13 +168,18 @@ project starts
 | `Playing` | fixed | `scenes/world/world.tscn` |
 | `Combat` | fixed | `scenes/combat/combat_scene.tscn` |
 | `GameOver` | fixed | `scenes/endings/game_over.tscn` |
-| `Paused` | overlay | `scenes/overlays/pause/pause_menu.tscn` |
-| `Inventory` + `Stats` | overlay | `scenes/overlays/party/party_menu.tscn` (one menu replaces both) |
-| `Shopping` | overlay | `scenes/overlays/shop/shop_screen.tscn` |
-| `Dialogue` | overlay | `scenes/overlays/dialogue/dialogue_box.tscn` |
-| `Settings` | overlay | `scenes/overlays/settings/settings_menu.tscn` |
-| `Loading` | - | probably not needed as a screen; decide with to-do 17 under `core/` |
-| _missing_ | overlay | party menu, statistics, quest log, quest giver / job board, blacksmith, save screen |
+| `Paused` | overlay | `scenes/overlays/pause/pause_menu.tscn` - `OpenPauseMenu`/`ClosePauseMenu`, from Playing, Combat or Tutorial |
+| `PartyMenu` | overlay | `scenes/overlays/party/party_menu.tscn` (one menu; replaced the old `Inventory` + `Stats` states) - `OpenPartyMenu`/`ClosePartyMenu`, from Playing or Paused |
+| `QuestLog` | overlay | `scenes/overlays/quests/quest_log.tscn` - `OpenQuestLog`/`CloseQuestLog`, from Playing or Paused |
+| `Statistics` | overlay | `scenes/overlays/statistics/statistics_screen.tscn` - `OpenStatistics`/`CloseStatistics`, from Playing or Paused |
+| `Settings` | overlay | `scenes/overlays/settings/settings_menu.tscn` - `OpenSettings`/`CloseSettings`, from MainMenu or Paused |
+| `SaveScreen` | overlay | `scenes/overlays/save/save_screen.tscn` - `OpenSaveScreen`/`CloseSaveScreen`, from Playing after the tutorial (save-point check to come) |
+| `Dialogue` | overlay | `scenes/overlays/dialogue/dialogue_box.tscn` - `OpenDialogue(npc)`/`CloseDialogue`, from Playing; reads `CurrentDialogueNpc` |
+| `Shopping` | overlay | `scenes/overlays/shop/shop_screen.tscn` - `OpenShop(shop)`/`CloseShop`, from Playing; reads `CurrentShop` |
+| `Blacksmith` | overlay | `scenes/overlays/blacksmith/blacksmith_screen.tscn` - `OpenBlacksmith(smith)`/`CloseBlacksmith`, from Playing; reads `CurrentBlacksmith` |
+| `QuestGiver` | overlay | `scenes/overlays/quests/quest_giver_screen.tscn` - `OpenQuestGiver`/`CloseQuestGiver`, from Playing |
+
+`Loading` was removed (2026-11-03): if a loading screen is ever needed, Godot shows it itself; the game logic never waits in a loading state. There is no job board in the MVP (decided 2026-11-03): each shop/NPC hands out its own unlock quest, so `job_board_screen.tscn` is not needed. Every Open returns false and changes nothing when called from a state not listed; every Close only works while its screen is on top.
 
 ---
 
@@ -192,7 +197,7 @@ project starts
 | Combat result | `combat/combat_result` | `CombatFinished` / `CombatResult` |
 | Pause | `overlays/pause/` | `PushState`/`PopState`, `QuitToMainMenu`, `QuitGame` |
 | Party menu | `overlays/party/` | `Player`, `Player.Inventory`, `PartyManager` |
-| Quest log / giver / job board | `overlays/quests/` | `QuestManager` |
+| Quest log / giver | `overlays/quests/` | `QuestManager` |
 | Shop | `overlays/shop/` | `ShopKeeper` buy/sell/prices |
 | Blacksmith | `overlays/blacksmith/` | `Blacksmith` upgrade methods |
 | Dialogue | `overlays/dialogue/` | NPC text (source to design) |
@@ -241,7 +246,7 @@ project starts
 
 **`game_logic` hook-ups the frontend needs (most already logged in `to_do_list.md`):**
 - 🧪 **Written 2026-10-28, needs testing**: `GameManager.CurrentState`, and read access to `Player`, `Party`, `Map`, `Quests`, `QuestGiver`, `Bosses`, `Settings`, `Statistics`. `LoadGame(slot)` returns true/false and `SaveGame(slot)` takes a slot, neither prints. `SaveManager` is static, so the load screen calls `SaveManager.SaveExists()` / `GetSaveFileInfo()` directly.
-- **Missing `GameState` values**: party menu, statistics, quest log, quest giver / job board, blacksmith, save screen (to-do 17 under `core/`). `Ending` and `Credits` added 2026-10-30.
+- **Missing `GameState` values**: party menu, statistics, quest log, quest giver / job board, blacksmith, save screen (to-do 17 under `core/`). `Ending` and `Credits` added 2026-10-30. 🧪 **All added 2026-11-03, needs testing** - see the state table above.
 - **Current area**: which `MapNode` the player is in and where they entered from, so `World` can load the right area scene and spawn point.
 - **Can-save-here check** tied to save points (to-do 10 under `core/`).
 - **Loot returned, not printed** (to-do 15 under `core/`).

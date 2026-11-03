@@ -43,6 +43,27 @@ namespace GameLogic.Data
     }
 
     /// <summary>
+    /// Serializable representation of a recruited companion (fighting or benched)
+    /// </summary>
+    public class SerializedCompanion
+    {
+        public string CompanionType { get; set; }  // Class name, e.g. "CompanionRisk"
+        public int Level { get; set; }
+        public int Experience { get; set; }
+        public int Health { get; set; }
+        public int MaxHealth { get; set; }
+        public bool InFightingParty { get; set; }  // false = benched
+        public bool StartingItemsGiven { get; set; }
+        public int PassiveBonusState { get; set; }
+        public SerializedItem EquippedWeapon { get; set; }
+        public SerializedItem EquippedArmor { get; set; }
+
+        // In the order of CompanionBase.GetCombatAbilities()
+        public List<int> AbilityLevels { get; set; } = new List<int>();
+        public List<int> AbilityExperience { get; set; } = new List<int>();
+    }
+
+    /// <summary>
     /// Serializable representation of a quest objective
     /// </summary>
     public class SerializedQuestObjective
@@ -103,6 +124,9 @@ namespace GameLogic.Data
         // Inventory (list of serialized items with full properties)
         public List<SerializedItem> InventoryItems { get; set; }
 
+        // Every recruited companion, fighting or benched (in roster order)
+        public List<SerializedCompanion> Companions { get; set; }
+
         // Legacy support - keep old weapon/armor names for backward compatibility
         public string EquippedWeaponName { get; set; }
         public string EquippedArmorName { get; set; }
@@ -114,6 +138,11 @@ namespace GameLogic.Data
         // The final boss has been beaten on this save (the save itself is from just before
         // that fight, so loading lets the player keep playing or fight the final boss again)
         public bool GameCompleted { get; set; }
+
+        // The opening tutorial (intro + Skarn fight) is finished. Saving is refused until it
+        // is, so this is always true in a save; stored so the rule isn't hidden (core/ to-do 9).
+        // Defaults to true so saves made before this field existed load as finished.
+        public bool TutorialCompleted { get; set; } = true;
 
         // Timestamps
         public DateTime SaveDate { get; set; }
@@ -205,6 +234,7 @@ namespace GameLogic.Data
         public SaveData()
         {
             InventoryItems = new List<SerializedItem>();
+            Companions = new List<SerializedCompanion>();
             SaveDate = DateTime.Now;
             DefeatedBossIds = new List<string>();
             BossTimesDefeated = new Dictionary<string, int>();

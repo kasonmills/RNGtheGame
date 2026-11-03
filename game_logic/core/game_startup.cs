@@ -37,6 +37,7 @@ namespace GameLogic.Core
         public GameSettings GameSettings { get; set; }
         public StatisticsTracker Statistics { get; set; }
         public bool GameCompleted { get; set; }
+        public List<Entities.NPCs.Companions.CompanionBase> Companions { get; set; } = new List<Entities.NPCs.Companions.CompanionBase>();
     }
 
     /// <summary>
@@ -195,24 +196,36 @@ namespace GameLogic.Core
                 QuestGiver = questGiver,
                 GameSettings = gameSettings,
                 Statistics = statistics,
-                GameCompleted = saveData.GameCompleted
+                GameCompleted = saveData.GameCompleted,
+                Companions = SaveManager.LoadCompanions(saveData)
             };
         }
 
         /// <summary>
         /// Descriptive text for a difficulty-select screen (immutable choice per save file).
         /// TODO-GODOT: render as radio buttons + info panel.
+        /// Only describes what difficulty actually changes in the game today (rewritten
+        /// 2026-11-03, core/ to-do 12). Add a line here as each planned difficulty effect is
+        /// built: starting stats (Bucket A #15), enemy accuracy (#16), boss strength (#11),
+        /// the Giant House Centipede's poison, the Captain's crit chance.
         /// </summary>
         public static string GetDifficultyDescription(DifficultyLevel difficulty)
         {
-            return difficulty switch
+            int penalty = GameSettings.GetPartyAccuracyPenalty(difficulty);
+            string accuracy = penalty == 0
+                ? "Your party's attacks land as often as their weapons allow."
+                : $"Your party's chance to hit is {penalty}% lower.";
+
+            string flavour = difficulty switch
             {
-                DifficultyLevel.Normal => "Enemies have 75% stats. Rewards are 80% of normal. Recommended for learning the game.",
-                DifficultyLevel.Hard => "Balanced gameplay - standard enemies and rewards. The intended experience.",
-                DifficultyLevel.Difficult => "Enemies have 150% stats. Rewards are 130% of normal. For experienced players.",
-                DifficultyLevel.Unfair => "Enemies have 200% stats. Rewards are 150% of normal. Extreme challenge.",
+                DifficultyLevel.Normal => "The gentlest way to play. A good choice for learning the game.",
+                DifficultyLevel.Hard => "The intended experience.",
+                DifficultyLevel.Difficult => "For players who already know the game well.",
+                DifficultyLevel.Unfair => "Luck is rarely on your side.",
                 _ => ""
             };
+
+            return $"{flavour} {accuracy} Difficulty can't be changed once the game has started.";
         }
 
         /// <summary>
@@ -248,6 +261,20 @@ namespace GameLogic.Core
                 questManager.RegisterQuest(finalQuest);
             }
 
+            // MVP (decided 2026-11-03): the old job-board side quests (level milestones, kill
+            // counts, gold targets, weapon upgrades, equipment, challenges - 19 in all) are
+            // switched off. The MVP's side quests are one per shop/NPC, each unlocking that NPC
+            // (BACKEND -> "Side quests: one per NPC"). Kept for a possible post-MVP update; to
+            // bring them back, uncomment this line:
+            // RegisterOldSideQuests(questManager, rngManager);
+        }
+
+        /// <summary>
+        /// The old job-board side quests - DORMANT for the MVP (see InitializeQuests). Not
+        /// called anywhere.
+        /// </summary>
+        private void RegisterOldSideQuests(QuestManager questManager, RNGManager rngManager)
+        {
             // Create level progression quests (no RNG - fixed milestones)
             int[] levelMilestones = { 5, 10, 15, 20, 25 };
             foreach (int level in levelMilestones)

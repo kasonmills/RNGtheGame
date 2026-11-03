@@ -641,11 +641,13 @@ namespace GameLogic.Entities.NPCs
         }
 
         /// <summary>
-        /// Clear all registered shops (useful for testing or new game)
+        /// Clear all registered shops and the shared flee count. Called when a new game is
+        /// started or a save is loaded, so no shop state carries over between playthroughs.
         /// </summary>
         public static void ClearAllShops()
         {
             _allShops.Clear();
+            _consecutiveFlees = 0;
         }
 
         /// <summary>

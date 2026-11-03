@@ -41,11 +41,18 @@ namespace GameLogic.Core
 
         // The final boss has been beaten on this save (kept on every later save)
         private bool _gameCompleted;
-        // The slot this game was last loaded from or saved to - the final-boss win writes here
-        private string _currentSaveSlot = "save1";
+        // The opening tutorial has been won - saving is refused until then (core/ to-do 9)
+        private bool _tutorialCompleted;
+        // The slot this game was last loaded from or saved to - the pre-boss auto-save, the
+        // final-boss win and "Load Last Save" all use it. Null for a new game until its first save.
+        private string _currentSaveSlot;
         // The game exactly as it was when the final boss fight started; written to the save,
         // marked completed, if the fight is won
         private Data.SaveData _preFinalBossSnapshot;
+
+        // What to do when the current fight ends (set by WatchFightEnd). Only one fight runs at
+        // a time, so only one handler is kept - and a reset can always take it off again.
+        private Action<CombatResult> _fightEndHandler;
 
         /// <summary>
         /// The single running GameManager instance. Minimum viable access pattern for a
@@ -82,7 +89,7 @@ namespace GameLogic.Core
         public Player Player => _player;
 
         /// <summary>
-        /// The party: the companions travelling with the player (ActiveCompanions).
+        /// The party: every recruited companion (RecruitedCompanions), each fighting or benched.
         /// </summary>
         public Entities.NPCs.Companions.PartyManager Party => _partyManager;
 
@@ -123,6 +130,13 @@ namespace GameLogic.Core
         /// before the final boss, so the player can keep playing or fight it again.
         /// </summary>
         public bool IsGameCompleted => _gameCompleted;
+
+        /// <summary>
+        /// Whether the opening tutorial (intro + the Skarn fight) has been won. Saving is
+        /// refused until it has, so the save screen can grey out its button while this is false.
+        /// Always true after a load - a save only exists once the tutorial is done.
+        /// </summary>
+        public bool IsTutorialCompleted => _tutorialCompleted;
 
         /// <summary>
         /// Why the last save failed, for a pop-up (null if it worked). Set by SaveGame() and by
@@ -201,6 +215,8 @@ namespace GameLogic.Core
         /// </summary>
         public void StartNewGame(string playerName, DifficultyLevel difficulty, Abilities.Ability ability, Items.Weapon startingWeapon)
         {
+            ResetPlaythrough();
+
             var result = _gameStartup.CreateNewGame(playerName, difficulty, ability, startingWeapon, _rngManager, _mapManager, _gameSettings);
 
             _player = result.Player;
@@ -208,8 +224,6 @@ namespace GameLogic.Core
             _questManager = result.QuestManager;
             _questGiver = result.QuestGiver;
             _combatManager.Difficulty = difficulty; // Harder difficulties lower the party's hit chance
-            _gameCompleted = false;
-            _preFinalBossSnapshot = null;
 
             ChangeState(GameState.Cutscene); // Opening intro; FinishIntro() then starts the tutorial fight
             _isRunning = true;
@@ -274,7 +288,6 @@ namespace GameLogic.Core
 
             void OnCombatFinished(CombatResult result)
             {
-                _combatManager.CombatFinished -= OnCombatFinished;
                 _tutorialManager.ActionLessonsFinished -= OnLessonsFinished;
 
                 // The fight can end before every lesson is done (e.g. Chance lands the last hit)
@@ -283,27 +296,40 @@ namespace GameLogic.Core
                     PopState();
                 }
 
-                // Tutorial complete (or lost) - the tutorial refuses Flee, so only win/lose happen
+                // Tutorial complete (or lost) - the tutorial refuses Flee, so only win/lose happen.
+                // Only a win finishes it; after a loss the player must play it again.
+                if (result.Outcome == CombatOutcome.Won)
+                {
+                    _tutorialCompleted = true;
+                }
+
                 ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
             }
 
             _tutorialManager.ActionLessonsFinished += OnLessonsFinished;
-            _combatManager.CombatFinished += OnCombatFinished;
+            WatchFightEnd(OnCombatFinished);
 
-            _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { eagleBear }, _partyManager.ActiveCompanions, _bossManager);
+            _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { eagleBear }, _partyManager.RecruitedCompanions, _bossManager);
         }
 
         /// <summary>
-        /// Load a saved game from the given slot. Returns false if there is no save there or it
-        /// could not be read, and the game stays on the main menu - the load screen shows the
-        /// message. Data.SaveManager.SaveExists()/GetSaveFileInfo() list what is in each slot.
+        /// Load a saved game from the given slot. The previous playthrough is wiped first
+        /// (ResetPlaythrough), then everything is filled in from the file. Returns false if
+        /// there is no save there or it could not be read - then nothing is wiped and the game
+        /// stays where it was; the load screen shows the message.
+        /// Data.SaveManager.SaveExists()/GetSaveFileInfo() list what is in each slot.
         /// </summary>
         public bool LoadGame(string saveSlotName = "save1")
         {
-            var result = _gameStartup.LoadGame(saveSlotName, _rngManager, _mapManager);
+            // Read the save into a fresh map first - the current game is only wiped once the
+            // file has been read, so a bad save never costs the player the game they're in
+            var loadedMap = new MapManager();
+            var result = _gameStartup.LoadGame(saveSlotName, _rngManager, loadedMap);
 
             if (result.Success)
             {
+                ResetPlaythrough(loadedMap);
+
                 _player = result.Player;
                 _gameSettings = result.GameSettings;
                 _combatManager.Difficulty = _gameSettings.Difficulty; // Harder difficulties lower the party's hit chance
@@ -312,16 +338,91 @@ namespace GameLogic.Core
                 _questManager = result.QuestManager;
                 _questGiver = result.QuestGiver;
                 _gameCompleted = result.GameCompleted;
+                // A save can only be made after the tutorial, so a loaded game never goes back
+                // through it (SaveData.TutorialCompleted is always true; even a hand-edited false
+                // is ignored, so it can't lock the player out of saving)
+                _tutorialCompleted = true;
+                _partyManager.RestoreRoster(result.Companions);
                 _currentSaveSlot = saveSlotName;
-                _preFinalBossSnapshot = null;
 
                 ChangeState(GameState.Playing);
                 _isRunning = true;
                 return true;
             }
 
-            ChangeState(GameState.MainMenu);
+            // Nothing was wiped and the state is left alone, so the player stays where they
+            // were (the main menu, or the game they loaded from)
             return false;
+        }
+
+        /// <summary>
+        /// Wipe everything that belongs to a playthrough, so nothing from the previous game
+        /// carries into the next one (core/ to-do 5, decided 2026-11-03). Both StartNewGame()
+        /// and LoadGame() run this first - a load then fills everything back in from the file.
+        /// Kept on purpose: the player's preferences in Settings (volume, text speed and so on)
+        /// carry over to a new game; only Difficulty is set per save. A load still takes the
+        /// save's preferences, since the save is the only place they are stored for now.
+        /// Systems are replaced with new objects rather than cleared, so anything added to
+        /// them later is reset too without having to remember it here.
+        /// </summary>
+        private void ResetPlaythrough(MapManager map = null)
+        {
+            // A fight left running (e.g. quit to the main menu mid-fight) is dropped, and its
+            // end handler taken off so it can't fire on the next game's first fight
+            StopWatchingFightEnd();
+            _combatManager.AbandonCombat();
+
+            // The playthrough itself - set again by the new game or the load
+            _player = null;
+            _bossManager = null;
+            _questManager = null;
+            _questGiver = null;
+
+            _partyManager = new Entities.NPCs.Companions.PartyManager();
+            _statistics = new StatisticsTracker();
+            _tutorialManager = new TutorialManager();
+            _mapManager = map ?? new MapManager();
+            _activeOverworldEnemies = new List<World.OverworldEnemySpawn>();
+            _stateStack = new Stack<GameState>();
+            CurrentShop = null;
+            CurrentBlacksmith = null;
+            CurrentDialogueNpc = null;
+
+            Entities.NPCs.ShopKeeper.ClearAllShops();
+            _rngManager.ResetStatistics();
+
+            _gameCompleted = false;
+            _tutorialCompleted = false;
+            _preFinalBossSnapshot = null;
+            _currentSaveSlot = null;
+            LastSaveError = null;
+        }
+
+        /// <summary>
+        /// Run the given handler once, when the fight about to start ends. Replaces any
+        /// handler still waiting from an earlier fight.
+        /// </summary>
+        private void WatchFightEnd(Action<CombatResult> onFinished)
+        {
+            StopWatchingFightEnd();
+
+            void Handler(CombatResult result)
+            {
+                StopWatchingFightEnd();
+                onFinished(result);
+            }
+
+            _fightEndHandler = Handler;
+            _combatManager.CombatFinished += _fightEndHandler;
+        }
+
+        private void StopWatchingFightEnd()
+        {
+            if (_fightEndHandler != null)
+            {
+                _combatManager.CombatFinished -= _fightEndHandler;
+                _fightEndHandler = null;
+            }
         }
 
         /// <summary>
@@ -357,8 +458,8 @@ namespace GameLogic.Core
         /// <summary>
         /// Main gameplay loop - exploration and navigation
         /// TODO-GODOT: this text-menu dispatch is a stub until Godot scene/input wiring exists.
-        /// The action methods below (Explore, OpenInventory, OpenStats, Rest, SaveGame,
-        /// quest giver/job board/quest log/statistics menus) are still valid and will be called by
+        /// The action methods below (Explore, Rest, SaveGame, and the Open/Close pairs for the
+        /// party menu, quest giver, quest log and statistics) are still valid and will be called by
         /// player movement/interaction signals (walking onto an encounter tile, pressing an interact
         /// key near an NPC, opening a UI panel, etc.) instead of a numbered console choice.
         /// Boss challenges no longer go through a menu at all - the player finds
@@ -569,19 +670,12 @@ namespace GameLogic.Core
 
             ChangeState(GameState.Combat); // Combat always enters from Playing and returns to Playing/GameOver
 
-            void OnCombatFinished(CombatResult result)
-            {
-                _combatManager.CombatFinished -= OnCombatFinished;
-
-                // Won, party fled or the enemy fled - back to the overworld. Only a loss
-                // (the whole party down) is Game Over.
-                ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
-            }
-
-            _combatManager.CombatFinished += OnCombatFinished;
+            // Won, party fled or the enemy fled - back to the overworld. Only a loss
+            // (the whole party down) is Game Over.
+            WatchFightEnd(result => ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing));
 
             // CombatManager handles the actual combat (including XP and loot rewards)
-            _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { enemy }, _partyManager.ActiveCompanions);
+            _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { enemy }, _partyManager.RecruitedCompanions);
         }
 
         /// <summary>
@@ -618,93 +712,196 @@ namespace GameLogic.Core
             return loot;
         }
 
+        // ------------------------------------------------------------------
+        // Overlay screens (core/ to-do 17, 2026-11-03)
+        // ------------------------------------------------------------------
+        // Every screen below is an overlay: Open pushes its state on top of the current one,
+        // Close pops back to exactly where the player was. Each Open only works from the
+        // states listed on it and returns false otherwise (nothing changes), so a screen can
+        // never open in the wrong place - e.g. a shop in the middle of a fight. Each Close only
+        // works while that screen is the one on top. None of them print anything.
+        // TODO-GODOT: SceneRouter opens/closes the matching overlay scene on StateChanged.
+
         /// <summary>
-        /// Open the inventory panel - pauses the player (like Paused) since they can't
-        /// move their character while browsing it.
-        /// TODO-GODOT: call this when the player opens the inventory panel/hotkey.
+        /// The shopkeeper whose shop is open (null when no shop is open).
         /// </summary>
-        public void OpenInventory()
+        public ShopKeeper CurrentShop { get; private set; }
+
+        /// <summary>
+        /// The blacksmith whose screen is open (null when it isn't open).
+        /// </summary>
+        public Blacksmith CurrentBlacksmith { get; private set; }
+
+        /// <summary>
+        /// The NPC being talked to (null when no conversation is open).
+        /// </summary>
+        public NPCBase CurrentDialogueNpc { get; private set; }
+
+        private bool OpenOverlay(GameState overlay, params GameState[] allowedFrom)
         {
-            PushState(GameState.Inventory);
+            if (Array.IndexOf(allowedFrom, _currentState) < 0)
+            {
+                return false;
+            }
 
-            // TODO-GODOT: inventory listing -> inventory panel UI
-            _player.Inventory.DisplayInventory();
-
-            Console.WriteLine($"Equipped Weapon: {(_player.EquippedWeapon?.Name ?? "None")}");
-            Console.WriteLine($"Equipped Armor: {(_player.EquippedArmor?.Name ?? "None")}");
+            PushState(overlay);
+            return true;
         }
 
-        /// <summary>
-        /// Close the inventory panel and return to whatever state it interrupted.
-        /// TODO-GODOT: call this when the player closes the inventory panel/hotkey.
-        /// </summary>
-        public void CloseInventory()
+        private bool CloseOverlay(GameState overlay)
         {
+            if (_currentState != overlay)
+            {
+                return false;
+            }
+
             PopState();
+            return true;
         }
 
         /// <summary>
-        /// Open the character stats panel - pauses the player (like Paused) since they can't
-        /// move their character while browsing it.
-        /// TODO-GODOT: call this when the player opens the stats panel/hotkey.
+        /// Pause the game. Opens from the world, a fight or the tutorial fight.
+        /// TODO-GODOT: call this from the pause key/button.
         /// </summary>
-        public void OpenStats()
+        public bool OpenPauseMenu() => OpenOverlay(GameState.Paused, GameState.Playing, GameState.Combat, GameState.Tutorial);
+
+        /// <summary>
+        /// Resume - back to whatever was paused.
+        /// </summary>
+        public bool ClosePauseMenu() => CloseOverlay(GameState.Paused);
+
+        /// <summary>
+        /// The party menu: the one menu for the player, inventory and companions (decided
+        /// 2026-10-12; replaces the old Inventory and Stats screens). Opens from the world or
+        /// the pause menu - not during a fight, which has its own buttons. Reads Player,
+        /// Player.Inventory and Party.
+        /// TODO-GODOT: call this from the party menu key/button.
+        /// </summary>
+        public bool OpenPartyMenu() => OpenOverlay(GameState.PartyMenu, GameState.Playing, GameState.Paused);
+
+        public bool ClosePartyMenu() => CloseOverlay(GameState.PartyMenu);
+
+        /// <summary>
+        /// The quest log (every quest, the tracked quest). Opens from the world or the pause
+        /// menu. Reads Quests.
+        /// </summary>
+        public bool OpenQuestLog() => OpenOverlay(GameState.QuestLog, GameState.Playing, GameState.Paused);
+
+        public bool CloseQuestLog() => CloseOverlay(GameState.QuestLog);
+
+        /// <summary>
+        /// The statistics page for this save (read only). Opens from the world or the pause
+        /// menu. Reads Statistics.
+        /// </summary>
+        public bool OpenStatistics() => OpenOverlay(GameState.Statistics, GameState.Playing, GameState.Paused);
+
+        public bool CloseStatistics() => CloseOverlay(GameState.Statistics);
+
+        /// <summary>
+        /// The settings menu. Opens from the main menu or the pause menu. Reads and changes
+        /// Settings.
+        /// </summary>
+        public bool OpenSettings() => OpenOverlay(GameState.Settings, GameState.MainMenu, GameState.Paused);
+
+        public bool CloseSettings() => CloseOverlay(GameState.Settings);
+
+        /// <summary>
+        /// The save screen. Opens from the world only, and only once the tutorial is won.
+        /// TODO: also require standing at a save point (an inn or a marked campsite, core/
+        /// to-do 10) once the fixed map places them. Calls SaveGame(slot).
+        /// TODO-GODOT: call this when the player uses a save point.
+        /// </summary>
+        public bool OpenSaveScreen()
         {
-            PushState(GameState.Stats);
-
-            // TODO-GODOT: character stats block -> stats panel UI
-            Console.WriteLine("\n=== Character Stats ===");
-            Console.WriteLine($"Name: {_player.Name}");
-            Console.WriteLine($"Level: {_player.Level}");
-            Console.WriteLine($"Experience: {_player.Experience}");
-            Console.WriteLine($"Health: {_player.Health}/{_player.MaxHealth}");
-            Console.WriteLine($"Gold: {_player.Gold}");
-
-            // Ability info
-            Console.WriteLine("\n--- Ability ---");
-            if (_player.SelectedAbility != null)
+            if (!_tutorialCompleted)
             {
-                Console.WriteLine(_player.SelectedAbility.GetInfo());
-            }
-            else
-            {
-                Console.WriteLine("No ability selected");
+                return false;
             }
 
-            // Attack stats
-            Console.WriteLine("\n--- Combat Stats ---");
-            if (_player.EquippedWeapon != null)
+            return OpenOverlay(GameState.SaveScreen, GameState.Playing);
+        }
+
+        public bool CloseSaveScreen() => CloseOverlay(GameState.SaveScreen);
+
+        /// <summary>
+        /// Talk to an NPC. Opens from the world. The screen reads CurrentDialogueNpc.
+        /// TODO-GODOT: call this when the player interacts with an NPC who only talks.
+        /// The NPC's lines aren't designed yet (frontend plan: "source to design").
+        /// </summary>
+        public bool OpenDialogue(NPCBase npc)
+        {
+            if (npc == null || !OpenOverlay(GameState.Dialogue, GameState.Playing))
             {
-                Console.WriteLine($"Weapon: {_player.EquippedWeapon.Name}");
-                Console.WriteLine($"  Damage: {_player.EquippedWeapon.MinDamage}-{_player.EquippedWeapon.MaxDamage}");
-                Console.WriteLine($"  Accuracy: {_player.EquippedWeapon.Accuracy}%");
-                Console.WriteLine($"  Crit Chance: {_player.EquippedWeapon.CritChance}%");
-            }
-            else
-            {
-                Console.WriteLine("Weapon: None (unarmed - 1-3 damage)");
+                return false;
             }
 
-            // Defense stats
-            if (_player.EquippedArmor != null)
-            {
-                Console.WriteLine($"Armor: {_player.EquippedArmor.Name}");
-                Console.WriteLine($"  Defense: {_player.EquippedArmor.Defense}");
-            }
-            else
-            {
-                Console.WriteLine("Armor: None");
-            }
+            CurrentDialogueNpc = npc;
+            return true;
+        }
+
+        public bool CloseDialogue()
+        {
+            if (!CloseOverlay(GameState.Dialogue)) return false;
+            CurrentDialogueNpc = null;
+            return true;
         }
 
         /// <summary>
-        /// Close the character stats panel and return to whatever state it interrupted.
-        /// TODO-GODOT: call this when the player closes the stats panel/hotkey.
+        /// Open a shopkeeper's shop. Opens from the world. The screen reads CurrentShop.
+        /// TODO-GODOT: call this when the player interacts with a shopkeeper.
         /// </summary>
-        public void CloseStats()
+        public bool OpenShop(ShopKeeper shop)
         {
-            PopState();
+            if (shop == null || !OpenOverlay(GameState.Shopping, GameState.Playing))
+            {
+                return false;
+            }
+
+            CurrentShop = shop;
+            return true;
         }
+
+        public bool CloseShop()
+        {
+            if (!CloseOverlay(GameState.Shopping)) return false;
+            CurrentShop = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Open a blacksmith's upgrade screen. Opens from the world. The screen reads
+        /// CurrentBlacksmith.
+        /// TODO-GODOT: call this when the player interacts with a blacksmith.
+        /// </summary>
+        public bool OpenBlacksmith(Blacksmith blacksmith)
+        {
+            if (blacksmith == null || !OpenOverlay(GameState.Blacksmith, GameState.Playing))
+            {
+                return false;
+            }
+
+            CurrentBlacksmith = blacksmith;
+            return true;
+        }
+
+        public bool CloseBlacksmith()
+        {
+            if (!CloseOverlay(GameState.Blacksmith)) return false;
+            CurrentBlacksmith = null;
+            return true;
+        }
+
+        /// <summary>
+        /// The quest giver's screen (the boss quests). Opens from the world. Reads QuestGiver
+        /// and Quests.
+        /// TODO-GODOT: call this when the player talks to the quest giver.
+        /// </summary>
+        public bool OpenQuestGiver() => OpenOverlay(GameState.QuestGiver, GameState.Playing);
+
+        public bool CloseQuestGiver() => CloseOverlay(GameState.QuestGiver);
+
+        // No job board in the MVP (decided 2026-11-03): each shop/NPC hands out its own unlock
+        // quest, so there is no board to open.
 
         /// <summary>
         /// Rest to restore health
@@ -726,9 +923,45 @@ namespace GameLogic.Core
         /// Save the current game to the given slot. Returns success/failure instead of
         /// printing or blocking on a keypress, so the save screen can show the result.
         /// TODO-GODOT: call this from the save screen at a save point (saving is only
-        /// allowed at save points - to-do 10 under core/; nothing enforces that yet).
+        /// allowed at save points - to-do 10 under core/; only the tutorial part of that is
+        /// enforced so far). Refused, with LastSaveError set, until the tutorial is won.
+        /// With no slot given it saves to this game's current slot (or a free one if this
+        /// game has never been saved), so it can't overwrite another playthrough by accident.
         /// </summary>
-        public bool SaveGame(string saveSlotName = "save1")
+        public bool SaveGame(string saveSlotName = null)
+        {
+            if (!_tutorialCompleted)
+            {
+                LastSaveError = "You can't save until the tutorial is finished.";
+                return false;
+            }
+
+            return WriteSave(saveSlotName ?? _currentSaveSlot ?? FindFreeSaveSlot());
+        }
+
+        /// <summary>
+        /// The automatic save made right before every boss fight (decided 2026-11-03) - the
+        /// only place the game saves by itself; everywhere else the player has to find a save
+        /// point. Writes to this game's current slot (a free one if it has never been saved),
+        /// so losing the fight and loading the last save puts the player right before the boss.
+        /// Skipped during the tutorial (no saving until it's won). Returns false and sets
+        /// LastSaveError if the save failed - the fight still goes ahead.
+        /// </summary>
+        private bool AutoSaveBeforeBoss()
+        {
+            if (!_tutorialCompleted)
+            {
+                return false;
+            }
+
+            return WriteSave(_currentSaveSlot ?? FindFreeSaveSlot());
+        }
+
+        /// <summary>
+        /// Write the game to a slot with no save-point check - shared by SaveGame() and the
+        /// pre-boss auto-save. A successful write makes it this game's current slot.
+        /// </summary>
+        private bool WriteSave(string saveSlotName)
         {
             // Update statistics before saving
             _statistics.UpdatePlayTime(_player.PlayTime);
@@ -736,11 +969,44 @@ namespace GameLogic.Core
             _statistics.UpdateCurrentLevel(_player.Level);
             _statistics.RecordGameSave();
 
-            bool saved = Data.SaveManager.SaveGame(_player, saveSlotName, out string error, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, _gameCompleted);
+            bool saved = Data.SaveManager.SaveGame(_player, saveSlotName, out string error, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, _gameCompleted, _partyManager);
             LastSaveError = error;
             if (saved)
                 _currentSaveSlot = saveSlotName;
             return saved;
+        }
+
+        /// <summary>
+        /// The first "saveN" slot with nothing in it, for a game that has never been saved.
+        /// TODO-GODOT: if the save screen lets the player pick a slot for a new game, pass that
+        /// to SaveGame() instead.
+        /// </summary>
+        private static string FindFreeSaveSlot()
+        {
+            int number = 1;
+            while (Data.SaveManager.SaveExists($"save{number}"))
+            {
+                number++;
+            }
+            return $"save{number}";
+        }
+
+        /// <summary>
+        /// "Load Last Save" on the Game Over screen: reload this game's current slot - the last
+        /// save point it was saved at, or right before the boss if a boss fight was lost (every
+        /// defeat goes back to the last save, decided 2026-11-03). Returns false if this game
+        /// has no save yet (e.g. losing the tutorial) - the screen should then offer a new game
+        /// or the main menu instead.
+        /// TODO-GODOT: call this from the Game Over screen.
+        /// </summary>
+        public bool LoadLastSave()
+        {
+            if (_currentSaveSlot == null)
+            {
+                return false;
+            }
+
+            return LoadGame(_currentSaveSlot);
         }
 
         /// <summary>
@@ -839,6 +1105,9 @@ namespace GameLogic.Core
         public void QuitToMainMenu()
         {
             _stateStack.Clear();
+            CurrentShop = null;
+            CurrentBlacksmith = null;
+            CurrentDialogueNpc = null;
             ChangeState(GameState.MainMenu);
         }
 
@@ -867,22 +1136,20 @@ namespace GameLogic.Core
                 return;
             }
 
+            // Auto-save right before the fight (decided 2026-11-03).
+            // TODO-GODOT: if this returns false, show LastSaveError in a pop-up
+            AutoSaveBeforeBoss();
+
             ChangeState(GameState.Combat);
 
-            void OnCombatFinished(CombatResult result)
-            {
-                _combatManager.CombatFinished -= OnCombatFinished;
-                ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
-            }
-
-            _combatManager.CombatFinished += OnCombatFinished;
+            WatchFightEnd(result => ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing));
 
             World.BossEncounter.StartBossEncounter(
                 _player,
                 boss,
                 _bossManager,
                 _combatManager,
-                _partyManager.ActiveCompanions);
+                _partyManager.RecruitedCompanions);
         }
 
         /// <summary>
@@ -899,17 +1166,20 @@ namespace GameLogic.Core
                 return;
             }
 
+            // Auto-save right before the fight, like every boss (decided 2026-11-03) - a loss
+            // and "Load Last Save" puts the player back here.
+            // TODO-GODOT: if this returns false, show LastSaveError in a pop-up
+            AutoSaveBeforeBoss();
+
             // Snapshot the game as it is right now, before the fight changes anything. A win
             // writes this to the save marked completed, so loading it puts the player back
             // here - free to keep playing or fight the final boss again (decided 2026-10-30).
-            _preFinalBossSnapshot = Data.SaveManager.CreateSaveData(_player, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, gameCompleted: true);
+            _preFinalBossSnapshot = Data.SaveManager.CreateSaveData(_player, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, gameCompleted: true, party: _partyManager);
 
             ChangeState(GameState.Combat);
 
             void OnCombatFinished(CombatResult result)
             {
-                _combatManager.CombatFinished -= OnCombatFinished;
-
                 if (result.Outcome == CombatOutcome.Lost)
                 {
                     _preFinalBossSnapshot = null;
@@ -921,6 +1191,9 @@ namespace GameLogic.Core
                 {
                     _gameCompleted = true;
                     // TODO-GODOT: if this fails, show LastSaveError in a pop-up on the ending screen
+                    // The pre-boss auto-save normally set the slot; if it failed and this game
+                    // was never saved, use a free slot rather than another playthrough's
+                    _currentSaveSlot ??= FindFreeSaveSlot();
                     Data.SaveManager.WriteSaveData(_preFinalBossSnapshot, _currentSaveSlot, out string error);
                     LastSaveError = error;
                     _preFinalBossSnapshot = null;
@@ -934,13 +1207,13 @@ namespace GameLogic.Core
                 ChangeState(GameState.Playing);
             }
 
-            _combatManager.CombatFinished += OnCombatFinished;
+            WatchFightEnd(OnCombatFinished);
 
             World.BossEncounter.StartFinalBossEncounter(
                 _player,
                 _bossManager,
                 _combatManager,
-                _partyManager.ActiveCompanions);
+                _partyManager.RecruitedCompanions);
         }
 
         /// <summary>
@@ -1003,7 +1276,7 @@ namespace GameLogic.Core
             switch (choice)
             {
                 case "1":
-                    LoadGame();
+                    if (!LoadLastSave()) ChangeState(GameState.MainMenu);
                     break;
                 case "2":
                     ChangeState(GameState.MainMenu);

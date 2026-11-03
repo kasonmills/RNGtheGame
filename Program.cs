@@ -1,28 +1,16 @@
 ﻿using System;
 
-using GameLogic.Core;
-
+/// <summary>
+/// The console program (`dotnet run` in the repo root). The game itself is played through
+/// the Godot project, so this only says so and exits (decided 2026-10-13: keep it, cut
+/// down; 2026-11-03: a message only). It no longer calls GameManager.Run(), the old console
+/// loop. This is the console program itself, so it is the one place that prints.
+/// </summary>
 class Program
 {
-    /*
-    this is the main program hub all will be controled by the gamemanager
-    */
     static void Main(string[] args)
     {
-        // console test only comment out when using godot
-        try
-        {
-            GameManager game = new GameManager();
-            game.Run();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("\n=== FATAL ERROR ===");
-            Console.WriteLine($"The game crashed: {ex.Message}");
-            Console.WriteLine("\nPress any key to exit...");
-            Console.ReadKey();
-        }
-        // end console test
+        Console.WriteLine("RNG the Game is played through the Godot project (godot_project/).");
+        Console.WriteLine("Open it in Godot to play. This console program does nothing else.");
     }
 }
-

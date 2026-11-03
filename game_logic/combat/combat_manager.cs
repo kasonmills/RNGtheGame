@@ -50,6 +50,7 @@ namespace GameLogic.Combat
         private Player _player;
         private List<Enemy> _enemies;
         private readonly List<Entity> _party;
+        private readonly List<CompanionBase> _sittingOut = new List<CompanionBase>(); // Recruited but not fighting this time
         private readonly List<Entity> _allCombatants;
         private bool _combatActive;
         private bool _partyFled;
@@ -186,8 +187,9 @@ namespace GameLogic.Combat
         /// <param name="player">The player character</param>
         /// <param name="enemies">The enemy or enemies to fight - built by the caller (e.g. the
         /// overworld spawn that was touched, or the boss being challenged)</param>
-        /// <param name="companions">The party's companions (can be null or empty) - the first
-        /// three that are in the party and standing fight</param>
+        /// <param name="companions">Every recruited companion (PartyManager.RecruitedCompanions;
+        /// can be null or empty) - the first three that are in the fighting party and standing
+        /// fight. The rest sit the fight out and get half its XP on a win.</param>
         /// <param name="bossManager">Optional boss manager for boss encounters</param>
         public void StartCombat(Player player, List<Enemy> enemies, List<Entity> companions = null, BossManager bossManager = null)
         {
@@ -223,6 +225,7 @@ namespace GameLogic.Combat
 
             // The party: the player plus up to three companions who are in the party and standing
             _party.Clear();
+            _sittingOut.Clear();
             _party.Add(_player);
 
             if (companions != null)
@@ -236,6 +239,9 @@ namespace GameLogic.Combat
                         _party.Add(companion);
                     }
                 }
+
+                // Benched, or already down when the fight began
+                _sittingOut.AddRange(companions.OfType<CompanionBase>().Where(c => !_party.Contains(c)).Distinct());
             }
 
             _allCombatants.Clear();
@@ -1736,6 +1742,37 @@ namespace GameLogic.Combat
         // ------------------------------------------------------------------
 
         /// <summary>
+        /// Drop the current fight (if any) without an outcome: no rewards, no XP, and
+        /// CombatFinished/CombatEnded are not fired. Also forgets everyone from the last
+        /// fight, so nothing from one playthrough stays referenced here. Called by
+        /// GameManager when a new game is started or a save is loaded (core/ to-do 5).
+        /// </summary>
+        public void AbandonCombat()
+        {
+            GameLog.MessageLogged -= OnGameLogMessage;
+
+            _combatActive = false;
+            _partyFled = false;
+            IsWaitingForPlayerAction = false;
+            CurrentActor = null;
+            LastResult = null;
+
+            _player = null;
+            _bossManager = null;
+            _enemies = new List<Enemy>();
+            _party.Clear();
+            _sittingOut.Clear();
+            _allCombatants.Clear();
+            _defendingEntities.Clear();
+            _fledEnemies.Clear();
+            _directlyControlled.Clear();
+            _pendingRevivePenalties.Clear();
+            _turnQueue.Clear();
+            _turnOrder = new List<TurnSlot>();
+            _currentRound = 0;
+        }
+
+        /// <summary>
         /// Finish the fight: hand out rewards for the outcome, then fire CombatFinished and
         /// CombatEnded (once each).
         /// </summary>
@@ -1782,6 +1819,16 @@ namespace GameLogic.Combat
         /// Rewards for a won fight or one the opponents fled from: full XP and loot for each
         /// defeated enemy, 50% for each enemy that fled (decided 2026-10-12, per-enemy 2026-10-14).
         /// </summary>
+        private static void GiveCompanionXP(CompanionBase companion, int xp, CombatResult result)
+        {
+            int levelBefore = companion.Level;
+            companion.GainExperience(xp);
+            if (companion.Level > levelBefore)
+            {
+                result.CompanionLevelsGained[companion] = companion.Level - levelBefore;
+            }
+        }
+
         private void HandleVictory(CombatResult result)
         {
             Log("\n" + "=".PadRight(50, '='));
@@ -1848,18 +1895,19 @@ namespace GameLogic.Combat
             _player.AddExperience(totalXP);
             result.PlayerLevelsGained = _player.Level - playerLevelBefore;
 
-            // Share XP with companions who are still standing
+            // Companion XP (decided 2026-11-02): standing fighters get the full amount; fighters
+            // who are down, and everyone who sat the fight out (benched), get half
             foreach (var member in _party)
             {
-                if (member is CompanionBase companion && companion.IsAlive())
+                if (member is CompanionBase companion)
                 {
-                    int companionLevelBefore = companion.Level;
-                    companion.GainExperience(totalXP);
-                    if (companion.Level > companionLevelBefore)
-                    {
-                        result.CompanionLevelsGained[companion] = companion.Level - companionLevelBefore;
-                    }
+                    GiveCompanionXP(companion, companion.IsAlive() ? totalXP : totalXP / 2, result);
                 }
+            }
+
+            foreach (var companion in _sittingOut)
+            {
+                GiveCompanionXP(companion, totalXP / 2, result);
             }
 
             _player.Gold += totalGold;

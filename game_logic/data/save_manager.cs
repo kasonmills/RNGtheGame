@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Linq;
+using GameLogic.Entities.NPCs.Companions;
 using GameLogic.Entities.Player;
 using GameLogic.Items;
 using GameLogic.Quests;
@@ -49,13 +51,14 @@ namespace GameLogic.Data
         /// <param name="statistics">Statistics tracker to save</param>
         /// <param name="errorMessage">Why the save failed (for a pop-up), or null on success</param>
         /// <param name="gameCompleted">Whether the final boss has been beaten on this save</param>
+        /// <param name="party">The companion roster to save (fighting and benched)</param>
         /// <returns>True if save was successful</returns>
-        public static bool SaveGame(Player player, string saveSlotName, out string errorMessage, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false)
+        public static bool SaveGame(Player player, string saveSlotName, out string errorMessage, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false, PartyManager party = null)
         {
             SaveData saveData;
             try
             {
-                saveData = CreateSaveData(player, bossManager, mapManager, questManager, gameSettings, statistics, gameCompleted);
+                saveData = CreateSaveData(player, bossManager, mapManager, questManager, gameSettings, statistics, gameCompleted, party);
             }
             catch (Exception ex)
             {
@@ -78,11 +81,20 @@ namespace GameLogic.Data
         /// Build a SaveData of the current game in memory without writing it - e.g. the
         /// snapshot taken when the final boss fight starts, written later with WriteSaveData.
         /// </summary>
-        public static SaveData CreateSaveData(Player player, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false)
+        public static SaveData CreateSaveData(Player player, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false, PartyManager party = null)
         {
                 // Create SaveData from player
                 SaveData saveData = CreateSaveDataFromPlayer(player, mapManager);
                 saveData.GameCompleted = gameCompleted;
+
+                // Save the companion roster
+                if (party != null)
+                {
+                    foreach (var companion in party.RecruitedCompanions.OfType<CompanionBase>())
+                    {
+                        saveData.Companions.Add(SerializeCompanion(companion));
+                    }
+                }
 
                 // Save boss progression data
                 if (bossManager != null)
@@ -266,6 +278,84 @@ namespace GameLogic.Data
             }
 
             return data;
+        }
+
+        /// <summary>
+        /// Convert a companion to a SerializedCompanion for saving
+        /// </summary>
+        private static SerializedCompanion SerializeCompanion(CompanionBase companion)
+        {
+            var serialized = new SerializedCompanion
+            {
+                CompanionType = companion.GetType().Name,
+                Level = companion.Level,
+                Experience = companion.Experience,
+                Health = companion.Health,
+                MaxHealth = companion.MaxHealth,
+                InFightingParty = companion.InParty,
+                StartingItemsGiven = companion.StartingItemsGiven,
+                PassiveBonusState = companion.PassiveBonusState,
+                EquippedWeapon = companion.EquippedWeapon != null ? SerializeItem(companion.EquippedWeapon) : null,
+                EquippedArmor = companion.EquippedArmor != null ? SerializeItem(companion.EquippedArmor) : null
+            };
+
+            foreach (var ability in companion.GetCombatAbilities())
+            {
+                serialized.AbilityLevels.Add(ability.Level);
+                serialized.AbilityExperience.Add(ability.Experience);
+            }
+
+            return serialized;
+        }
+
+        /// <summary>
+        /// Rebuild the companion roster from a save. Companions of an unknown type are skipped.
+        /// Old saves with no companions give an empty roster.
+        /// </summary>
+        public static List<CompanionBase> LoadCompanions(SaveData saveData)
+        {
+            var companions = new List<CompanionBase>();
+            if (saveData?.Companions == null) return companions;
+
+            foreach (var saved in saveData.Companions)
+            {
+                CompanionBase companion = saved.CompanionType switch
+                {
+                    nameof(CompanionChance) => new CompanionChance(),
+                    nameof(CompanionRisk) => new CompanionRisk(),
+                    nameof(CompanionBoon) => new CompanionBoon(),
+                    nameof(CompanionFelicity) => new CompanionFelicity(),
+                    nameof(CompanionMage) => new CompanionMage(),
+                    nameof(CompanionRogue) => new CompanionRogue(),
+                    _ => null
+                };
+                if (companion == null) continue;
+
+                // Level up from 1 the normal way so speed and level-based abilities match
+                companion.RaiseToLevel(saved.Level);
+                companion.Experience = saved.Experience;
+                companion.MaxHealth = saved.MaxHealth;
+                companion.Health = saved.Health;
+                companion.InParty = saved.InFightingParty;
+                companion.StartingItemsGiven = saved.StartingItemsGiven;
+                companion.PassiveBonusState = saved.PassiveBonusState;
+                companion.EquippedWeapon = DeserializeItem(saved.EquippedWeapon) as Weapon;
+                companion.EquippedArmor = DeserializeItem(saved.EquippedArmor) as Armor;
+
+                var abilities = companion.GetCombatAbilities();
+                for (int i = 0; i < abilities.Count && i < saved.AbilityLevels.Count; i++)
+                {
+                    abilities[i].Level = Math.Clamp(saved.AbilityLevels[i], 1, abilities[i].MaxLevel);
+                    if (i < saved.AbilityExperience.Count)
+                    {
+                        abilities[i].Experience = saved.AbilityExperience[i];
+                    }
+                }
+
+                companions.Add(companion);
+            }
+
+            return companions;
         }
 
         /// <summary>

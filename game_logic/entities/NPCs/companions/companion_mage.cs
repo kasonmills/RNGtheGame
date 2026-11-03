@@ -16,6 +16,13 @@ namespace GameLogic.Entities.NPCs.Companions
 
         private bool _passiveApplied = false;
 
+        // Whether the staff bonus is switched on (1) or off (0), for saves
+        public override int PassiveBonusState
+        {
+            get => _passiveApplied ? 1 : 0;
+            set => _passiveApplied = value != 0;
+        }
+
         public CompanionMage(int startingLevel = 1)
             : base("Lyra the Arcane", startingLevel, CompanionAIStyle.Strategic)
         {

@@ -82,6 +82,47 @@ namespace GameLogic.Entities.NPCs.Companions
         }
 
         /// <summary>
+        /// Raise this companion to the given level (capped at MaxLevel) with no XP needed, the
+        /// same as levelling up normally, so stats and level-based abilities match. Used for
+        /// late recruits (they join at the player's level minus 1) and to rebuild a companion
+        /// from a save. Does nothing if they are already at or above it. Logs nothing.
+        /// </summary>
+        public void RaiseToLevel(int targetLevel)
+        {
+            targetLevel = Math.Min(targetLevel, MaxLevel);
+            if (Level >= targetLevel) return;
+
+            // Level-up messages would otherwise go to the console when nothing is listening
+            void Ignore(string message) { }
+            GameLog.MessageLogged += Ignore;
+            try
+            {
+                while (Level < targetLevel)
+                {
+                    LevelUp();
+                }
+            }
+            finally
+            {
+                GameLog.MessageLogged -= Ignore;
+            }
+
+            Experience = 0;
+            ExperienceToNextLevel = CalculateExperienceRequired(Level);
+        }
+
+        /// <summary>
+        /// Whatever a companion's passive bonus needs to remember while it is applied, so a
+        /// save can restore it without applying the bonus to the player a second time
+        /// (e.g. how much max health Risk added). 0 for companions with nothing to remember.
+        /// </summary>
+        public virtual int PassiveBonusState
+        {
+            get => 0;
+            set { }
+        }
+
+        /// <summary>
         /// Get effective speed including Swift Tactics passive ability bonus
         /// Overrides base GetEffectiveSpeed() to add companion speed buff
         /// </summary>

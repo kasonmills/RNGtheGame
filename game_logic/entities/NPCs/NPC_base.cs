@@ -108,27 +108,25 @@ namespace GameLogic.Entities.NPCs
         }
 
         /// <summary>
-        /// Add companion to party
+        /// Put a companion in the fighting party (non-companions are ignored).
+        /// PartyManager owns the roster - go through it rather than calling this directly.
         /// </summary>
         public void JoinParty()
         {
             if (!IsCompanion)
             {
-                Console.WriteLine($"{Name} cannot join the party (not a companion type).");
                 return;
             }
 
             InParty = true;
-            Console.WriteLine($"{Name} joined the party!");
         }
 
         /// <summary>
-        /// Remove companion from party
+        /// Take a companion out of the fighting party (benched, still recruited)
         /// </summary>
         public void LeaveParty()
         {
             InParty = false;
-            Console.WriteLine($"{Name} left the party.");
         }
 
         /// <summary>
@@ -138,7 +136,6 @@ namespace GameLogic.Entities.NPCs
         {
             if (!IsCompanion)
             {
-                Console.WriteLine($"{Name} cannot level up (not a companion).");
                 return;
             }
 
@@ -149,8 +146,8 @@ namespace GameLogic.Entities.NPCs
             MaxHealth += healthIncrease;
             Health = MaxHealth; // Full heal on level up
 
-            Console.WriteLine($"{Name} leveled up to Level {Level}!");
-            Console.WriteLine($"Max Health increased by {healthIncrease} (now {MaxHealth})");
+            GameLog.Write($"{Name} leveled up to Level {Level}!");
+            GameLog.Write($"Max Health increased by {healthIncrease} (now {MaxHealth})");
         }
 
         /// <summary>
