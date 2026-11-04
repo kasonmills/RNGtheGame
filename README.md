@@ -183,8 +183,9 @@ RNGtheGame/
 │   └── TurnManagerTests.cs              # Switched off - no longer compiles
 │
 ├── docs/
-│   ├── to_do_list.md                    # What is still to do, and the decision log
+│   ├── to_do_list.md                    # What is still to do: build / decide / test / other
 │   ├── done.md                          # What is finished (entries move here from to_do_list.md)
+│   ├── code_review_notes.md             # Reasoning, code findings and history behind the to-do list
 │   ├── godot_frontend_plan.md           # Planned folder/file structure of the Godot frontend
 │   ├── abilities.md
 │   ├── boss_ideas_archive.md

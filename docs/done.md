@@ -36,6 +36,10 @@ What is finished. The other half of `to_do_list.md`: that file is what is still 
 
 ## Code Cleanup
 
+### Condense the to-do list (planned 2026-11-03)
+- **Moved here**: 2026-11-04
+- ✅ `to_do_list.md` was rewritten as short checklists in four sections: ready to build, needs creative input, built and needs testing, and other. The old long-form text, with its reasoning, code findings and history, was moved mostly unchanged to `docs/code_review_notes.md`. The old status summary at the end was dropped as out of date.
+
 ### Order-based boss progression (Tier 0)
 - **Moved here**: 2026-10-15
 - ✅ **Done (2026-09-30)** Remove the Champion Key/Final Gate system, replace with order-based progression (defeating boss N-1 unlocks boss N). `BossManager` now has `IsBossUnlocked`/`GetNextBoss`/`GetFinalBoss`/`IsFinalBoss` derived from registration order instead of keys/randomness.
