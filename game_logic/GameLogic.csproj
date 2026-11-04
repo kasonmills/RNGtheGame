@@ -8,4 +8,10 @@
     <RootNamespace>GameLogic</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Lets tests call internal calculation methods directly instead of via reflection,
+         without putting them on the public API the Godot frontend assembly sees. -->
+    <InternalsVisibleTo Include="GameLogicTests" />
+  </ItemGroup>
+
 </Project>

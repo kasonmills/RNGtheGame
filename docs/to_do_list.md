@@ -100,7 +100,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] **Main quests unlock in story order**, with a new "locked" quest state that is saved.
 - [ ] **Save quest item rewards** (only gold and XP are saved today).
 - [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. ⛔ Each quest's content comes from section 2.
-- [ ] **New NPCs:** the baker (sells sweets that heal) and the magic component seller.
+- [ ] **New NPCs:** the magic component seller (stocks only the rarer components not sold elsewhere) and the blacksmith's apprentice (weapon enchanting, with his own side quest line). No separate baker NPC (decided 2026-11-04) - the general Shop Keeper absorbs baked-goods healing sales and common magic components instead.
 - [ ] **Move quest text out of console prints** into data the Godot screens can show.
 
 ### Game systems
@@ -202,15 +202,19 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 
 ### Items and magic
 - [ ] 🔴 **Catalog trim** to about 50-60 weapons and 20-25 armor sets: how many weapon and armor types stay, the split across rarities, which items stay (cut items stay dormant), and what armor types mean without classes. Blocks the loot fixes.
+- [ ] **Healing potions are being replaced by candy/sweets (decided 2026-11-04).** `item_database.cs` still defines the old "Health Potion"/"Minor Health Potion"/"Greater Health Potion" line (ConsumableType.HealthPotion) - these need renaming/retheming to candy and sweets. **Sold by the general Shop Keeper, not a separate baker NPC (revised 2026-11-04 - no traveling baker after all).** The Shop Keeper also sells magic components; a separate magic component seller NPC stocks only the rarer components the Shop Keeper doesn't carry. Numbers and specifics not worked out yet.
+- [ ] **Blacksmith's apprentice - weapon enchanting (decided 2026-11-04).** A new NPC who enchants the player's weapons for additional power or other effects, reached through his own side quest line (not just an unlock quest - an actual questline). Most of the specific enchantment effects are still to be designed.
 - [ ] **Former Epic items and abilities** (all Rare for now, marked `TODO: was Epic`) - decide each one: Rare, Legendary or cut. That's 27 weapons, 30 armor sets, Combat Elixir, Greater Revival Potion, and the abilities Evasion, Iron Will, Swift Tactics, Precision Training and the Rogue's. There is no Legendary armor yet, so some may fill that gap.
 - [ ] **Spells** - the spells themselves; each caster's free weak spell (strength, cooldown?); which spells need rare components.
 - [ ] **Spell components** - rarity, description, price and buyable flag for each of the 37 (all placeholders now); loot weights and amounts; how they're grouped; area-based drops (mushrooms in forests...); the Negativity Crystal being given by an NPC or cursed onto the player.
 - [ ] **Potion names** (may be reworked).
 
 ### Quests
-- [ ] **Each NPC's unlock quest** - blacksmith, shopkeeper, component seller, baker (more later?): what it asks and who gives it. Is unlocking the whole reward, or is there gold/XP too?
-- [ ] **The baker's sweets** - new items or renamed potions? How strong, and what they cost.
-- [ ] **The component seller's stock.**
+- [ ] **Each NPC's unlock quest** - blacksmith, shopkeeper, magic component seller (more later?): what it asks and who gives it. Is unlocking the whole reward, or is there gold/XP too?
+- [ ] **The Shop Keeper's candy/sweets** - new items or renamed potions? How strong, and what they cost.
+- [ ] **The magic component seller's stock** - which of the 37 components count as "rare enough" to be exclusive to them rather than sold by the general Shop Keeper.
+- [ ] **The blacksmith's apprentice's side quest line** - not a single unlock quest like the other NPCs, an actual questline. What it involves, how long it is, what unlocks enchanting at the end.
+- [ ] **Weapon enchantment effects** - what the apprentice can actually grant (extra power, elemental/status effects, etc.), how many, and whether they're tied to rarity or the questline's progress.
 - [ ] **Does the boss-quest giver ("Veteran Ranger") stay** as its own screen?
 - [ ] **Main vs. side quests** - rework the unused `progression/quest_system.cs` into the main quest tracker? What is a main quest here?
 - [ ] **Rewrite the quest text** for the current story (drop the "greatest warrior in the realm" framing).

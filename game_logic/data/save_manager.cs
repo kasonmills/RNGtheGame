@@ -17,8 +17,10 @@ namespace GameLogic.Data
     /// </summary>
     public static class SaveManager
     {
-        // Save file location
-        private static readonly string SaveDirectory = Path.Combine(
+        // Save file location. Internal (not private) and mutable so tests can redirect it
+        // to a temp directory - a true `readonly` static field can't be changed via
+        // reflection after the type initializes, which is what broke the old test setup.
+        internal static string SaveDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "RNGtheGame",
             "Saves"

@@ -41,7 +41,7 @@ namespace GameLogic.Tests
             var turnManager = new TurnManager();
 
             // Assert
-            Assert.Equal(0, turnManager.CurrentTurnNumber);
+            Assert.Equal(0, turnManager.CurrentRoundNumber);
         }
 
         [Fact]
@@ -56,7 +56,7 @@ namespace GameLogic.Tests
             turnManager.InitializeCombat(player, enemy);
 
             // Assert
-            Assert.Equal(0, turnManager.CurrentTurnNumber);
+            Assert.Equal(0, turnManager.CurrentRoundNumber);
         }
 
         [Fact]
@@ -90,7 +90,7 @@ namespace GameLogic.Tests
 
             // Assert - Should be back to player's turn
             Assert.True(turnManager.IsPlayerTurn());
-            Assert.Equal(0, turnManager.CurrentTurnNumber);
+            Assert.Equal(0, turnManager.CurrentRoundNumber);
         }
 
         #endregion
@@ -144,7 +144,7 @@ namespace GameLogic.Tests
             turnManager.NextTurn(); // Enemy -> Player (new round)
 
             // Assert - Should be turn 1 (0-indexed becomes 1)
-            Assert.Equal(1, turnManager.CurrentTurnNumber);
+            Assert.Equal(1, turnManager.CurrentRoundNumber);
             Assert.True(turnManager.IsPlayerTurn()); // Back to player
         }
 
@@ -201,7 +201,7 @@ namespace GameLogic.Tests
         #region Turn Counter Tests
 
         [Fact]
-        public void CurrentTurnNumber_StartsAtZero()
+        public void CurrentRoundNumber_StartsAtZero()
         {
             // Arrange
             var turnManager = new TurnManager();
@@ -212,11 +212,11 @@ namespace GameLogic.Tests
             turnManager.InitializeCombat(player, enemy);
 
             // Assert
-            Assert.Equal(0, turnManager.CurrentTurnNumber);
+            Assert.Equal(0, turnManager.CurrentRoundNumber);
         }
 
         [Fact]
-        public void CurrentTurnNumber_IncrementsAfterFullRound()
+        public void CurrentRoundNumber_IncrementsAfterFullRound()
         {
             // Arrange
             var turnManager = new TurnManager();
@@ -229,11 +229,11 @@ namespace GameLogic.Tests
             turnManager.NextTurn(); // Enemy -> Player (round complete)
 
             // Assert
-            Assert.Equal(1, turnManager.CurrentTurnNumber);
+            Assert.Equal(1, turnManager.CurrentRoundNumber);
         }
 
         [Fact]
-        public void CurrentTurnNumber_IncrementsCorrectlyOverMultipleRounds()
+        public void CurrentRoundNumber_IncrementsCorrectlyOverMultipleRounds()
         {
             // Arrange
             var turnManager = new TurnManager();
@@ -248,11 +248,11 @@ namespace GameLogic.Tests
             }
 
             // Assert - Should be on turn 5 (0 -> 1 -> 2 -> 3 -> 4 -> 5)
-            Assert.Equal(5, turnManager.CurrentTurnNumber);
+            Assert.Equal(5, turnManager.CurrentRoundNumber);
         }
 
         [Fact]
-        public void CurrentTurnNumber_StaysCorrectDuringRound()
+        public void CurrentRoundNumber_StaysCorrectDuringRound()
         {
             // Arrange
             var turnManager = new TurnManager();
@@ -261,13 +261,13 @@ namespace GameLogic.Tests
             turnManager.InitializeCombat(player, enemy);
 
             // Act & Assert
-            Assert.Equal(0, turnManager.CurrentTurnNumber); // Player's turn in round 0
+            Assert.Equal(0, turnManager.CurrentRoundNumber); // Player's turn in round 0
 
             turnManager.NextTurn();
-            Assert.Equal(0, turnManager.CurrentTurnNumber); // Enemy's turn in round 0
+            Assert.Equal(0, turnManager.CurrentRoundNumber); // Enemy's turn in round 0
 
             turnManager.NextTurn();
-            Assert.Equal(1, turnManager.CurrentTurnNumber); // Player's turn in round 1
+            Assert.Equal(1, turnManager.CurrentRoundNumber); // Player's turn in round 1
         }
 
         #endregion
@@ -384,7 +384,7 @@ namespace GameLogic.Tests
             turnManager.Reset();
 
             // Assert
-            Assert.Equal(0, turnManager.CurrentTurnNumber);
+            Assert.Equal(0, turnManager.CurrentRoundNumber);
         }
 
         [Fact]
@@ -404,7 +404,7 @@ namespace GameLogic.Tests
             turnManager.InitializeCombat(player2, enemy2);
 
             // Assert - Should be able to start fresh
-            Assert.Equal(0, turnManager.CurrentTurnNumber);
+            Assert.Equal(0, turnManager.CurrentRoundNumber);
             Assert.True(turnManager.IsPlayerTurn());
         }
 
@@ -426,7 +426,7 @@ namespace GameLogic.Tests
 
             // Assert
             Assert.Contains("TestHero", status);
-            Assert.Contains("Turn 1", status);
+            Assert.Contains("Round 1", status);
         }
 
         [Fact]
@@ -444,7 +444,7 @@ namespace GameLogic.Tests
 
             // Assert
             Assert.Contains("Goblin", status);
-            Assert.Contains("Turn 1", status);
+            Assert.Contains("Round 1", status);
         }
 
         [Fact]
@@ -464,7 +464,7 @@ namespace GameLogic.Tests
             string status = turnManager.GetTurnStatus();
 
             // Assert - Turn number is 0-indexed internally, displayed as 1-indexed
-            Assert.Contains("Turn 3", status);
+            Assert.Contains("Round 3", status);
         }
 
         [Fact]
@@ -478,17 +478,17 @@ namespace GameLogic.Tests
 
             // Act & Assert
             string status1 = turnManager.GetTurnStatus();
-            Assert.Contains("Turn 1", status1);
+            Assert.Contains("Round 1", status1);
             Assert.Contains("TestHero", status1);
 
             turnManager.NextTurn();
             string status2 = turnManager.GetTurnStatus();
-            Assert.Contains("Turn 1", status2);
+            Assert.Contains("Round 1", status2);
             Assert.Contains("Goblin", status2);
 
             turnManager.NextTurn();
             string status3 = turnManager.GetTurnStatus();
-            Assert.Contains("Turn 2", status3);
+            Assert.Contains("Round 2", status3);
             Assert.Contains("TestHero", status3);
         }
 

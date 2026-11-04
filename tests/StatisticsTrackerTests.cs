@@ -213,16 +213,17 @@ namespace GameLogic.Tests
             // Arrange
             var stats = new StatisticsTracker();
 
-            // Act
+            // Act - Goblin and Bandit are real enemy types (game_logic/entities/enemies/enemy_types/).
             stats.RecordEnemyKill("Goblin");
             stats.RecordEnemyKill("Goblin");
-            stats.RecordEnemyKill("Orc");
+            stats.RecordEnemyKill("Bandit");
             stats.RecordEnemyKill("Goblin");
 
-            // Assert
-            Assert.Equal(3, stats.EnemiesKilled);
-            Assert.Equal(2, stats.KillsByEnemyType["Goblin"]);
-            Assert.Equal(1, stats.KillsByEnemyType["Orc"]);
+            // Assert - EnemiesKilled is a running total across all calls (4 here), not
+            // the number of distinct enemy types.
+            Assert.Equal(4, stats.EnemiesKilled);
+            Assert.Equal(3, stats.KillsByEnemyType["Goblin"]);
+            Assert.Equal(1, stats.KillsByEnemyType["Bandit"]);
         }
 
         [Fact]
@@ -231,15 +232,17 @@ namespace GameLogic.Tests
             // Arrange
             var stats = new StatisticsTracker();
 
-            // Act
-            stats.RecordBossDefeat("Dragon King");
-            stats.RecordBossDefeat("Demon Lord");
-            stats.RecordBossDefeat("Dragon King");
+            // Act - Skarn and the Librarian-Monk are real bosses from this game's roster
+            // (docs/to_do_list.md Tier 2), not placeholder names.
+            stats.RecordBossDefeat("Skarn");
+            stats.RecordBossDefeat("Librarian-Monk");
+            stats.RecordBossDefeat("Skarn");
 
-            // Assert
-            Assert.Equal(2, stats.BossesDefeated);
-            Assert.Equal(2, stats.BossDefeats["Dragon King"]);
-            Assert.Equal(1, stats.BossDefeats["Demon Lord"]);
+            // Assert - BossesDefeated is a running total across all calls (3 here), not
+            // the number of distinct bosses.
+            Assert.Equal(3, stats.BossesDefeated);
+            Assert.Equal(2, stats.BossDefeats["Skarn"]);
+            Assert.Equal(1, stats.BossDefeats["Librarian-Monk"]);
         }
 
         [Fact]
@@ -686,8 +689,8 @@ namespace GameLogic.Tests
             stats.RecordBossAttempt();
             stats.RecordBossAttempt();
             stats.RecordBossAttempt();
-            stats.RecordBossDefeat("Boss1");
-            stats.RecordBossDefeat("Boss2");
+            stats.RecordBossDefeat("Skarn");
+            stats.RecordBossDefeat("Librarian-Monk");
 
             // Act
             double bossWinRate = stats.GetBossWinRate();
@@ -702,10 +705,10 @@ namespace GameLogic.Tests
             // Arrange
             var stats = new StatisticsTracker();
             stats.RecordEnemyKill("Goblin");
-            stats.RecordEnemyKill("Orc");
+            stats.RecordEnemyKill("Bandit");
             stats.RecordEnemyKill("Goblin");
             stats.RecordEnemyKill("Goblin");
-            stats.RecordEnemyKill("Orc");
+            stats.RecordEnemyKill("Bandit");
 
             // Act
             string mostKilled = stats.GetMostKilledEnemy();
@@ -737,15 +740,15 @@ namespace GameLogic.Tests
         {
             // Arrange
             var stats = new StatisticsTracker();
-            stats.RecordConsumableUse("Health Potion");
-            stats.RecordConsumableUse("Mana Potion");
-            stats.RecordConsumableUse("Health Potion");
+            stats.RecordConsumableUse("Bread");
+            stats.RecordConsumableUse("Cooked Meat");
+            stats.RecordConsumableUse("Bread");
 
             // Act
             string mostUsed = stats.GetMostUsedConsumable();
 
             // Assert
-            Assert.Equal("Health Potion", mostUsed);
+            Assert.Equal("Bread", mostUsed);
         }
 
         [Fact]

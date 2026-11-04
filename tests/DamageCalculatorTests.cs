@@ -50,13 +50,17 @@ namespace GameLogic.Tests
             return new Weapon(
                 name: name,
                 description: "Test weapon",
-                value: 100,
+                type: WeaponType.Sword,
                 minDamage: minDmg,
                 maxDamage: maxDmg,
-                accuracy: accuracy,
                 critChance: critChance,
+                accuracy: accuracy,
+                rarity: ItemRarity.Common,
                 level: 1,
-                rarity: 1
+                value: 100,
+                minDamageUpgradeRange: (1, 5),
+                damageShiftRange: (0, 0),
+                maxDamageUpgradeRange: (1, 5)
             );
         }
 
@@ -68,10 +72,11 @@ namespace GameLogic.Tests
             return new Armor(
                 name: name,
                 description: "Test armor",
-                value: 100,
+                type: ArmorType.Leather,
                 defense: defense,
+                rarity: ItemRarity.Common,
                 level: 1,
-                rarity: 1
+                value: 100
             );
         }
 
@@ -129,7 +134,7 @@ namespace GameLogic.Tests
             var rng = new RNGManager(seed: 42);
             var calculator = new DamageCalculator(rng);
             var lowLevelPlayer = CreateTestPlayer("Hero1", level: 2);
-            var highLevelPlayer = CreateTestPlayer("Hero2", level: 50);
+            var highLevelPlayer = CreateTestPlayer("Hero2", level: 40); // 40 is the real level cap, not 50/100
             var weapon = CreateTestWeapon("Sword", minDmg: 10, maxDmg: 10, accuracy: 100); // Fixed damage
             lowLevelPlayer.EquipWeapon(weapon);
             highLevelPlayer.EquipWeapon(CreateTestWeapon("Sword", minDmg: 10, maxDmg: 10, accuracy: 100));
@@ -139,9 +144,9 @@ namespace GameLogic.Tests
             var lowLevelResult = calculator.CalculatePlayerAttackDamage(lowLevelPlayer, enemy);
             var highLevelResult = calculator.CalculatePlayerAttackDamage(highLevelPlayer, enemy);
 
-            // Assert - Level 50 should have +25 damage bonus (50 / 2)
+            // Assert - Level 40 should have +20 damage bonus (40 / 2)
             Assert.True(highLevelResult.FinalDamage > lowLevelResult.FinalDamage);
-            int expectedBonus = (50 / 2) - (2 / 2); // 25 - 1 = 24 extra damage
+            int expectedBonus = (40 / 2) - (2 / 2); // 20 - 1 = 19 extra damage
             Assert.True(highLevelResult.FinalDamage >= lowLevelResult.FinalDamage + expectedBonus - 2);
         }
 
@@ -185,8 +190,9 @@ namespace GameLogic.Tests
 
             // Assert - Should always crit with 100% crit chance
             Assert.True(result.IsCritical);
-            // Base damage 20 + level bonus (10/2 = 5) = 25, then * 1.5 = 37.5 = 37
-            Assert.True(result.FinalDamage >= 35); // Account for rounding
+            // Base damage 20 + level bonus (10/2 = 5) = 25, then * 1.5 = 37.5 = 37, then the
+            // Goblin's own Defense (level/2 = 5) is subtracted (flat reduction) -> 32.
+            Assert.True(result.FinalDamage >= 37 - enemy.Defense - 2); // Account for rounding
         }
 
         [Fact]
@@ -567,10 +573,13 @@ namespace GameLogic.Tests
                     damages.Add(result.FinalDamage);
             }
 
-            // Assert - All damage should be in range 10-20 (weapon damage) + 0 (level 1 bonus)
+            // Assert - Weapon damage 10-20 (level 1 means no level bonus), minus the
+            // Goblin's flat Defense reduction, floored at 1 (never less than 1 damage).
+            int expectedMin = Math.Max(1, 10 - enemy.Defense);
+            int expectedMax = Math.Max(1, 20 - enemy.Defense);
             foreach (var damage in damages)
             {
-                Assert.InRange(damage, 10, 20);
+                Assert.InRange(damage, expectedMin, expectedMax);
             }
         }
 

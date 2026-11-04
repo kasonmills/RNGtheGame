@@ -565,7 +565,7 @@ namespace GameLogic.Tests
             // Act
             rng.Roll(1, 100);
             rng.NextDouble();
-            rng.RollPercentage(50);
+            rng.RollPercentage(50); // Calls Roll() internally - must count as 1, not 2.
 
             // Assert
             Assert.Equal(3, rng.TotalRolls);

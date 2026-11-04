@@ -20,17 +20,42 @@ namespace GameLogic.Tests
 
         private Weapon CreateTestWeapon(string name = "Test Sword")
         {
-            return new Weapon(name, "A test weapon", 100, 10, 15, 85, 10, 1, 1);
+            return new Weapon(
+                name: name,
+                description: "A test weapon",
+                type: WeaponType.Sword,
+                minDamage: 10,
+                maxDamage: 15,
+                critChance: 10,
+                accuracy: 85,
+                rarity: ItemRarity.Common,
+                level: 1,
+                value: 100,
+                minDamageUpgradeRange: (1, 5),
+                damageShiftRange: (0, 0),
+                maxDamageUpgradeRange: (1, 5)
+            );
         }
 
         private Armor CreateTestArmor(string name = "Test Armor")
         {
-            return new Armor(name, "A test armor", 100, 5, 1, 1);
+            return new Armor(
+                name: name,
+                description: "A test armor",
+                type: ArmorType.Leather,
+                defense: 5,
+                rarity: ItemRarity.Common,
+                level: 1,
+                value: 100
+            );
         }
 
+        /// <summary>
+        /// Item is abstract - a Weapon stands in as "any item" for generic inventory tests.
+        /// </summary>
         private Item CreateTestItem(string name = "Test Item")
         {
-            return new Item(name, "A test item", 50, 1, 1);
+            return CreateTestWeapon(name);
         }
 
         #endregion
@@ -96,7 +121,7 @@ namespace GameLogic.Tests
 
             // Assert
             Assert.NotNull(player.Inventory);
-            Assert.Empty(player.Inventory);
+            Assert.Empty(player.Inventory.Items);
         }
 
         [Fact]
@@ -318,8 +343,8 @@ namespace GameLogic.Tests
             player.AddToInventory(item);
 
             // Assert
-            Assert.Contains(item, player.Inventory);
-            Assert.Single(player.Inventory);
+            Assert.Contains(item, player.Inventory.Items);
+            Assert.Single(player.Inventory.Items);
         }
 
         [Fact]
@@ -337,10 +362,10 @@ namespace GameLogic.Tests
             player.AddToInventory(item3);
 
             // Assert
-            Assert.Equal(3, player.Inventory.Count);
-            Assert.Contains(item1, player.Inventory);
-            Assert.Contains(item2, player.Inventory);
-            Assert.Contains(item3, player.Inventory);
+            Assert.Equal(3, player.Inventory.Items.Count);
+            Assert.Contains(item1, player.Inventory.Items);
+            Assert.Contains(item2, player.Inventory.Items);
+            Assert.Contains(item3, player.Inventory.Items);
         }
 
         #endregion

@@ -92,8 +92,10 @@ namespace GameLogic.Systems
             // Apply penalty: -1 level per under-leveled companion
             partyLevel -= underLeveledCount;
 
-            // Don't go below player level though
-            return Math.Max(partyLevel, playerLevel);
+            // The penalty exists precisely because under-leveled companions already pull
+            // partyLevel below playerLevel - flooring at playerLevel would cancel it out
+            // every time it's meant to apply. Only floor at 1, a real level has to be positive.
+            return Math.Max(partyLevel, 1);
         }
 
         /// <summary>

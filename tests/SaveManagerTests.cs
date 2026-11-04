@@ -18,25 +18,18 @@ namespace GameLogic.Tests
 
         public SaveManagerTests()
         {
-            // Redirect save directory to a temp location for testing
+            // Redirect save directory to a temp location for testing. SaveManager.SaveDirectory
+            // is internal (not private), so this sets it directly - no reflection needed.
             _testSaveDirectory = Path.Combine(Path.GetTempPath(), "RNGtheGame_Tests", Guid.NewGuid().ToString());
             Directory.CreateDirectory(_testSaveDirectory);
 
-            // Store original save directory using reflection
-            var saveDirField = typeof(SaveManager).GetField("SaveDirectory",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            _originalSaveDirectory = (string)saveDirField.GetValue(null);
-
-            // Set test directory
-            saveDirField.SetValue(null, _testSaveDirectory);
+            _originalSaveDirectory = SaveManager.SaveDirectory;
+            SaveManager.SaveDirectory = _testSaveDirectory;
         }
 
         public void Dispose()
         {
-            // Restore original save directory
-            var saveDirField = typeof(SaveManager).GetField("SaveDirectory",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            saveDirField.SetValue(null, _originalSaveDirectory);
+            SaveManager.SaveDirectory = _originalSaveDirectory;
 
             // Clean up test directory
             if (Directory.Exists(_testSaveDirectory))
@@ -61,12 +54,34 @@ namespace GameLogic.Tests
 
         private Weapon CreateTestWeapon()
         {
-            return new Weapon("Test Sword", "A test weapon", 100, 10, 15, 85, 10, 1, 1);
+            return new Weapon(
+                name: "Test Sword",
+                description: "A test weapon",
+                type: WeaponType.Sword,
+                minDamage: 10,
+                maxDamage: 15,
+                critChance: 10,
+                accuracy: 85,
+                rarity: ItemRarity.Common,
+                level: 1,
+                value: 100,
+                minDamageUpgradeRange: (1, 5),
+                damageShiftRange: (0, 0),
+                maxDamageUpgradeRange: (1, 5)
+            );
         }
 
         private Armor CreateTestArmor()
         {
-            return new Armor("Test Armor", "A test armor", 100, 5, 1, 1);
+            return new Armor(
+                name: "Test Armor",
+                description: "A test armor",
+                type: ArmorType.Leather,
+                defense: 5,
+                rarity: ItemRarity.Common,
+                level: 1,
+                value: 100
+            );
         }
 
         #endregion

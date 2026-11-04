@@ -25,13 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Temporarily excluded: fail to compile against the current game_logic API.
-         See conversation/memory for the specific mismatch in each file. -->
-    <Compile Remove="DamageCalculatorTests.cs" />
-    <Compile Remove="PlayerTests.cs" />
+    <!-- Excluded (2026-11-04): most side quests are being cut from the MVP and the small
+         list that stays hasn't been implemented yet (decided in this session). Testing
+         against the current GameLogic.Quests API now would be wasted work - revisit once
+         the trimmed side-quest design is actually built. See docs/to_do_list.md. -->
     <Compile Remove="QuestManagerTests.cs" />
-    <Compile Remove="TurnManagerTests.cs" />
-    <Compile Remove="SaveManagerTests.cs" />
   </ItemGroup>
 
 </Project>
+

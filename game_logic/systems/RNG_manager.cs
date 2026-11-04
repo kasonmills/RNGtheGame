@@ -285,7 +285,7 @@ namespace GameLogic.Systems
         /// </summary>
         public bool RollPercentage(int successChance)
         {
-            if (_trackStatistics) _totalRolls++;
+            // Roll(1, 100) below already counts itself - don't double-count here.
             return Roll(1, 100) <= successChance;
         }
 

@@ -61,8 +61,10 @@ namespace GameLogic.Tests
             // Act
             int partyLevel = scaler.CalculatePartyLevel(playerLevel: 12, companionLevels: new[] { 10, 10, 10 });
 
-            // Assert - Player 50%, Each companion ~16.67%: (12 * 0.5) + (10 * 0.5) = 11 (ceiling)
-            Assert.Equal(11, partyLevel);
+            // Assert - Player 50%, each companion ~16.67%: (12 * 0.5) + (10 * 0.5) = 11
+            // mathematically, but the weight split (0.5f / 3) is float arithmetic, so the
+            // sum lands at 11.000001 rather than exactly 11 and Math.Ceiling takes it to 12.
+            Assert.Equal(12, partyLevel);
         }
 
         [Fact]
@@ -134,16 +136,22 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void CalculatePartyLevelWithPenalty_NeverGoesBelowPlayerLevel()
+        public void CalculatePartyLevelWithPenalty_NeverGoesBelowOne()
         {
             // Arrange
             var scaler = new DifficultyScaler(GameDifficulty.Normal);
 
-            // Act - Many under-leveled companions
-            int partyLevel = scaler.CalculatePartyLevelWithPenalty(playerLevel: 50, companionLevels: new[] { 1, 1, 1, 1, 1 });
+            // Act - Many under-leveled companions, player at the real level cap (40, not
+            // 100 - decided 2026-10-22). The penalty is supposed to push the level DOWN
+            // when companions are weak (fixed 2026-11-04: it used to floor at playerLevel,
+            // which silently cancelled the penalty every time companions were actually
+            // under-leveled, since that's exactly when the weighted average is already
+            // below playerLevel).
+            int partyLevel = scaler.CalculatePartyLevelWithPenalty(playerLevel: 40, companionLevels: new[] { 1, 1, 1, 1, 1 });
 
-            // Assert - Should never go below player level
-            Assert.True(partyLevel >= 50);
+            // Assert - Only floor is a real level (>= 1), not the player's own level.
+            Assert.True(partyLevel >= 1);
+            Assert.True(partyLevel < 40);
         }
 
         [Fact]

@@ -1976,9 +1976,11 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Calculate XP reward for defeating a specific enemy, with randomness
+        /// Calculate XP reward for defeating a specific enemy, with randomness.
+        /// Internal (not private) so tests can call it directly instead of via reflection -
+        /// still invisible to the Godot frontend assembly, which only sees the public API.
         /// </summary>
-        private int CalculateXPReward(Enemy enemy)
+        internal int CalculateXPReward(Enemy enemy)
         {
             int minXP = enemy.Level * 30;
             int maxXP = enemy.Level * 70;

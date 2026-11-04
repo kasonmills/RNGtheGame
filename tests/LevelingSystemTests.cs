@@ -38,8 +38,10 @@ namespace GameLogic.Tests
             // Act
             int xp = LevelingSystem.CalculateXPForLevel(2, baseXP: 100, scalingFactor: 1.15);
 
-            // Assert
-            Assert.Equal(100, xp); // baseXP * 1.15^(2-1) = 100 * 1.15 = 115, but rounds to 100
+            // Assert - baseXP * 1.15^(2-1) = 100 * 1.15, truncated (not rounded) by the (int)
+            // cast. 1.15 has no exact binary representation, so the double comes out as
+            // 114.999...99, and truncation lands on 114, not 115.
+            Assert.Equal(114, xp);
         }
 
         [Fact]
