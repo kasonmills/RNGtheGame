@@ -89,6 +89,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] **Every spell needs components**, all drawn from the one shared pouch.
 - [ ] **Combat Elixir becomes a spell** (with components), not a consumable.
 - [ ] **"Elixir of Vitality" doesn't heal** - it runs the Combat Elixir code.
+- [ ] **Healing potions become candy/sweets**, sold by the Shop Keeper. Replace the Minor/Health/Greater Health Potion line (`ConsumableType.HealthPotion`) in `item_database.cs`. ⛔ Names and numbers in section 2.
 - [ ] **Shop:** pouch components can't be sold yet, and buying something that won't fit still takes the gold. Check first and refuse the sale.
 - [ ] **Chests and the ground keep items the player couldn't carry**, so they can come back for them. ⛔ Needs map objects.
 - [ ] Inventory stacking ignores XP (two copies with different XP merge into one).
@@ -100,7 +101,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] **Main quests unlock in story order**, with a new "locked" quest state that is saved.
 - [ ] **Save quest item rewards** (only gold and XP are saved today).
 - [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. ⛔ Each quest's content comes from section 2.
-- [ ] **New NPCs:** the magic component seller (stocks only the rarer components not sold elsewhere) and the blacksmith's apprentice (weapon enchanting, with his own side quest line). No separate baker NPC (decided 2026-11-04) - the general Shop Keeper absorbs baked-goods healing sales and common magic components instead.
+- [ ] **New NPCs:** the magic component seller (rarer components only) and the blacksmith's apprentice (weapon enchanting, unlocked through his own quest line). There is no baker: the Shop Keeper sells the healing sweets and the common components.
 - [ ] **Move quest text out of console prints** into data the Godot screens can show.
 
 ### Game systems
@@ -122,7 +123,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 
 ### Code cleanup
 - [ ] Delete the duplicate settings/statistics save code in `QuestSerializationHelper` (about 190 lines).
-- [ ] `turn_manager.cs` is unused: delete it together with `TurnManagerTests`.
+- [ ] `turn_manager.cs` is unused by combat, but its tests were reworked and pass (2026-11-04). Decide: delete both, or keep them.
 - [ ] Rename one of the two `CombatAction` types.
 - [ ] Merge the 9 identical weapon-mastery files into one class, and fix the `\\n` typo in their text. (Wait for the masteries-vs-families decision.)
 - [ ] Merge the duplicate effects (Regeneration twice, Bleed/Bleeding).
@@ -143,8 +144,12 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] Rewrite `MapController.cs` for the touch-to-fight overworld spawns.
 - [ ] The combat log treats `[...]` as formatting. Fix it when combat text moves to events.
 
-### Unit tests - ⛔ on hold until most of this list is built
-- [ ] Full rework of the backend tests (5 files are switched off and `CombatManagerTests` is broken), plus frontend tests, new tests (bosses, shop, upgrades, save), and a CI pipeline.
+### Unit tests
+_The backend tests were reworked against the current code on 2026-11-04, and they pass._
+- [ ] `QuestManagerTests` - ⛔ switched off until the quest changes above (NPC unlock quests, story-order unlocking, rewards) are built, then rewrite it against them.
+- [ ] New tests: bosses, shop, weapon/armor upgrades.
+- [ ] Frontend (Godot) tests.
+- [ ] A CI pipeline to run the tests.
 
 ---
 
@@ -202,16 +207,14 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 
 ### Items and magic
 - [ ] 🔴 **Catalog trim** to about 50-60 weapons and 20-25 armor sets: how many weapon and armor types stay, the split across rarities, which items stay (cut items stay dormant), and what armor types mean without classes. Blocks the loot fixes.
-- [ ] **Healing potions are being replaced by candy/sweets (decided 2026-11-04).** `item_database.cs` still defines the old "Health Potion"/"Minor Health Potion"/"Greater Health Potion" line (ConsumableType.HealthPotion) - these need renaming/retheming to candy and sweets. **Sold by the general Shop Keeper, not a separate baker NPC (revised 2026-11-04 - no traveling baker after all).** The Shop Keeper also sells magic components; a separate magic component seller NPC stocks only the rarer components the Shop Keeper doesn't carry. Numbers and specifics not worked out yet.
-- [ ] **Blacksmith's apprentice - weapon enchanting (decided 2026-11-04).** A new NPC who enchants the player's weapons for additional power or other effects, reached through his own side quest line (not just an unlock quest - an actual questline). Most of the specific enchantment effects are still to be designed.
 - [ ] **Former Epic items and abilities** (all Rare for now, marked `TODO: was Epic`) - decide each one: Rare, Legendary or cut. That's 27 weapons, 30 armor sets, Combat Elixir, Greater Revival Potion, and the abilities Evasion, Iron Will, Swift Tactics, Precision Training and the Rogue's. There is no Legendary armor yet, so some may fill that gap.
 - [ ] **Spells** - the spells themselves; each caster's free weak spell (strength, cooldown?); which spells need rare components.
 - [ ] **Spell components** - rarity, description, price and buyable flag for each of the 37 (all placeholders now); loot weights and amounts; how they're grouped; area-based drops (mushrooms in forests...); the Negativity Crystal being given by an NPC or cursed onto the player.
-- [ ] **Potion names** (may be reworked).
+- [ ] **Names for the other potions** (revival, antidote and so on), now that healing potions are becoming candy/sweets.
 
 ### Quests
 - [ ] **Each NPC's unlock quest** - blacksmith, shopkeeper, magic component seller (more later?): what it asks and who gives it. Is unlocking the whole reward, or is there gold/XP too?
-- [ ] **The Shop Keeper's candy/sweets** - new items or renamed potions? How strong, and what they cost.
+- [ ] **The Shop Keeper's candy/sweets** - their names, whether they are new items or the renamed potions, how strong each is, and what they cost.
 - [ ] **The magic component seller's stock** - which of the 37 components count as "rare enough" to be exclusive to them rather than sold by the general Shop Keeper.
 - [ ] **The blacksmith's apprentice's side quest line** - not a single unlock quest like the other NPCs, an actual questline. What it involves, how long it is, what unlocks enchanting at the end.
 - [ ] **Weapon enchantment effects** - what the apprentice can actually grant (extra power, elemental/status effects, etc.), how many, and whether they're tied to rarity or the questline's progress.

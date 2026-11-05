@@ -36,6 +36,11 @@ What is finished. The other half of `to_do_list.md`: that file is what is still 
 
 ## Code Cleanup
 
+### Backend test rework
+- **Moved here**: 2026-11-05
+- ✅ **Done (2026-11-04)** The backend tests were reworked against the current code, and they pass. DamageCalculator, Player, SaveManager and TurnManager tests are switched back on, `CombatManagerTests` is rewritten, and gold-reward tests moved to the new `LootGeneratorTests.cs`. Two bugs were found and fixed along the way: a double-counted RNG roll statistic, and a party-level penalty in `DifficultyScaler` that cancelled itself.
+- **Follow-up still in `to_do_list.md`**: `QuestManagerTests` (switched off until the quest changes are built), new tests, frontend tests and CI, all under "Unit tests".
+
 ### Condense the to-do list (planned 2026-11-03)
 - **Moved here**: 2026-11-04
 - ✅ `to_do_list.md` was rewritten as short checklists in four sections: ready to build, needs creative input, built and needs testing, and other. The old long-form text, with its reasoning, code findings and history, was moved mostly unchanged to `docs/code_review_notes.md`. The old status summary at the end was dropped as out of date.
