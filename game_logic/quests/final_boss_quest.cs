@@ -1,5 +1,6 @@
 using System;
 using GameLogic.Entities.Enemies.Bosses;
+using GameLogic.Systems;
 
 namespace GameLogic.Quests
 {
@@ -52,12 +53,12 @@ namespace GameLogic.Quests
 
         protected override void OnCompleted()
         {
-            Console.WriteLine("\n═══════════════════════════════════════");
-            Console.WriteLine("    🏆 FINAL QUEST COMPLETED! 🏆");
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("You have proven yourself the realm's greatest warrior!");
-            Console.WriteLine("Your legend will be remembered for all time.");
-            Console.WriteLine("═══════════════════════════════════════\n");
+            GameLog.Write("\n═══════════════════════════════════════");
+            GameLog.Write("    🏆 FINAL QUEST COMPLETED! 🏆");
+            GameLog.Write("═══════════════════════════════════════");
+            GameLog.Write("You have proven yourself the realm's greatest warrior!");
+            GameLog.Write("Your legend will be remembered for all time.");
+            GameLog.Write("═══════════════════════════════════════\n");
         }
     }
 }

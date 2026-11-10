@@ -297,40 +297,6 @@ namespace GameLogic.Tests
             Assert.Equal(DifficultyLevel.Difficult, settings.Difficulty);
         }
 
-        [Theory]
-        [InlineData(DifficultyLevel.Normal, 0.75f)]
-        [InlineData(DifficultyLevel.Hard, 1.0f)]
-        [InlineData(DifficultyLevel.Difficult, 1.5f)]
-        [InlineData(DifficultyLevel.Unfair, 2.0f)]
-        public void GetDifficultyMultiplier_ReturnsCorrectValue(DifficultyLevel difficulty, float expected)
-        {
-            // Arrange
-            var settings = new GameSettings { Difficulty = difficulty };
-
-            // Act
-            float multiplier = settings.GetDifficultyMultiplier();
-
-            // Assert
-            Assert.Equal(expected, multiplier);
-        }
-
-        [Theory]
-        [InlineData(DifficultyLevel.Normal, 0.8f)]
-        [InlineData(DifficultyLevel.Hard, 1.0f)]
-        [InlineData(DifficultyLevel.Difficult, 1.3f)]
-        [InlineData(DifficultyLevel.Unfair, 1.5f)]
-        public void GetRewardMultiplier_ReturnsCorrectValue(DifficultyLevel difficulty, float expected)
-        {
-            // Arrange
-            var settings = new GameSettings { Difficulty = difficulty };
-
-            // Act
-            float multiplier = settings.GetRewardMultiplier();
-
-            // Assert
-            Assert.Equal(expected, multiplier);
-        }
-
         #endregion
 
         #region Reset To Defaults Tests
@@ -523,54 +489,5 @@ namespace GameLogic.Tests
 
         #endregion
 
-        #region Integration Tests
-
-        [Fact]
-        public void DifficultyMultipliers_AffectGameplay()
-        {
-            // Arrange - Simulate enemy with 100 HP on different difficulties
-            int baseEnemyHP = 100;
-            var normalSettings = new GameSettings { Difficulty = DifficultyLevel.Normal };
-            var hardSettings = new GameSettings { Difficulty = DifficultyLevel.Hard };
-            var difficultSettings = new GameSettings { Difficulty = DifficultyLevel.Difficult };
-            var unfairSettings = new GameSettings { Difficulty = DifficultyLevel.Unfair };
-
-            // Act
-            int normalHP = (int)(baseEnemyHP * normalSettings.GetDifficultyMultiplier());
-            int hardHP = (int)(baseEnemyHP * hardSettings.GetDifficultyMultiplier());
-            int difficultHP = (int)(baseEnemyHP * difficultSettings.GetDifficultyMultiplier());
-            int unfairHP = (int)(baseEnemyHP * unfairSettings.GetDifficultyMultiplier());
-
-            // Assert
-            Assert.Equal(75, normalHP);    // 75% of 100
-            Assert.Equal(100, hardHP);     // 100% of 100
-            Assert.Equal(150, difficultHP); // 150% of 100
-            Assert.Equal(200, unfairHP);   // 200% of 100
-        }
-
-        [Fact]
-        public void RewardMultipliers_AffectLoot()
-        {
-            // Arrange - Simulate quest reward of 100 gold on different difficulties
-            int baseReward = 100;
-            var normalSettings = new GameSettings { Difficulty = DifficultyLevel.Normal };
-            var hardSettings = new GameSettings { Difficulty = DifficultyLevel.Hard };
-            var difficultSettings = new GameSettings { Difficulty = DifficultyLevel.Difficult };
-            var unfairSettings = new GameSettings { Difficulty = DifficultyLevel.Unfair };
-
-            // Act
-            int normalReward = (int)(baseReward * normalSettings.GetRewardMultiplier());
-            int hardReward = (int)(baseReward * hardSettings.GetRewardMultiplier());
-            int difficultReward = (int)(baseReward * difficultSettings.GetRewardMultiplier());
-            int unfairReward = (int)(baseReward * unfairSettings.GetRewardMultiplier());
-
-            // Assert
-            Assert.Equal(80, normalReward);    // 80% of 100
-            Assert.Equal(100, hardReward);     // 100% of 100
-            Assert.Equal(130, difficultReward); // 130% of 100
-            Assert.Equal(150, unfairReward);   // 150% of 100
-        }
-
-        #endregion
     }
 }

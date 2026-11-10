@@ -1,6 +1,7 @@
 using System;
 using Xunit;
 using GameLogic.Progression;
+using GameLogic.Systems;
 
 namespace GameLogic.Tests
 {
@@ -683,7 +684,7 @@ namespace GameLogic.Tests
         public void GetDifficultyMultiplier_Normal_Returns0Point8()
         {
             // Act
-            float multiplier = LevelingSystem.GetDifficultyMultiplier(XpDifficultyLevel.Normal);
+            float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Normal);
 
             // Assert
             Assert.Equal(0.8f, multiplier);
@@ -693,7 +694,7 @@ namespace GameLogic.Tests
         public void GetDifficultyMultiplier_Hard_ReturnsOne()
         {
             // Act
-            float multiplier = LevelingSystem.GetDifficultyMultiplier(XpDifficultyLevel.Hard);
+            float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Hard);
 
             // Assert
             Assert.Equal(1.0f, multiplier);
@@ -703,7 +704,7 @@ namespace GameLogic.Tests
         public void GetDifficultyMultiplier_Difficult_Returns1Point25()
         {
             // Act
-            float multiplier = LevelingSystem.GetDifficultyMultiplier(XpDifficultyLevel.Difficult);
+            float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Difficult);
 
             // Assert
             Assert.Equal(1.25f, multiplier);
@@ -713,7 +714,7 @@ namespace GameLogic.Tests
         public void GetDifficultyMultiplier_Unfair_Returns1Point5()
         {
             // Act
-            float multiplier = LevelingSystem.GetDifficultyMultiplier(XpDifficultyLevel.Unfair);
+            float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Unfair);
 
             // Assert
             Assert.Equal(1.5f, multiplier);

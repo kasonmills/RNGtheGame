@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GameLogic.Systems;
 
 namespace GameLogic.World
 {
@@ -136,12 +137,12 @@ namespace GameLogic.World
         {
             Visit();
             // TODO-GODOT: arrival text below -> popup/HUD text once player sprite reaches this node's position
-            Console.WriteLine($"\n=== {Name} ===");
-            Console.WriteLine(Description);
+            GameLog.Write($"\n=== {Name} ===");
+            GameLog.Write(Description);
 
             if (AvailableEvents.Count > 0)
             {
-                Console.WriteLine($"Available: {string.Join(", ", AvailableEvents)}");
+                GameLog.Write($"Available: {string.Join(", ", AvailableEvents)}");
             }
         }
 

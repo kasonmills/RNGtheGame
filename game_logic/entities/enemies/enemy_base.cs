@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GameLogic.Items;
 using GameLogic.Abilities;
+using GameLogic.Systems;
 
 namespace GameLogic.Entities.Enemies
 {
@@ -26,6 +27,21 @@ namespace GameLogic.Entities.Enemies
         public int GoldValue { get; set; }     // Base gold dropped
         public int XPValue { get; set; }       // Base XP given
         public List<Item> LootTable { get; set; } // Possible item drops
+
+        /// <summary>
+        /// Enemies with the same group name pay less XP and gold the more of them are beaten in
+        /// one fight (CombatManager.DiminishingRewardsFullCount / DiminishingRewardsFactor), so
+        /// summoned enemies can't be farmed endlessly. Null (the default) = always full rewards.
+        /// First user: the Slime Dragon's draglings, "Dragling" (decided 2026-11-10).
+        /// </summary>
+        public string DiminishingRewardsGroup { get; set; }
+
+        /// <summary>
+        /// True once DifficultyScaler.ApplyDifficultyToEnemy has scaled this enemy's health and
+        /// damage for the game's difficulty - it is only done once per enemy. Anything that
+        /// re-runs InitializeStats must set it back to false.
+        /// </summary>
+        public bool DifficultyApplied { get; set; }
 
         // Enemy Classification
         public EnemyType Type { get; set; }
@@ -133,7 +149,7 @@ namespace GameLogic.Entities.Enemies
 
             // This would normally trigger combat logic
             // For now, placeholder
-            Console.WriteLine($"{Name} executes action: {action}");
+            GameLog.Write($"{Name} executes action: {action}");
         }
     }
 

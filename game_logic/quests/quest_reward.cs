@@ -69,37 +69,38 @@ namespace GameLogic.Quests
             return string.Join(", ", rewardParts);
         }
 
-        /// <summary>
-        /// Display rewards to console
-        /// </summary>
-        public void DisplayRewards()
-        {
-            if (!HasRewards())
-            {
-                Console.WriteLine("No rewards.");
-                return;
-            }
-
-            Console.WriteLine("═══ QUEST REWARDS ═══");
-
-            if (Gold > 0)
-            {
-                Console.WriteLine($"💰 Gold: {Gold}");
-            }
-
-            if (Experience > 0)
-            {
-                Console.WriteLine($"⭐ Experience: {Experience}");
-            }
-
-            if (Items.Count > 0)
-            {
-                Console.WriteLine("📦 Items:");
-                foreach (var item in Items)
-                {
-                    Console.WriteLine($"   • {item.Name}");
-                }
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display rewards to console
+        // /// </summary>
+        // public void DisplayRewards()
+        // {
+        //     if (!HasRewards())
+        //     {
+        //         Console.WriteLine("No rewards.");
+        //         return;
+        //     }
+        //
+        //     Console.WriteLine("═══ QUEST REWARDS ═══");
+        //
+        //     if (Gold > 0)
+        //     {
+        //         Console.WriteLine($"💰 Gold: {Gold}");
+        //     }
+        //
+        //     if (Experience > 0)
+        //     {
+        //         Console.WriteLine($"⭐ Experience: {Experience}");
+        //     }
+        //
+        //     if (Items.Count > 0)
+        //     {
+        //         Console.WriteLine("📦 Items:");
+        //         foreach (var item in Items)
+        //         {
+        //             Console.WriteLine($"   • {item.Name}");
+        //         }
+        //     }
+        // }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GameLogic.Items;
+using GameLogic.Systems;
 
 namespace GameLogic.Entities.NPCs
 {
@@ -121,163 +122,169 @@ namespace GameLogic.Entities.NPCs
             AddDialogue("Every adventurer needs good equipment. Take a look around!");
         }
 
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Show the shopkeeper's main menu
+        // /// </summary>
+        // public void ShowShop(Player.Player player)
+        // {
+        //     Console.Clear();
+        //     Console.WriteLine("=".PadRight(50, '='));
+        //     Console.WriteLine($"    {Name}'s Shop");
+        //     Console.WriteLine("=".PadRight(50, '='));
+        //     Greet();
+        //     Console.WriteLine($"\nShop Tier: {ShopTier}/5");
+        //
+        //     // Show shop personality
+        //     string personalityDesc = ShopPersonalityModifier < 0.95 ? "(Generous Prices)" :
+        //                              ShopPersonalityModifier > 1.05 ? "(Premium Prices)" :
+        //                              "(Fair Prices)";
+        //     Console.WriteLine($"Shop Style: {personalityDesc}");
+        //
+        //     // Show current market conditions
+        //     string marketDesc = MarketConditionsModifier < 0.98 ? "Buyer's Market" :
+        //                        MarketConditionsModifier > 1.02 ? "Seller's Market" :
+        //                        "Stable Market";
+        //     Console.WriteLine($"Market: {marketDesc}");
+        //
+        //     // Show next restock info
+        //     Console.WriteLine($"\nNext Restock: {GetTimeUntilRestock()} OR {GetCombatUntilRestock()}");
+        //
+        //     Console.WriteLine($"\nYour Gold: {player.Gold}");
+        //
+        //     Console.WriteLine("\nWhat would you like to do?");
+        //     Console.WriteLine("1. Buy Items");
+        //     Console.WriteLine("2. Sell Items");
+        //     Console.WriteLine("3. View Shop Info");
+        //     Console.WriteLine("4. Leave");
+        //
+        //     Console.Write("\nChoice: ");
+        // }
+
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display shop inventory for purchase
+        // /// </summary>
+        // public void DisplayGoods()
+        // {
+        //     if (ShopInventory.Count == 0)
+        //     {
+        //         Console.WriteLine("\nThe shop is currently out of stock!");
+        //         return;
+        //     }
+        //
+        //     Console.WriteLine("\n=== SHOP INVENTORY ===\n");
+        //
+        //     // Group by category
+        //     var weapons = ShopInventory.Where(i => i.Category == ItemCategory.Weapon).ToList();
+        //     var armor = ShopInventory.Where(i => i.Category == ItemCategory.Armor).ToList();
+        //     var consumables = ShopInventory.Where(i => i.Category == ItemCategory.Consumable).ToList();
+        //
+        //     int index = 1;
+        //
+        //     if (weapons.Count > 0)
+        //     {
+        //         Console.WriteLine("--- WEAPONS ---");
+        //         foreach (var item in weapons)
+        //         {
+        //             int price = CalculateBuyPrice(item);
+        //             Console.WriteLine($"{index}. {item.GetDisplayName()} - {price} gold");
+        //             index++;
+        //         }
+        //         Console.WriteLine();
+        //     }
+        //
+        //     if (armor.Count > 0)
+        //     {
+        //         Console.WriteLine("--- ARMOR ---");
+        //         foreach (var item in armor)
+        //         {
+        //             int price = CalculateBuyPrice(item);
+        //             Console.WriteLine($"{index}. {item.GetDisplayName()} - {price} gold");
+        //             index++;
+        //         }
+        //         Console.WriteLine();
+        //     }
+        //
+        //     if (consumables.Count > 0)
+        //     {
+        //         Console.WriteLine("--- CONSUMABLES ---");
+        //         foreach (var item in consumables)
+        //         {
+        //             int price = CalculateBuyPrice(item);
+        //             Console.WriteLine($"{index}. {item.GetDisplayName()} - {price} gold");
+        //             index++;
+        //         }
+        //         Console.WriteLine();
+        //     }
+        // }
+
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Buy menu - player purchases items from shop
+        // /// </summary>
+        // public void BuyMenu(Player.Player player)
+        // {
+        //     if (ShopInventory.Count == 0)
+        //     {
+        //         Console.WriteLine("\n❌ The shop is currently out of stock!");
+        //         Console.WriteLine("\nPress any key to continue...");
+        //         Console.ReadKey();
+        //         return;
+        //     }
+        //
+        //     Console.Clear();
+        //     Console.WriteLine("=== BUY ITEMS ===\n");
+        //     Console.WriteLine($"Your Gold: {player.Gold}\n");
+        //
+        //     DisplayGoods();
+        //
+        //     Console.WriteLine($"{ShopInventory.Count + 1}. Cancel");
+        //     Console.Write("\nSelect item to buy (or enter number for details): ");
+        //
+        //     string input = Console.ReadLine();
+        //     if (int.TryParse(input, out int choice) && choice > 0 && choice <= ShopInventory.Count)
+        //     {
+        //         Item selectedItem = ShopInventory[choice - 1];
+        //         ShowItemDetails(selectedItem, player);
+        //     }
+        // }
+
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Show item details and confirm purchase
+        // /// </summary>
+        // private void ShowItemDetails(Item item, Player.Player player)
+        // {
+        //     Console.Clear();
+        //     Console.WriteLine("=== ITEM DETAILS ===\n");
+        //     Console.WriteLine(item.GetInfo());
+        //
+        //     int price = CalculateBuyPrice(item);
+        //     Console.WriteLine($"\nPrice: {price} gold");
+        //     Console.WriteLine($"Your Gold: {player.Gold}");
+        //
+        //     if (player.Gold < price)
+        //     {
+        //         Console.WriteLine("\n❌ You don't have enough gold!");
+        //         Console.WriteLine("\nPress any key to continue...");
+        //         Console.ReadKey();
+        //         return;
+        //     }
+        //
+        //     Console.Write("\nBuy this item? (Y/N): ");
+        //     string confirm = Console.ReadLine()?.ToUpper();
+        //
+        //     if (confirm == "Y")
+        //     {
+        //         BuyItem(player, item);
+        //     }
+        // }
+
         /// <summary>
-        /// Show the shopkeeper's main menu
-        /// </summary>
-        public void ShowShop(Player.Player player)
-        {
-            Console.Clear();
-            Console.WriteLine("=".PadRight(50, '='));
-            Console.WriteLine($"    {Name}'s Shop");
-            Console.WriteLine("=".PadRight(50, '='));
-            Greet();
-            Console.WriteLine($"\nShop Tier: {ShopTier}/5");
-
-            // Show shop personality
-            string personalityDesc = ShopPersonalityModifier < 0.95 ? "(Generous Prices)" :
-                                     ShopPersonalityModifier > 1.05 ? "(Premium Prices)" :
-                                     "(Fair Prices)";
-            Console.WriteLine($"Shop Style: {personalityDesc}");
-
-            // Show current market conditions
-            string marketDesc = MarketConditionsModifier < 0.98 ? "Buyer's Market" :
-                               MarketConditionsModifier > 1.02 ? "Seller's Market" :
-                               "Stable Market";
-            Console.WriteLine($"Market: {marketDesc}");
-
-            // Show next restock info
-            Console.WriteLine($"\nNext Restock: {GetTimeUntilRestock()} OR {GetCombatUntilRestock()}");
-
-            Console.WriteLine($"\nYour Gold: {player.Gold}");
-
-            Console.WriteLine("\nWhat would you like to do?");
-            Console.WriteLine("1. Buy Items");
-            Console.WriteLine("2. Sell Items");
-            Console.WriteLine("3. View Shop Info");
-            Console.WriteLine("4. Leave");
-
-            Console.Write("\nChoice: ");
-        }
-
-        /// <summary>
-        /// Display shop inventory for purchase
-        /// </summary>
-        public void DisplayGoods()
-        {
-            if (ShopInventory.Count == 0)
-            {
-                Console.WriteLine("\nThe shop is currently out of stock!");
-                return;
-            }
-
-            Console.WriteLine("\n=== SHOP INVENTORY ===\n");
-
-            // Group by category
-            var weapons = ShopInventory.Where(i => i.Category == ItemCategory.Weapon).ToList();
-            var armor = ShopInventory.Where(i => i.Category == ItemCategory.Armor).ToList();
-            var consumables = ShopInventory.Where(i => i.Category == ItemCategory.Consumable).ToList();
-
-            int index = 1;
-
-            if (weapons.Count > 0)
-            {
-                Console.WriteLine("--- WEAPONS ---");
-                foreach (var item in weapons)
-                {
-                    int price = CalculateBuyPrice(item);
-                    Console.WriteLine($"{index}. {item.GetDisplayName()} - {price} gold");
-                    index++;
-                }
-                Console.WriteLine();
-            }
-
-            if (armor.Count > 0)
-            {
-                Console.WriteLine("--- ARMOR ---");
-                foreach (var item in armor)
-                {
-                    int price = CalculateBuyPrice(item);
-                    Console.WriteLine($"{index}. {item.GetDisplayName()} - {price} gold");
-                    index++;
-                }
-                Console.WriteLine();
-            }
-
-            if (consumables.Count > 0)
-            {
-                Console.WriteLine("--- CONSUMABLES ---");
-                foreach (var item in consumables)
-                {
-                    int price = CalculateBuyPrice(item);
-                    Console.WriteLine($"{index}. {item.GetDisplayName()} - {price} gold");
-                    index++;
-                }
-                Console.WriteLine();
-            }
-        }
-
-        /// <summary>
-        /// Buy menu - player purchases items from shop
-        /// </summary>
-        public void BuyMenu(Player.Player player)
-        {
-            if (ShopInventory.Count == 0)
-            {
-                Console.WriteLine("\n❌ The shop is currently out of stock!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-                return;
-            }
-
-            Console.Clear();
-            Console.WriteLine("=== BUY ITEMS ===\n");
-            Console.WriteLine($"Your Gold: {player.Gold}\n");
-
-            DisplayGoods();
-
-            Console.WriteLine($"{ShopInventory.Count + 1}. Cancel");
-            Console.Write("\nSelect item to buy (or enter number for details): ");
-
-            string input = Console.ReadLine();
-            if (int.TryParse(input, out int choice) && choice > 0 && choice <= ShopInventory.Count)
-            {
-                Item selectedItem = ShopInventory[choice - 1];
-                ShowItemDetails(selectedItem, player);
-            }
-        }
-
-        /// <summary>
-        /// Show item details and confirm purchase
-        /// </summary>
-        private void ShowItemDetails(Item item, Player.Player player)
-        {
-            Console.Clear();
-            Console.WriteLine("=== ITEM DETAILS ===\n");
-            Console.WriteLine(item.GetInfo());
-
-            int price = CalculateBuyPrice(item);
-            Console.WriteLine($"\nPrice: {price} gold");
-            Console.WriteLine($"Your Gold: {player.Gold}");
-
-            if (player.Gold < price)
-            {
-                Console.WriteLine("\n❌ You don't have enough gold!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-                return;
-            }
-
-            Console.Write("\nBuy this item? (Y/N): ");
-            string confirm = Console.ReadLine()?.ToUpper();
-
-            if (confirm == "Y")
-            {
-                BuyItem(player, item);
-            }
-        }
-
-        /// <summary>
-        /// Process item purchase
+        /// Process item purchase. Returns false (nothing changes) when the player can't afford it
+        /// or it doesn't fit in the bag. Messages go through GameLog for the shop screen.
+        /// TODO-GODOT: any "Buy this?" confirmation happens on the shop screen before this call.
         /// </summary>
         public bool BuyItem(Player.Player player, Item item)
         {
@@ -286,108 +293,104 @@ namespace GameLogic.Entities.NPCs
             if (player.Gold < price)
             {
                 Speak("You don't have enough gold for that!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
                 return false;
             }
 
-            if (player.Inventory.IsFull() && !item.IsStackable)
+            // Check it fits before any gold changes hands (a full bag, or a stack that would go
+            // over 99, used to still take the gold - fixed 2026-11-10)
+            if (!player.AddToInventory(item))
             {
-                Speak("Your inventory is full! You need to make space first.");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
+                Speak("You can't carry that! You need to make space first.");
                 return false;
             }
 
             // Complete the transaction
             player.Gold -= price;
-            player.Inventory.AddItem(item);
             ShopInventory.Remove(item);
 
-            Console.WriteLine($"\n✅ Purchased {item.GetDisplayName()} for {price} gold!");
+            GameLog.Write($"Purchased {item.GetDisplayName()} for {price} gold! Gold remaining: {player.Gold}");
             Speak("Pleasure doing business with you!");
-            Console.WriteLine($"\nGold remaining: {player.Gold}");
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
             return true;
         }
 
-        /// <summary>
-        /// Sell menu - player sells items to shop
-        /// </summary>
-        public void SellMenu(Player.Player player)
-        {
-            if (player.Inventory.Items.Count == 0)
-            {
-                Console.WriteLine("\n❌ You don't have any items to sell!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-                return;
-            }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Sell menu - player sells items to shop
+        // /// </summary>
+        // public void SellMenu(Player.Player player)
+        // {
+        //     if (player.Inventory.Items.Count == 0)
+        //     {
+        //         Console.WriteLine("\n❌ You don't have any items to sell!");
+        //         Console.WriteLine("\nPress any key to continue...");
+        //         Console.ReadKey();
+        //         return;
+        //     }
+        //
+        //     Console.Clear();
+        //     Console.WriteLine("=== SELL ITEMS ===\n");
+        //     Console.WriteLine($"Your Gold: {player.Gold}\n");
+        //
+        //     // Display player inventory with sell prices
+        //     var sellableItems = player.Inventory.Items
+        //         .Where(i => i.Category != ItemCategory.QuestItem)  // Can't sell quest items
+        //         .ToList();
+        //
+        //     if (sellableItems.Count == 0)
+        //     {
+        //         Console.WriteLine("❌ You don't have any items that can be sold!");
+        //         Console.WriteLine("(Quest items cannot be sold)");
+        //         Console.WriteLine("\nPress any key to continue...");
+        //         Console.ReadKey();
+        //         return;
+        //     }
+        //
+        //     for (int i = 0; i < sellableItems.Count; i++)
+        //     {
+        //         var item = sellableItems[i];
+        //         int sellPrice = CalculateSellPrice(item, _rng);
+        //         Console.WriteLine($"{i + 1}. {item.GetDisplayName()} - {sellPrice} gold");
+        //     }
+        //
+        //     Console.WriteLine($"{sellableItems.Count + 1}. Cancel");
+        //     Console.Write("\nSelect item to sell: ");
+        //
+        //     string input = Console.ReadLine();
+        //     if (int.TryParse(input, out int choice) && choice > 0 && choice <= sellableItems.Count)
+        //     {
+        //         Item selectedItem = sellableItems[choice - 1];
+        //         ConfirmSell(player, selectedItem);
+        //     }
+        // }
 
-            Console.Clear();
-            Console.WriteLine("=== SELL ITEMS ===\n");
-            Console.WriteLine($"Your Gold: {player.Gold}\n");
-
-            // Display player inventory with sell prices
-            var sellableItems = player.Inventory.Items
-                .Where(i => i.Category != ItemCategory.QuestItem)  // Can't sell quest items
-                .ToList();
-
-            if (sellableItems.Count == 0)
-            {
-                Console.WriteLine("❌ You don't have any items that can be sold!");
-                Console.WriteLine("(Quest items cannot be sold)");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-                return;
-            }
-
-            for (int i = 0; i < sellableItems.Count; i++)
-            {
-                var item = sellableItems[i];
-                int sellPrice = CalculateSellPrice(item, _rng);
-                Console.WriteLine($"{i + 1}. {item.GetDisplayName()} - {sellPrice} gold");
-            }
-
-            Console.WriteLine($"{sellableItems.Count + 1}. Cancel");
-            Console.Write("\nSelect item to sell: ");
-
-            string input = Console.ReadLine();
-            if (int.TryParse(input, out int choice) && choice > 0 && choice <= sellableItems.Count)
-            {
-                Item selectedItem = sellableItems[choice - 1];
-                ConfirmSell(player, selectedItem);
-            }
-        }
-
-        /// <summary>
-        /// Confirm sell transaction
-        /// </summary>
-        private void ConfirmSell(Player.Player player, Item item)
-        {
-            int sellPrice = CalculateSellPrice(item, _rng);
-
-            Console.Clear();
-            Console.WriteLine("=== CONFIRM SALE ===\n");
-            Console.WriteLine(item.GetInfo());
-            Console.WriteLine($"\nSell Price: {sellPrice} gold");
-
-            // Warn about equipped items
-            if ((item is Weapon && item == player.EquippedWeapon) ||
-                (item is Armor && item == player.EquippedArmor))
-            {
-                Console.WriteLine("\n⚠️  WARNING: This item is currently equipped!");
-            }
-
-            Console.Write("\nSell this item? (Y/N): ");
-            string confirm = Console.ReadLine()?.ToUpper();
-
-            if (confirm == "Y")
-            {
-                SellItem(player, item);
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Confirm sell transaction
+        // /// </summary>
+        // private void ConfirmSell(Player.Player player, Item item)
+        // {
+        //     int sellPrice = CalculateSellPrice(item, _rng);
+        //
+        //     Console.Clear();
+        //     Console.WriteLine("=== CONFIRM SALE ===\n");
+        //     Console.WriteLine(item.GetInfo());
+        //     Console.WriteLine($"\nSell Price: {sellPrice} gold");
+        //
+        //     // Warn about equipped items
+        //     if ((item is Weapon && item == player.EquippedWeapon) ||
+        //         (item is Armor && item == player.EquippedArmor))
+        //     {
+        //         Console.WriteLine("\n⚠️  WARNING: This item is currently equipped!");
+        //     }
+        //
+        //     Console.Write("\nSell this item? (Y/N): ");
+        //     string confirm = Console.ReadLine()?.ToUpper();
+        //
+        //     if (confirm == "Y")
+        //     {
+        //         SellItem(player, item);
+        //     }
+        // }
 
         /// <summary>
         /// Process item sale
@@ -398,8 +401,6 @@ namespace GameLogic.Entities.NPCs
             if (item.Category == ItemCategory.QuestItem)
             {
                 Speak("I can't buy quest items. Those are important to your adventure!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
                 return false;
             }
 
@@ -407,12 +408,12 @@ namespace GameLogic.Entities.NPCs
             if (item is Weapon && item == player.EquippedWeapon)
             {
                 player.EquippedWeapon = null;
-                Console.WriteLine("Weapon unequipped.");
+                GameLog.Write("Weapon unequipped.");
             }
             else if (item is Armor && item == player.EquippedArmor)
             {
                 player.EquippedArmor = null;
-                Console.WriteLine("Armor unequipped.");
+                GameLog.Write("Armor unequipped.");
             }
 
             int sellPrice = CalculateSellPrice(item, _rng);
@@ -424,11 +425,8 @@ namespace GameLogic.Entities.NPCs
             // Add to shop inventory (optional - shops could have infinite gold)
             ShopInventory.Add(item);
 
-            Console.WriteLine($"\n✅ Sold {item.GetDisplayName()} for {sellPrice} gold!");
+            GameLog.Write($"Sold {item.GetDisplayName()} for {sellPrice} gold! Gold: {player.Gold}");
             Speak("Thank you! I'll find a good home for this.");
-            Console.WriteLine($"\nGold: {player.Gold}");
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
             return true;
         }
 
@@ -491,65 +489,66 @@ namespace GameLogic.Entities.NPCs
             return Math.Max(1, (int)Math.Round(price));
         }
 
-        /// <summary>
-        /// Display shop information
-        /// </summary>
-        public void ShowShopInfo()
-        {
-            Console.Clear();
-            Console.WriteLine("=== SHOP INFORMATION ===\n");
-            Speak("Here's how my shop works...\n");
-
-            Console.WriteLine($"Shop Tier: {ShopTier}/5");
-            Console.WriteLine("Higher tier shops have better prices!\n");
-
-            // Show shop personality explanation
-            string personalityExplanation;
-            if (ShopPersonalityModifier < 0.95)
-                personalityExplanation = "I run a GENEROUS shop - my prices are lower than most!";
-            else if (ShopPersonalityModifier > 1.05)
-                personalityExplanation = "I deal in PREMIUM goods - quality costs more here.";
-            else
-                personalityExplanation = "I offer FAIR prices - right in the middle.";
-
-            Console.WriteLine($"Shop Personality: {personalityExplanation}\n");
-
-            Console.WriteLine("PRICING SYSTEM:");
-            Console.WriteLine("  Prices are affected by:");
-            Console.WriteLine("    1. Shop Tier (base multiplier)");
-            Console.WriteLine("    2. My personal pricing style (permanent)");
-            Console.WriteLine("    3. Current market conditions (changes with restock)");
-            Console.WriteLine("    4. Individual item variations (small differences)\n");
-
-            Console.WriteLine("BUY PRICES:");
-            var exampleWeapon = new Weapon("Example", "", WeaponType.Sword, 1, 1, 1, 1, ItemRarity.Common, 1, 100,
-                minDamageUpgradeRange: (1, 2), damageShiftRange: (1, 1), maxDamageUpgradeRange: (1, 3));
-            Console.WriteLine($"  Base: {BuyPriceMultiplier}% of item value (tier-based)");
-            Console.WriteLine($"  Example: A 100g sword costs you ~{CalculateBuyPrice(exampleWeapon)}g\n");
-
-            Console.WriteLine("SELL PRICES:");
-            Console.WriteLine($"  Base: {SellPriceMultiplier}% of item value (tier-based)");
-            Console.WriteLine($"  Example: A 100g sword sells for ~{CalculateSellPrice(exampleWeapon, _rng)}g");
-            Console.WriteLine("  Note: Prices vary slightly with each transaction!\n");
-
-            Console.WriteLine("RESTOCKING SYSTEM:");
-            Console.WriteLine("  My shop restocks when EITHER condition is met:");
-            Console.WriteLine($"    - Time: Every ~{_restockMinutes} minutes (varies slightly)");
-            Console.WriteLine($"    - Combat: Every ~{_restockCombatEncounters} encounters (varies slightly)");
-            Console.WriteLine("  Upon restock:");
-            Console.WriteLine("    - New random inventory");
-            Console.WriteLine("    - Market conditions change");
-            Console.WriteLine("    - New item price variations\n");
-
-            Console.WriteLine("NOTES:");
-            Console.WriteLine("  - Quest items cannot be sold");
-            Console.WriteLine("  - Can't force restock by leaving and returning");
-            Console.WriteLine("  - Check 'Next Restock' timer at main menu");
-            Console.WriteLine("  - Shop around for the best deals!\n");
-
-            Console.WriteLine("Press any key to continue...");
-            Console.ReadKey();
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display shop information
+        // /// </summary>
+        // public void ShowShopInfo()
+        // {
+        //     Console.Clear();
+        //     Console.WriteLine("=== SHOP INFORMATION ===\n");
+        //     Speak("Here's how my shop works...\n");
+        //
+        //     Console.WriteLine($"Shop Tier: {ShopTier}/5");
+        //     Console.WriteLine("Higher tier shops have better prices!\n");
+        //
+        //     // Show shop personality explanation
+        //     string personalityExplanation;
+        //     if (ShopPersonalityModifier < 0.95)
+        //         personalityExplanation = "I run a GENEROUS shop - my prices are lower than most!";
+        //     else if (ShopPersonalityModifier > 1.05)
+        //         personalityExplanation = "I deal in PREMIUM goods - quality costs more here.";
+        //     else
+        //         personalityExplanation = "I offer FAIR prices - right in the middle.";
+        //
+        //     Console.WriteLine($"Shop Personality: {personalityExplanation}\n");
+        //
+        //     Console.WriteLine("PRICING SYSTEM:");
+        //     Console.WriteLine("  Prices are affected by:");
+        //     Console.WriteLine("    1. Shop Tier (base multiplier)");
+        //     Console.WriteLine("    2. My personal pricing style (permanent)");
+        //     Console.WriteLine("    3. Current market conditions (changes with restock)");
+        //     Console.WriteLine("    4. Individual item variations (small differences)\n");
+        //
+        //     Console.WriteLine("BUY PRICES:");
+        //     var exampleWeapon = new Weapon("Example", "", WeaponType.Sword, 1, 1, 1, 1, ItemRarity.Common, 1, 100,
+        //         minDamageUpgradeRange: (1, 2), damageShiftRange: (1, 1), maxDamageUpgradeRange: (1, 3));
+        //     Console.WriteLine($"  Base: {BuyPriceMultiplier}% of item value (tier-based)");
+        //     Console.WriteLine($"  Example: A 100g sword costs you ~{CalculateBuyPrice(exampleWeapon)}g\n");
+        //
+        //     Console.WriteLine("SELL PRICES:");
+        //     Console.WriteLine($"  Base: {SellPriceMultiplier}% of item value (tier-based)");
+        //     Console.WriteLine($"  Example: A 100g sword sells for ~{CalculateSellPrice(exampleWeapon, _rng)}g");
+        //     Console.WriteLine("  Note: Prices vary slightly with each transaction!\n");
+        //
+        //     Console.WriteLine("RESTOCKING SYSTEM:");
+        //     Console.WriteLine("  My shop restocks when EITHER condition is met:");
+        //     Console.WriteLine($"    - Time: Every ~{_restockMinutes} minutes (varies slightly)");
+        //     Console.WriteLine($"    - Combat: Every ~{_restockCombatEncounters} encounters (varies slightly)");
+        //     Console.WriteLine("  Upon restock:");
+        //     Console.WriteLine("    - New random inventory");
+        //     Console.WriteLine("    - Market conditions change");
+        //     Console.WriteLine("    - New item price variations\n");
+        //
+        //     Console.WriteLine("NOTES:");
+        //     Console.WriteLine("  - Quest items cannot be sold");
+        //     Console.WriteLine("  - Can't force restock by leaving and returning");
+        //     Console.WriteLine("  - Check 'Next Restock' timer at main menu");
+        //     Console.WriteLine("  - Shop around for the best deals!\n");
+        //
+        //     Console.WriteLine("Press any key to continue...");
+        //     Console.ReadKey();
+        // }
 
         /// <summary>
         /// Check if shop needs restocking based on time or combat encounters
@@ -606,7 +605,7 @@ namespace GameLogic.Entities.NPCs
                 {
                     shop.IncrementCombatEncounter();
                 }
-                Console.WriteLine("(First flee - combat counted for shop restocks)");
+                GameLog.Write("(First flee - combat counted for shop restocks)");
             }
             else
             {
@@ -615,7 +614,7 @@ namespace GameLogic.Entities.NPCs
                 {
                     shop.ApplyFleePenalty();
                 }
-                Console.WriteLine($"(Consecutive flee #{_consecutiveFlees} - shop restock requirements increased!)");
+                GameLog.Write($"(Consecutive flee #{_consecutiveFlees} - shop restock requirements increased!)");
             }
         }
 
@@ -733,52 +732,53 @@ namespace GameLogic.Entities.NPCs
                 ShopInventory.Add(item);
             }
 
-            Console.WriteLine($"\n{Name}'s shop has been restocked with {itemCount} items!");
-            Console.WriteLine($"Market conditions: {marketCondition}");
+            GameLog.Write($"\n{Name}'s shop has been restocked with {itemCount} items!");
+            GameLog.Write($"Market conditions: {marketCondition}");
         }
 
-        /// <summary>
-        /// Main interaction loop with the shopkeeper
-        /// </summary>
-        public void Interact(Player.Player player)
-        {
-            // Check if shop should restock
-            if (ShouldRestock())
-            {
-                Console.WriteLine($"\n✨ {Name} has new inventory!");
-                RestockShop(player.Level, _rng);
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-            }
-
-            bool shopping = true;
-
-            while (shopping)
-            {
-                ShowShop(player);
-                string choice = Console.ReadLine();
-
-                switch (choice)
-                {
-                    case "1":
-                        BuyMenu(player);
-                        break;
-                    case "2":
-                        SellMenu(player);
-                        break;
-                    case "3":
-                        ShowShopInfo();
-                        break;
-                    case "4":
-                        Speak("Come back anytime!");
-                        shopping = false;
-                        break;
-                    default:
-                        Console.WriteLine("\nInvalid choice. Press any key to continue...");
-                        Console.ReadKey();
-                        break;
-                }
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Main interaction loop with the shopkeeper
+        // /// </summary>
+        // public void Interact(Player.Player player)
+        // {
+        //     // Check if shop should restock
+        //     if (ShouldRestock())
+        //     {
+        //         Console.WriteLine($"\n✨ {Name} has new inventory!");
+        //         RestockShop(player.Level, _rng);
+        //         Console.WriteLine("\nPress any key to continue...");
+        //         Console.ReadKey();
+        //     }
+        //
+        //     bool shopping = true;
+        //
+        //     while (shopping)
+        //     {
+        //         ShowShop(player);
+        //         string choice = Console.ReadLine();
+        //
+        //         switch (choice)
+        //         {
+        //             case "1":
+        //                 BuyMenu(player);
+        //                 break;
+        //             case "2":
+        //                 SellMenu(player);
+        //                 break;
+        //             case "3":
+        //                 ShowShopInfo();
+        //                 break;
+        //             case "4":
+        //                 Speak("Come back anytime!");
+        //                 shopping = false;
+        //                 break;
+        //             default:
+        //                 Console.WriteLine("\nInvalid choice. Press any key to continue...");
+        //                 Console.ReadKey();
+        //                 break;
+        //         }
+        //     }
+        // }
     }
 }

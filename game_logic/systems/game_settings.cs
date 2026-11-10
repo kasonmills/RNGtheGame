@@ -78,35 +78,8 @@ namespace GameLogic.Systems
             // NOTE: Difficulty is NOT reset - it's immutable after save creation
         }
 
-        /// <summary>
-        /// Get difficulty multiplier for various stats
-        /// </summary>
-        public float GetDifficultyMultiplier()
-        {
-            return Difficulty switch
-            {
-                DifficultyLevel.Normal => 0.75f,
-                DifficultyLevel.Hard => 1.0f,
-                DifficultyLevel.Difficult => 1.5f,
-                DifficultyLevel.Unfair => 2.0f,
-                _ => 1.0f
-            };
-        }
-
-        /// <summary>
-        /// Get gold/XP reward multiplier based on difficulty
-        /// </summary>
-        public float GetRewardMultiplier()
-        {
-            return Difficulty switch
-            {
-                DifficultyLevel.Normal => 0.8f,
-                DifficultyLevel.Hard => 1.0f,
-                DifficultyLevel.Difficult => 1.3f,
-                DifficultyLevel.Unfair => 1.5f,
-                _ => 1.0f
-            };
-        }
+        // Enemy-strength and reward multipliers per difficulty live in DifficultyScaler (and the
+        // XP numbers in LevelingSystem) - the old unused copies here were removed 2026-11-10.
 
         /// <summary>
         /// Hit chance taken off the player's and companions' attacks on each difficulty
@@ -164,9 +137,11 @@ namespace GameLogic.Systems
     /// </summary>
     public enum DifficultyLevel
     {
-        Normal,     // 75% enemy stats, 80% rewards
-        Hard,       // 100% enemy stats, 100% rewards
-        Difficult,  // 150% enemy stats, 130% rewards
-        Unfair      // 200% enemy stats, 150% rewards
+        // Numbers in DifficultyScaler / LevelingSystem / GetPartyAccuracyPenalty:
+        // enemy health+damage, XP, gold, party hit chance
+        Normal,     // 75%,  80% XP,  100% gold, -0 hit chance
+        Hard,       // 100%, 100% XP, 100% gold, -7  (the 1x baseline)
+        Difficult,  // 150%, 125% XP, 120% gold, -14
+        Unfair      // 200%, 150% XP, 140% gold, -21
     }
 }

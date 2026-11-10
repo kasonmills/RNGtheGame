@@ -120,6 +120,13 @@ namespace GameLogic.Core
         public GameSettings Settings => _gameSettings;
 
         /// <summary>
+        /// The numbers for this save's difficulty - enemy strength, XP and gold multipliers,
+        /// danger ratings (e.g. for a "Deadly" tag on a boss). Always matches Settings.Difficulty;
+        /// replaced on a new game and on LoadGame(), so read it through this property each time.
+        /// </summary>
+        public DifficultyScaler Difficulty => _combatManager.DifficultyScaler;
+
+        /// <summary>
         /// The statistics for this save file (read only on screen). Replaced on LoadGame(),
         /// same as Settings.
         /// </summary>
@@ -547,7 +554,7 @@ namespace GameLogic.Core
         {
             // === TEXT-BASED VERSION (comment out when moving to Godot) ===
             // TODO-GODOT: flavor text -> exploration textbox/popup
-            Console.WriteLine("\nYou venture deeper into the unknown...\n");
+            GameLog.Write("\nYou venture deeper into the unknown...\n");
             
             // Simple encounter roll for console testing
             int encounterRoll = _rngManager.Roll(1, 100);
@@ -562,7 +569,7 @@ namespace GameLogic.Core
             }
             else // 15% chance for nothing
             {
-                Console.WriteLine("You find nothing of interest...");
+                GameLog.Write("You find nothing of interest...");
             }
             // === END TEXT-BASED VERSION ===
             
@@ -665,8 +672,8 @@ namespace GameLogic.Core
             enemy ??= SpawnEnemy();
 
             // TODO-GODOT: enemy intro/description -> combat scene intro textbox
-            Console.WriteLine($"A {enemy.Name} appears!\n");
-            Console.WriteLine(enemy.GetDescription());
+            GameLog.Write($"A {enemy.Name} appears!\n");
+            GameLog.Write(enemy.GetDescription());
 
             ChangeState(GameState.Combat); // Combat always enters from Playing and returns to Playing/GameOver
 
@@ -908,15 +915,12 @@ namespace GameLogic.Core
         /// </summary>
         private void Rest()
         {
-            Console.WriteLine("\nYou take a moment to rest...");
-            
+            GameLog.Write("You take a moment to rest...");
+
             int healAmount = _player.MaxHealth / 2;
             _player.Heal(healAmount);
-            
-            Console.WriteLine("You feel refreshed!");
-            
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
+
+            GameLog.Write("You feel refreshed!");
         }
 
         /// <summary>
@@ -1132,7 +1136,7 @@ namespace GameLogic.Core
             if (!World.BossEncounter.CanStartBossEncounter(boss, _bossManager, out string reason))
             {
                 // TODO-GODOT: show the reason (locked / already beaten) as a message
-                Console.WriteLine(reason);
+                GameLog.Write(reason);
                 return;
             }
 
@@ -1162,7 +1166,7 @@ namespace GameLogic.Core
             if (!World.BossEncounter.CanStartBossEncounter(_bossManager.GetFinalBoss(), _bossManager, out string reason))
             {
                 // TODO-GODOT: show the reason as a message
-                Console.WriteLine(reason);
+                GameLog.Write(reason);
                 return;
             }
 
@@ -1261,34 +1265,36 @@ namespace GameLogic.Core
         /// </summary>
         private void HandleGameOver()
         {
-            // TODO-GODOT: game over summary + options -> game over screen
-            Console.WriteLine("\n=== GAME OVER ===");
-            Console.WriteLine($"You reached level {_player.Level}");
-            Console.WriteLine($"You collected {_player.Gold} gold");
-            
-            Console.WriteLine("\n1. Load Last Save");
-            Console.WriteLine("2. Return to Main Menu");
-            Console.WriteLine("3. Quit");
-            
-            Console.Write("\nChoice: ");
-            string choice = Console.ReadLine();
-            
-            switch (choice)
-            {
-                case "1":
-                    if (!LoadLastSave()) ChangeState(GameState.MainMenu);
-                    break;
-                case "2":
-                    ChangeState(GameState.MainMenu);
-                    break;
-                case "3":
-                    _isRunning = false;
-                    break;
-                default:
-                    Console.WriteLine("Invalid choice.");
-                    HandleGameOver(); // Ask again
-                    break;
-            }
+            // TODO-GODOT: the Game Over screen shows the summary (level, gold) and its buttons
+            // call LoadLastSave() / ChangeState(GameState.MainMenu) directly. The old console
+            // menu is commented out (2026-11-10 - no console output); kept for reference:
+            // Console.WriteLine("\n=== GAME OVER ===");
+            // Console.WriteLine($"You reached level {_player.Level}");
+            // Console.WriteLine($"You collected {_player.Gold} gold");
+            //
+            // Console.WriteLine("\n1. Load Last Save");
+            // Console.WriteLine("2. Return to Main Menu");
+            // Console.WriteLine("3. Quit");
+            //
+            // Console.Write("\nChoice: ");
+            // string choice = Console.ReadLine();
+            //
+            // switch (choice)
+            // {
+            //     case "1":
+            //         if (!LoadLastSave()) ChangeState(GameState.MainMenu);
+            //         break;
+            //     case "2":
+            //         ChangeState(GameState.MainMenu);
+            //         break;
+            //     case "3":
+            //         _isRunning = false;
+            //         break;
+            //     default:
+            //         Console.WriteLine("Invalid choice.");
+            //         HandleGameOver(); // Ask again
+            //         break;
+            // }
         }
 
     }

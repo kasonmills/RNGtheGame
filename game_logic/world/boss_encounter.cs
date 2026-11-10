@@ -67,12 +67,12 @@ namespace GameLogic.World
         {
             if (!CanStartBossEncounter(boss, bossManager, out string reason))
             {
-                Console.WriteLine(reason);
+                GameLog.Write(reason);
                 return false;
             }
 
             // TODO-GODOT: boss intro (name, title, description) -> boss intro screen
-            Console.WriteLine(boss.GetBossInfo());
+            GameLog.Write(boss.GetBossInfo());
 
             // MVP: the repeat-fight warning is switched off along with rematches. Kept for a
             // possible update/DLC:
@@ -83,7 +83,7 @@ namespace GameLogic.World
             //     Console.WriteLine($"This boss has been defeated {boss.TimesDefeated} time{(boss.TimesDefeated > 1 ? "s" : "")} before.");
             // }
 
-            Console.WriteLine("\n⚔️  THE BATTLE BEGINS! ⚔️");
+            GameLog.Write("\n⚔️  THE BATTLE BEGINS! ⚔️");
 
             combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { boss }, companions, bossManager);
             return true;
@@ -112,72 +112,75 @@ namespace GameLogic.World
 
             if (!CanStartBossEncounter(finalBoss, bossManager, out string reason))
             {
-                Console.WriteLine(reason);
+                GameLog.Write(reason);
                 return false;
             }
 
-            // Display epic final boss screen
-            // TODO-GODOT: final battle intro -> its own scene/cutscene
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine("           🔥 THE FINAL BATTLE 🔥");
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine();
-            Console.WriteLine("Every other threat has fallen before you...");
-            Console.WriteLine();
-            Console.WriteLine("Before you stands the final challenge...");
-            Console.WriteLine();
-            Console.WriteLine(finalBoss.GetBossInfo());
-            Console.WriteLine();
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine("This is the final challenge.");
-            Console.WriteLine("Victory here will prove you are the realm's greatest warrior.");
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine();
-
-            // Start final combat
-            Console.WriteLine("\n⚔️  THE ULTIMATE BATTLE BEGINS! ⚔️");
-
-            void OnCombatFinished(CombatResult result)
-            {
-                combatManager.CombatFinished -= OnCombatFinished;
-
-                if (result.Outcome == CombatOutcome.Won)
-                {
-                    DisplayFinalVictoryScreen(finalBoss);
-                }
-            }
-
-            combatManager.CombatFinished += OnCombatFinished;
+            // TODO-GODOT: final battle intro -> its own scene/cutscene. The old console intro
+            // and the victory screen hooked onto CombatFinished are commented out (2026-11-10 -
+            // no console output; the hook could also be left behind if the fight was dropped).
+            // The win is handled by GameManager (Ending -> Credits). Kept for reference:
+            // Console.WriteLine("═══════════════════════════════════════════════════");
+            // Console.WriteLine("           🔥 THE FINAL BATTLE 🔥");
+            // Console.WriteLine("═══════════════════════════════════════════════════");
+            // Console.WriteLine();
+            // Console.WriteLine("Every other threat has fallen before you...");
+            // Console.WriteLine();
+            // Console.WriteLine("Before you stands the final challenge...");
+            // Console.WriteLine();
+            // Console.WriteLine(finalBoss.GetBossInfo());
+            // Console.WriteLine();
+            // Console.WriteLine("═══════════════════════════════════════════════════");
+            // Console.WriteLine("This is the final challenge.");
+            // Console.WriteLine("Victory here will prove you are the realm's greatest warrior.");
+            // Console.WriteLine("═══════════════════════════════════════════════════");
+            // Console.WriteLine();
+            //
+            // // Start final combat
+            // Console.WriteLine("\n⚔️  THE ULTIMATE BATTLE BEGINS! ⚔️");
+            //
+            // void OnCombatFinished(CombatResult result)
+            // {
+            //     combatManager.CombatFinished -= OnCombatFinished;
+            //
+            //     if (result.Outcome == CombatOutcome.Won)
+            //     {
+            //         DisplayFinalVictoryScreen(finalBoss);
+            //     }
+            // }
+            //
+            // combatManager.CombatFinished += OnCombatFinished;
 
             combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { finalBoss }, companions, bossManager);
             return true;
         }
 
-        /// <summary>
-        /// Display the final victory screen after defeating the final boss
-        /// </summary>
-        private static void DisplayFinalVictoryScreen(BossEnemy finalBoss)
-        {
-            // TODO-GODOT: final victory -> ending cutscene/credits state (to-do 16 under core/)
-            Console.WriteLine("\n\n");
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine("          🏆 ULTIMATE VICTORY! 🏆");
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine();
-            Console.WriteLine($"You have defeated {finalBoss.Name}!");
-            Console.WriteLine();
-            Console.WriteLine("Through skill, determination, and the favor of RNG,");
-            Console.WriteLine("you have proven yourself the greatest warrior!");
-            Console.WriteLine();
-            Console.WriteLine("The realm is saved. The legend is complete.");
-            Console.WriteLine();
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine("           🎉 CONGRATULATIONS! 🎉");
-            Console.WriteLine("═══════════════════════════════════════════════════");
-            Console.WriteLine();
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display the final victory screen after defeating the final boss
+        // /// </summary>
+        // private static void DisplayFinalVictoryScreen(BossEnemy finalBoss)
+        // {
+        //     // TODO-GODOT: final victory -> ending cutscene/credits state (to-do 16 under core/)
+        //     Console.WriteLine("\n\n");
+        //     Console.WriteLine("═══════════════════════════════════════════════════");
+        //     Console.WriteLine("═══════════════════════════════════════════════════");
+        //     Console.WriteLine("          🏆 ULTIMATE VICTORY! 🏆");
+        //     Console.WriteLine("═══════════════════════════════════════════════════");
+        //     Console.WriteLine("═══════════════════════════════════════════════════");
+        //     Console.WriteLine();
+        //     Console.WriteLine($"You have defeated {finalBoss.Name}!");
+        //     Console.WriteLine();
+        //     Console.WriteLine("Through skill, determination, and the favor of RNG,");
+        //     Console.WriteLine("you have proven yourself the greatest warrior!");
+        //     Console.WriteLine();
+        //     Console.WriteLine("The realm is saved. The legend is complete.");
+        //     Console.WriteLine();
+        //     Console.WriteLine("═══════════════════════════════════════════════════");
+        //     Console.WriteLine("           🎉 CONGRATULATIONS! 🎉");
+        //     Console.WriteLine("═══════════════════════════════════════════════════");
+        //     Console.WriteLine();
+        // }
 
         /// <summary>
         /// Display list of available bosses for selection
@@ -189,38 +192,39 @@ namespace GameLogic.World
             return bossManager.AllBosses.Values.ToList();
         }
 
-        /// <summary>
-        /// Display boss selection menu
-        /// </summary>
-        /// <param name="bossManager">The boss manager</param>
-        /// <param name="showDefeated">Whether to show defeated bosses differently</param>
-        public static void DisplayBossSelectionMenu(BossManager bossManager, bool showDefeated = true)
-        {
-            var bosses = GetAvailableBosses(bossManager);
-
-            Console.WriteLine("\n═══ BOSSES ═══");
-            Console.WriteLine($"Bosses Defeated: {bossManager.BossesDefeated}/{bossManager.TotalBosses}");
-            Console.WriteLine();
-
-            int index = 1;
-            foreach (var boss in bosses)
-            {
-                bool isDefeated = bossManager.IsBossDefeated(boss.BossId);
-                bool isUnlocked = bossManager.IsBossUnlocked(boss.BossId);
-                string defeatedMark = isDefeated ? " [✓ DEFEATED]" : (isUnlocked ? " [NEW]" : " [🔒 LOCKED]");
-                string repeatCount = isDefeated && boss.TimesDefeated > 0 ? $" (x{boss.TimesDefeated})" : "";
-
-                Console.WriteLine($"[{index}] {boss.Name}{defeatedMark}{repeatCount}");
-                Console.WriteLine($"    Level {boss.Level} | {boss.MechanicType}");
-
-                if (isDefeated && showDefeated)
-                {
-                    Console.WriteLine($"    ⚠️  Repeat fight - Boss will be {(1 + boss.TimesDefeated * 0.5):P0} stronger!");
-                }
-
-                Console.WriteLine();
-                index++;
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display boss selection menu
+        // /// </summary>
+        // /// <param name="bossManager">The boss manager</param>
+        // /// <param name="showDefeated">Whether to show defeated bosses differently</param>
+        // public static void DisplayBossSelectionMenu(BossManager bossManager, bool showDefeated = true)
+        // {
+        //     var bosses = GetAvailableBosses(bossManager);
+        //
+        //     Console.WriteLine("\n═══ BOSSES ═══");
+        //     Console.WriteLine($"Bosses Defeated: {bossManager.BossesDefeated}/{bossManager.TotalBosses}");
+        //     Console.WriteLine();
+        //
+        //     int index = 1;
+        //     foreach (var boss in bosses)
+        //     {
+        //         bool isDefeated = bossManager.IsBossDefeated(boss.BossId);
+        //         bool isUnlocked = bossManager.IsBossUnlocked(boss.BossId);
+        //         string defeatedMark = isDefeated ? " [✓ DEFEATED]" : (isUnlocked ? " [NEW]" : " [🔒 LOCKED]");
+        //         string repeatCount = isDefeated && boss.TimesDefeated > 0 ? $" (x{boss.TimesDefeated})" : "";
+        //
+        //         Console.WriteLine($"[{index}] {boss.Name}{defeatedMark}{repeatCount}");
+        //         Console.WriteLine($"    Level {boss.Level} | {boss.MechanicType}");
+        //
+        //         if (isDefeated && showDefeated)
+        //         {
+        //             Console.WriteLine($"    ⚠️  Repeat fight - Boss will be {(1 + boss.TimesDefeated * 0.5):P0} stronger!");
+        //         }
+        //
+        //         Console.WriteLine();
+        //         index++;
+        //     }
+        // }
     }
 }

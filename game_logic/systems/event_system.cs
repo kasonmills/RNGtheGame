@@ -219,13 +219,13 @@ namespace GameLogic.Systems
         {
             if (!_registeredEvents.TryGetValue(eventId, out WorldEvent worldEvent))
             {
-                Console.WriteLine($"Event '{eventId}' not found.");
+                GameLog.Write($"Event '{eventId}' not found.");
                 return false;
             }
 
             if (worldEvent.IsActive)
             {
-                Console.WriteLine($"Event '{worldEvent.Name}' is already active.");
+                GameLog.Write($"Event '{worldEvent.Name}' is already active.");
                 return false;
             }
 
@@ -237,8 +237,8 @@ namespace GameLogic.Systems
             // Set cooldown
             _eventCooldowns[eventId] = DateTime.Now;
 
-            Console.WriteLine($"World Event: {worldEvent.Name}");
-            Console.WriteLine($"  {worldEvent.Description}");
+            GameLog.Write($"World Event: {worldEvent.Name}");
+            GameLog.Write($"  {worldEvent.Description}");
 
             return true;
         }
@@ -277,7 +277,7 @@ namespace GameLogic.Systems
             var worldEvent = _activeEvents.FirstOrDefault(e => e.Id == eventId);
             if (worldEvent == null)
             {
-                Console.WriteLine($"Event '{eventId}' is not active.");
+                GameLog.Write($"Event '{eventId}' is not active.");
                 return false;
             }
 
@@ -285,7 +285,7 @@ namespace GameLogic.Systems
             worldEvent.ActivatedAt = null;
             _activeEvents.Remove(worldEvent);
 
-            Console.WriteLine($"Event ended: {worldEvent.Name}");
+            GameLog.Write($"Event ended: {worldEvent.Name}");
             return true;
         }
 

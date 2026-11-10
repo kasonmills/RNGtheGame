@@ -16,17 +16,9 @@
 
 # 1. Ready to build
 
-### Bosses - shared engine work
-_Several bosses need the same engine changes. Build each one once._
-- [ ] **A "joined attack" for the Cyclops Brothers** - when one brother attacks on his turn, the other attacks the same target alongside him. The joiner's attack is not a turn of his own, so his Defend doesn't end and his own slot still comes up. (Each brother keeps one slot of his own. The "more than one slot per round" engine piece is built for the Princess - see section 3.)
-- [ ] **Enemies joining a fight already in progress** - needed for the Slime Dragon's draglings and the Princess's guards.
-- [ ] **A "skip your next turn" effect** - general, so it can be reused. The combat screen shows that the turn was skipped.
-- [ ] **An extra turn added at the end of a round** - needed for the Cyclops revive and the Slime Dragon. The boss decides each round whether it gets one. If it doesn't, no turn is added at all (not shown, not skipped).
-
 ### Bosses - strength
 - [ ] 🔴 **Hand-set level-1 stats for every boss** (health, damage, defense, accuracy, crit, speed, rewards) to replace the shared stopgap formula. Then tune Skarn against the player's starting stats. (notes: Bucket A #11)
-- [ ] **A boss's level = the party's average level + 5**, set when the fight starts, applied through `DifficultyScaler`. Count only the fighting party. (Open details in section 2.)
-- [ ] **Finish switching off the old boss multipliers and rematches** (keep the code, add comments on how to bring it back). Remaining: `TimesDefeated` saving, the console printout in `ApplyStrengthScaling()`, and the `[Strength: x1.15]` name label.
+- [ ] **A boss's level = the party's average level + 5**, set when the fight starts, applied through `DifficultyScaler`. Count only the fighting party. Bosses can go above 40, up to 45. The scaler's boss multipliers (health x3, damage x1.5, XP x5, gold x3-5) stay on top of the hand-set stats (decided 2026-11-10). The party level is a plain average, rounded up (`CalculatePartyLevel()` switched 2026-11-10). Changes `GetEffectiveEnemyLevel()`'s cap and its test.
 
 ### Bosses - one by one
 - [ ] **#2 Librarian-Monk - shield.** He raises a shield that reduces the damage of incoming attacks. The shield has its own HP, drained by the amount it blocks. It breaks at 0, and he has a 3-turn cooldown before he can raise it again. Needs a new `IBossMechanic` and a damage-pipeline hook. (Open details in section 2.)
@@ -42,8 +34,9 @@ _Several bosses need the same engine changes. Build each one once._
   - When one falls, the other enrages and, in a bonus turn at the end of the round, revives him at 25% health. There is no limit on revives. Both down in the same round = win.
   - XP and rewards only once both are beaten (`DefeatBoss` called once).
 - [ ] **#6 Demon Prince - a random condition on every hit.** He picks from 7+ equally likely conditions, some unique to him. Nothing on a miss. A 0-damage hit still applies it. His attack power is lower to balance this. Several conditions can sit on one target at once. ⛔ Needs his unique conditions designed (section 2).
-- [ ] **#7 Slime Dragon - spawns draglings whenever hit.** ⛔ Needs mid-fight joining and the end-of-round extra turn above (the reactive hook is built - section 3).
+- [ ] **#7 Slime Dragon - spawns draglings whenever hit.** The engine pieces are built (reactive hook, mid-fight joining, end-of-round bonus turn - section 3); the open details in section 2 come first.
   - End-of-round spawn (decided 2026-11-09): when a round ends, if fewer than 3 draglings are alive, he takes an extra turn that spawns more. With 3 or more alive, no extra turn is added that round.
+  - Farming draglings is allowed, with diminishing rewards (decided 2026-11-10, built - section 3): the dragling enemy sets `DiminishingRewardsGroup = "Dragling"`.
 - [ ] **#8 Captain of the Royal Guard (Risk as a boss)** - very high crit chance (about 55%, higher on harder difficulties) and a very high crit multiplier.
 - [ ] **Companion → boss plumbing for Risk** - a leave-party trigger, and a way to turn a `CompanionBase` into a matching `BossEnemy`.
 - [ ] **#9 Princess (final boss).** 🤫 She is a hidden twist: no foreshadowing text anywhere.
@@ -90,7 +83,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] **Combat Elixir becomes a spell** (with components), not a consumable.
 - [ ] **"Elixir of Vitality" doesn't heal** - it runs the Combat Elixir code.
 - [ ] **Healing potions become candy/sweets**, sold by the Shop Keeper. Replace the Minor/Health/Greater Health Potion line (`ConsumableType.HealthPotion`) in `item_database.cs`. ⛔ Names and numbers in section 2.
-- [ ] **Shop:** pouch components can't be sold yet, and buying something that won't fit still takes the gold. Check first and refuse the sale.
+- [ ] **Shop:** pouch components can't be sold yet. (Buying something that won't fit no longer takes the gold - fixed 2026-11-10, see section 3.)
 - [ ] **Chests and the ground keep items the player couldn't carry**, so they can come back for them. ⛔ Needs map objects.
 - [ ] Inventory stacking ignores XP (two copies with different XP merge into one).
 - [ ] Delete the 15 leftover "champion boss key" quest items in `item_database.cs`.
@@ -102,19 +95,17 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] **Save quest item rewards** (only gold and XP are saved today).
 - [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. ⛔ Each quest's content comes from section 2.
 - [ ] **New NPCs:** the magic component seller (rarer components only) and the blacksmith's apprentice (weapon enchanting, unlocked through his own quest line). There is no baker: the Shop Keeper sells the healing sweets and the common components.
-- [ ] **Move quest text out of console prints** into data the Godot screens can show.
+- [ ] **Move quest text into data the Godot screens can show** (the console prints became `GameLog` messages 2026-11-10; quest screens still need the text as data).
 
 ### Game systems
-- [ ] 🔴 **Difficulty actually changes the game.** Merge the three separate difficulty lists into the one players pick (Normal / Hard / Difficult / Unfair). Wire `DifficultyScaler` into `GameManager` and `CombatManager`. Wire the XP difficulty multiplier. Then remove the unused `GameSettings` multipliers. (notes: "Difficulty selection has zero mechanical effect")
 - [ ] 🔴 **Statistics are recorded as things happen** - have systems raise events and the tracker listen. The same events feed quests.
 - [ ] **Settings:** remove `ColoredText` and `UseEmojis` (code, save, tests). Hide the RNG-algorithm and auto-save settings in the MVP. Add a "setting changed" signal. Wire each kept setting.
-- [ ] 🔴 **No console output anywhere** - finish the conversion. Left: `player.cs`, `NPC_base.cs`, outside-fight events (level up, item added, gear equipped, quest progress, boss defeated) as events for Godot pop-ups, then the rest folder by folder. `menus/` files are reference-only and are skipped.
 - [ ] **Player class system out of the MVP** - no class choice and no class bonuses or armor penalties. Keep the code (`player_class.cs`, the save field) dormant.
 - [ ] **Day/night state** - saved, with a "switch day/night" option at campfires, inns and rest spots, plus a random auto-flip timer that a manual switch resets. The spawn system reads it. (Timer unit and night effects in section 2.)
 - [ ] **`Rest()` becomes an inn-based mechanic** (possibly the same menu as the day/night switch).
 - [ ] **Save points:** only inns and marked campsites allow saving. Add the check in `SaveGame` only, so the boss auto-save still works. ⛔ Needs the map.
 - [ ] **Gender selection at character creation** - cosmetic only.
-- [ ] **Equipment levelling, connected:** gear XP (above), a placed Blacksmith, and the three-way weapon upgrade choice wired in (today `CompleteUpgrade()` always takes "Balanced"). Take the typed Y/N and the one-second pause out of `UpgradeWeapon`/`UpgradeArmor`.
+- [ ] **Equipment levelling, connected:** gear XP (above), a placed Blacksmith, and the three-way weapon upgrade choice wired in (today `CompleteUpgrade()` always takes "Balanced"). (The typed Y/N and the one-second pause are out of `UpgradeWeapon`/`UpgradeArmor` - 2026-11-10.)
 - [ ] **Place shops, the blacksmith and NPCs in towns** - `city.cs` becomes the home for in-town places. ⛔ Needs the fixed map.
 - [ ] **Elder of the Elven Village** (NPC). ⛔ Needs the fixed map.
 - [ ] **Army camp + endless "test your strength" mode** - soldiers to talk to, and a commander who starts back-to-back fights with no healing between them, until you fall. Reward on exit. (Rewards and "what losing means" in section 2.) The loop can be built before the camp.
@@ -127,8 +118,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] Rename one of the two `CombatAction` types.
 - [ ] Merge the 9 identical weapon-mastery files into one class, and fix the `\\n` typo in their text. (Wait for the masteries-vs-families decision.)
 - [ ] Merge the duplicate effects (Regeneration twice, Bleed/Bleeding).
-- [ ] Remove dead leftovers: `DisplayBossSelectionMenu`/`GetAvailableBosses`, `GenerateMapFromSeed`, `ShowCombatStatus`, the enemies' unused `DecideAction()`, `BossEnemy.DecideAction()`, `BossDefinitions.GetBoss()`, `[Obsolete] LevelUp()` on weapon/armor, the unused `NPC_base.AttackTarget()`.
-- [ ] `BossEncounter.StartFinalBossEncounter` attaches a console victory printout that can be left behind (same bug the wipe fixed elsewhere).
+- [ ] Remove dead leftovers: `GetAvailableBosses` (`DisplayBossSelectionMenu` is commented out already), `GenerateMapFromSeed`, `ShowCombatStatus`, the enemies' unused `DecideAction()`, `BossEnemy.DecideAction()`, `BossDefinitions.GetBoss()`, `[Obsolete] LevelUp()` on weapon/armor, the unused `NPC_base.AttackTarget()`.
 - [ ] `quest_manager.cs` `SetQuestState()` uses reflection on a public property.
 - [ ] Check the build for a flood of nullable warnings in `game_logic`. If there is one, switch the check off or clean up folder by folder.
 - [ ] Decide `event_system.cs`: delete it, or make it the one central non-combat event handler (needs an in-depth review first).
@@ -162,7 +152,6 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Difficulty flavour text** - the placeholder lines in `GetDifficultyDescription` are for you to reword.
 
 ### Bosses
-- [ ] **Boss strength:** a plain average of the fighting party, or the player-weighted one in `DifficultyScaler`? Keep `DifficultyScaler`'s extra boss multipliers (health x3, etc.) on top of hand-set stats? Can a boss go above level 40?
 - [ ] **Librarian-Monk:** how much the shield reduces per hit (flat or %); the shield's HP and what it scales with (level, difficulty, both); whether the cooldown starts on break or on raise; whether raising it costs his turn; when the AI raises it.
 - [ ] **Centipede:** should "a restack only adds the minimum duration" be the rule for every stacking damage-over-time effect (Burn, Bleed too), or only his poison?
 - [ ] **Cyclops Brothers:** their names (which also sets who is faster); what the enrage boosts, how much, for how long, and whether it stacks; their stats. Confirm: while one is down, his slot is skipped. Later: a combined attack with its own animation.
@@ -191,6 +180,7 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Combat screen timing:** queue the events and play them back, or have combat advance one turn at a time?
 
 ### Difficulty
+- [ ] 🔴 **Make the harder difficulties much harder** - the wiring is built (section 3) with the old placeholder numbers: enemy health and damage 75% / 100% / 150% / 200%, XP 80% / 100% / 125% / 150%, gold 100% / 100% / 120% / 140%, party hit chance -0 / -7 / -14 / -21. The harder difficulties should be much harder and a lot more punishing - Unfair shows how punishing RNG can be when it isn't on your side (decided 2026-11-10). Set the real numbers (and whether defense, speed or crit should scale too).
 - [ ] **Starting stats per difficulty** (higher on easy, lower on hard): which stats; on top of enemy scaling or instead of it; whether the gap shrinks with levels. Check it against the per-boss level target.
 
 ### XP, levels and abilities
@@ -272,11 +262,59 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
   - A boss that is down or fled doesn't react (my default, to confirm).
   - A reaction doesn't end the boss's Defend or use up its turn.
   - A fight without a reacting boss plays exactly as before.
+- [ ] **Lost turns - "skip your next turn"** (written 2026-11-10, for the Princess). A general `SkipTurnEffect`, put on a target by a boss with `CombatAction.Inflict(boss, target, new SkipTurnEffect())`. No boss uses it yet, so test it with a small test mechanic. Check:
+  - Put on someone who hasn't acted yet this round, they lose this round's turn; on someone who already has, they lose next round's.
+  - The lost turn does nothing (nothing is started, not even a Defend), and the log and a `TurnSkipped` event with Message "Turn lost" show it.
+  - A Defend from their previous turn still ends when the lost turn comes.
+  - It doesn't wear off at the end of the round, only when used up. Putting a second one on doesn't add a second lost turn.
+  - Their poison/burn still ticks at the end of the lost turn (my default, to confirm).
+  - A boss's end-of-round bonus turn doesn't use it up (my default, to confirm).
+  - An antidote or Iron Will removes it (it counts as crowd control).
+  - It never carries over to the overworld or the next fight.
+  - The player can't submit an Inflict or Summon action (refused with "Only enemies can do that.").
+- [ ] **Enemies joining a fight in progress** (written 2026-11-10, for the draglings and the castle guards). A boss calls them with `CombatAction.Summon(boss, enemies)` on its turn, or `context.Summon(enemy)` from a reaction or a bonus turn. Test with a small test mechanic. Check:
+  - The new enemy shows in `Enemies`, the log, and an `EnemyJoined` event.
+  - It doesn't act in the round it joined, and is in the turn slots from the next round (my default, to confirm). With more than 4 enemies, the slots are shared as normal.
+  - It gives normal rewards when the fight is won (draglings get diminishing rewards - see below).
+  - No more than 8 enemies can be in the fight at once (my reading of the encounter cap, to confirm). A refused summon logs "No one answers...".
+  - The list GameManager passed into `StartCombat` is not changed.
+- [ ] **End-of-round bonus turns** (written 2026-11-10, for the Cyclops revive and the Slime Dragon). A boss whose mechanic implements `IEndOfRoundTurnMechanic` is asked once each round, after every slot has been played, whether it wants a bonus turn. Test with a small test mechanic. Check:
+  - If not, nothing is added - not shown in `TurnOrder`, not skipped.
+  - If yes, a slot with `IsEndOfRoundTurn` is added after the filled slots, an `EndOfRoundTurnAdded` event is raised, and the boss acts before the round ends (before effect countdowns, cooldowns and next round's speeds).
+  - It can revive a fallen ally through `context.FallenAllies` (setting Health) - a `Revived` event shows it, and the revived enemy is back in the slots next round.
+  - It can summon, or return an action (e.g. an attack) that resolves normally. An attack on a bonus turn isn't joined.
+  - It doesn't end the boss's Defend, doesn't tick its effects, and doesn't change its speed for next round (my default, to confirm). `IsEndOfRoundTurn` is true during it.
+  - If the fight is already over when the round ends, no bonus turn happens (e.g. both brothers down in the same round = win).
+- [ ] **Diminishing rewards** (written 2026-11-10, for farming draglings). Enemies with the same `DiminishingRewardsGroup` pay less XP and gold the more of them are beaten in one fight. Test with a fight of 15+ enemies sharing a group. Check:
+  - The first 10 pay full XP and gold; the 11th pays 80%, the 12th 64%, the 13th about 51% (each 80% of the one before), and the log says so.
+  - Item drops are not reduced.
+  - Enemies with no group, and other groups, are not affected. The count starts again in every fight.
+  - A fled one also takes the next place in line, then gets its usual half (my default, to confirm).
+- [ ] **Joined attacks** (written 2026-11-10, for the Cyclops Brothers). A boss whose mechanic implements `IAttackPartnerMechanic` is asked after every enemy attack whether it joins in. Test with two bosses whose test mechanic joins each other. Check:
+  - When one attacks on his own turn, the other attacks the same target straight after (an `AttackJoined` event, then the attack's own hit/miss events).
+  - Abilities, Defend and other actions aren't joined. Party attacks never are.
+  - The joiner's Defend stays up, his own slot still comes up this round, and his speed next round isn't changed by the joined attack.
+  - If the first attack took the target down, the joiner doesn't attack (my default, to confirm).
 - [ ] **Actions are checked** - a bad action (wrong turn, dead target, ability on cooldown, missing item, boss flee) is refused with an `ActionRejected` event.
 - [ ] **Direct control** - combat waits for you on a directly controlled companion's turn.
 - [ ] **Items in combat** - anyone can use an item on any standing party member. A revive works on a fallen companion or the fallen player, the revived member is slower the next round, and a revive can't target someone standing.
 - [ ] **The fight goes on** while anyone in the party stands; if the party wins while the player is down, the player gets up at 1 HP.
 - [ ] **Bosses** have stats (Skarn about 160 HP, 16-30 damage - probably too strong, note it); the old 15%/50% multipliers are off; a beaten boss can't be challenged again; boss fights include the party.
+- [ ] **One difficulty list** (2026-11-10) - `DifficultyScaler` and the XP multiplier now use `DifficultyLevel` (Normal / Hard / Difficult / Unfair) instead of their own lists; numbers unchanged, Hard is the 1x baseline. The party level is a plain average now (the weighted one is commented out). Check: it builds; `DifficultyScalerTests` and `LevelingSystemTests` pass (updated: names, two party-level answers, the "Fair Fight" danger label - the general danger labels Manageable / Fair Fight / Tough / Dangerous are placeholders to reword).
+- [ ] **No console output anywhere** (2026-11-10). Every `Console.WriteLine`/`Write`/`ReadKey`/`ReadLine`/`Clear` in the repo is gone from live code. Check:
+  - It builds. Nothing in `game_logic` prints; messages outside a fight come through `GameLog.MessageLogged` (nothing subscribes yet - an autoload can show them as pop-ups), and fight text through `CombatMessage`.
+  - Commented out, with a note on each (nothing called them; the Godot screens replace them): the three `menus/` files (whole file), the console menus in `shop_keeper.cs`, `blacksmith.cs` and `quest_giver.cs`, `Weapon.GetPlayerUpgradeChoice`, `PlayerInventory.DisplayInventory`, `QuestManager.DisplayQuestLog`/`DisplayActiveQuestTracker`, `Quest.DisplayQuestInfo`, `QuestReward.DisplayRewards`, `MapManager.DisplayMap`, `BossEncounter.DisplayBossSelectionMenu`, `HandleGameOver`'s menu, and the final-boss intro and victory printout (the victory hook could be left behind - that cleanup item is resolved).
+  - `ShopKeeper.BuyItem`/`SellItem`, `Blacksmith.UpgradeWeapon`/`UpgradeArmor` and `GameManager.Rest` no longer wait for a key press or a typed Y/N, and the upgrade's one-second pause is gone - the screen confirms before calling them.
+  - Buying an item that doesn't fit (full bag, or a stack over 99) is refused and takes no gold.
+  - The combat log doesn't repeat damage or healing lines (`Player.Heal`/`TakeDamage` messages are commented out).
+  - `CombatManagerTests.CalculateXPReward_BonusOccursAtExpectedRate` now counts "Bonus XP!" from `CombatMessage` instead of capturing the console (the console-capture helpers were removed).
+- [ ] **Difficulty changes the game** (wired 2026-11-10). `CombatManager` builds a `DifficultyScaler` whenever its `Difficulty` is set (GameManager sets it on a new game and on load); `GameManager.Difficulty` exposes it. Check:
+  - Every enemy's health and damage is multiplied for the difficulty when a fight starts (Normal 75%, Hard 100%, Difficult 150%, Unfair 200%) - including bosses, the tutorial's Skarn, and enemies who join mid-fight.
+  - A boss fought again after a loss is not made stronger again (applied once per enemy).
+  - The fight's XP and gold get the difficulty multiplier (shown in the log), and companions share the multiplied XP.
+  - The difficulty-select text now also states the enemy strength and the XP/gold numbers.
+  - Tests: the 4 `GameSettingsTests` for the removed `GetDifficultyMultiplier`/`GetRewardMultiplier` are gone; 2 new `DifficultyScalerTests` cover applying difficulty to an enemy.
+- [ ] **Old boss multipliers and rematches fully off** (finished 2026-11-10, code kept commented with notes on bringing it back). Check: it builds; a boss's name and info screen show no "Strength: x..." label; a new save has no boss repeat counts, and an older save that has them still loads.
 - [ ] **Party accuracy by difficulty** - on Hard, an 85% weapon hits about 78% of the time; enemies are unaffected; a load keeps the penalty.
 - [ ] **Combat text** (items, abilities, effects, companion level-ups) shows in the combat log.
 - [ ] **Tutorial** - only the player's own actions count toward "try each action"; a refused action doesn't count; the player gets a Minor Health Potion.
@@ -294,13 +332,13 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Tutorial and saving** - saving during the intro or the Skarn fight fails with the message; after winning it works; a loaded game can save straight away.
 - [ ] **Boss auto-save** - challenging a boss saves first; losing and loading lands right before the boss; a brand-new game's first auto-save goes to an empty slot; a failed write still starts the fight and sets `LastSaveError`.
 - [ ] **Defeat → last save** - losing a regular fight goes back to the last save point; losing to a boss goes back to right before it; losing the tutorial gives no "Load Last Save".
-- [ ] **Difficulty descriptions** show only what really changes (the hit-chance penalty).
+- [ ] **Difficulty descriptions** show only what really changes: enemy strength, XP and gold, and the hit-chance penalty, all read from the code.
 - [ ] **Intro → tutorial** - a new game lands in `Cutscene`; after `FinishIntro()` it is `Tutorial` on top of `Combat`; it drops to `Combat` after the fourth different action; winning goes to `Playing`; Flee is refused all fight.
 - [ ] **Screen states** - each Open from an allowed state pushes its state, and Close returns to the one before (e.g. Paused → Settings → Paused → Combat); Open from any other state returns false; the save screen won't open during the tutorial; `CurrentShop` etc. are set while open and null after.
 - [ ] **Ending** - winning the final fight → `Ending` → `Credits` → `MainMenu`; a Finish call in the wrong state does nothing; after a win the slot loads to just before the final boss with `IsGameCompleted` true, and a later save keeps the flag; a failed save prints nothing and sets `LastSaveError`.
 - [ ] **Godot access** - `CurrentState`, `Player`, `Party`, `Map`, `Quests`, `Settings` etc. are readable; `LoadGame` returns true/false.
 - [ ] **Quests** - a new game's quest log shows only the boss quests.
-- [ ] **Console program** - `dotnet run` in the repo root prints the two lines and exits.
+- [ ] **Console program** - `dotnet run` in the repo root does nothing and exits (its two lines are commented out too, 2026-11-10).
 
 ---
 
@@ -314,7 +352,7 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] Learn Godot; learn how game engines work (for a possible custom engine later).
 
 ### Docs and tools
-- [ ] Commit the `.gitignore` additions (root tracker files, `__pycache__/`), then delete the stray root `coding_sessions.json` once you've checked it holds nothing you need.
+- [ ] Delete the stray root `coding_sessions.json` once you have checked it holds nothing you need (the `.gitignore` additions for it and `__pycache__/` were committed 2026-11-10).
 - [ ] Add a note to the top of `player_class_system.md` saying it is a post-MVP reference.
 - [ ] Rewrite the README's "Key Features" and "Current Status" sections (they overstate what works) when the game is closer to done.
 - [ ] ⏸ Rewrite `SRS.md` from the finished game - only once the game is complete.

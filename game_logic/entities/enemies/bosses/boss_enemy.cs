@@ -75,6 +75,7 @@ namespace GameLogic.Entities.Enemies.Bosses
         public override void InitializeStats(int level)
         {
             Level = level;
+            DifficultyApplied = false; // Fresh stats - the difficulty is applied again at the next fight
 
             // Boss base stats (much stronger than regular enemies)
             _baseHealth = 100 + (level * 30);      // Bosses have 3x health of regular enemies
@@ -105,8 +106,12 @@ namespace GameLogic.Entities.Enemies.Bosses
         /// Each defeated boss makes remaining bosses 15% stronger (progression scaling)
         /// Each repeat of THIS boss makes it 50% stronger (repeat penalty)
         /// Both scale together multiplicatively
+        ///
+        /// MVP (decided 2026-10-14): dormant - nothing calls this (CombatManager.StartCombat has
+        /// the call to BossManager.ApplyBossScaling commented out). Kept for a possible
+        /// update/DLC. Returns a summary of the scaling for a pop-up instead of printing it.
         /// </summary>
-        public void ApplyStrengthScaling(int totalBossesDefeated)
+        public string ApplyStrengthScaling(int totalBossesDefeated)
         {
             BossNumber = totalBossesDefeated + 1;  // This is boss #X in the sequence
 
@@ -134,22 +139,19 @@ namespace GameLogic.Entities.Enemies.Bosses
             GoldValue = (int)(GoldValue * rewardMultiplier);
             XPValue = (int)(XPValue * rewardMultiplier);
 
-            // Display scaling information
-            Console.WriteLine($"\n⚔️  Boss Strength Scaling Applied!");
-            Console.WriteLine($"Boss #{BossNumber} in your journey | Repeat: {TimesDefeated + 1}{GetOrdinalSuffix(TimesDefeated + 1)} fight");
+            // Scaling summary, handed back for a pop-up (no console output)
+            string summary = "Boss Strength Scaling Applied!\n";
+            summary += $"Boss #{BossNumber} in your journey | Repeat: {TimesDefeated + 1}{GetOrdinalSuffix(TimesDefeated + 1)} fight\n";
+            summary += $"Progression scaling: {progressionMultiplier:F2}x ({(progressionMultiplier - 1) * 100:F0}% from total progress)";
 
-            if (TimesDefeated == 0)
-            {
-                // First time fighting this boss
-                Console.WriteLine($"Progression scaling: {progressionMultiplier:F2}x ({(progressionMultiplier - 1) * 100:F0}% from total progress)");
-            }
-            else
+            if (TimesDefeated > 0)
             {
                 // Repeat fight - show both scaling factors
-                Console.WriteLine($"Progression scaling: {progressionMultiplier:F2}x ({(progressionMultiplier - 1) * 100:F0}% from total progress)");
-                Console.WriteLine($"⚠️  Repeat penalty: {repeatPenalty:F2}x ({(repeatPenalty - 1) * 100:F0}% from {TimesDefeated} previous defeat{(TimesDefeated > 1 ? "s" : "")})");
-                Console.WriteLine($"💀 COMBINED STRENGTH: {totalMultiplier:F2}x ({(totalMultiplier - 1) * 100:F0}% total increase)");
+                summary += $"\nRepeat penalty: {repeatPenalty:F2}x ({(repeatPenalty - 1) * 100:F0}% from {TimesDefeated} previous defeat{(TimesDefeated > 1 ? "s" : "")})";
+                summary += $"\nCOMBINED STRENGTH: {totalMultiplier:F2}x ({(totalMultiplier - 1) * 100:F0}% total increase)";
             }
+
+            return summary;
         }
 
         /// <summary>
@@ -179,8 +181,11 @@ namespace GameLogic.Entities.Enemies.Bosses
         /// </summary>
         public override string GetDescription()
         {
-            string scalingInfo = BossNumber > 0 ? $" [Strength: x{1.0 + ((BossNumber - 1) * 0.15):F2}]" : "";
-            return $"{Name}, {Title} (Level {Level}){scalingInfo}";
+            // MVP: no strength label - the old 15%-per-boss multiplier is off (decided 2026-10-14).
+            // Kept for a possible update/DLC:
+            // string scalingInfo = BossNumber > 0 ? $" [Strength: x{1.0 + ((BossNumber - 1) * 0.15):F2}]" : "";
+            // return $"{Name}, {Title} (Level {Level}){scalingInfo}";
+            return $"{Name}, {Title} (Level {Level})";
         }
 
         /// <summary>
@@ -206,10 +211,11 @@ namespace GameLogic.Entities.Enemies.Bosses
             info += $"{UniqueAbilityDescription}\n";
             info += "───────────────────────────────────────\n";
 
-            if (BossNumber > 0)
-            {
-                info += $"Boss #{BossNumber} | Strength: x{1.0 + ((BossNumber - 1) * 0.15):F2}\n";
-            }
+            // MVP: no strength line (the old multiplier is off). Kept for a possible update/DLC:
+            // if (BossNumber > 0)
+            // {
+            //     info += $"Boss #{BossNumber} | Strength: x{1.0 + ((BossNumber - 1) * 0.15):F2}\n";
+            // }
 
             info += "═══════════════════════════════════════\n";
 

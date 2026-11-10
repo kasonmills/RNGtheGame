@@ -1,4 +1,5 @@
 using System;
+using GameLogic.Systems;
 
 namespace GameLogic.Items
 {
@@ -165,13 +166,13 @@ namespace GameLogic.Items
             }
 
             Experience += amount;
-            Console.WriteLine($"{GetDisplayName()} gained {amount} XP! ({Experience}/{ExperienceToNextLevel})");
+            GameLog.Write($"{GetDisplayName()} gained {amount} XP! ({Experience}/{ExperienceToNextLevel})");
 
             // Check if ready for upgrade
             if (Experience >= ExperienceToNextLevel)
             {
                 ReadyForUpgrade = true;
-                Console.WriteLine($"⚒️  {GetDisplayName()} has enough experience! Take it to a blacksmith to upgrade (Cost: {GetUpgradeCost()} gold)");
+                GameLog.Write($"⚒️  {GetDisplayName()} has enough experience! Take it to a blacksmith to upgrade (Cost: {GetUpgradeCost()} gold)");
             }
         }
 
@@ -242,7 +243,7 @@ namespace GameLogic.Items
             // Apply the chosen upgrade path
             ApplyUpgradePath(path, rng);
 
-            Console.WriteLine($"⚒️  {GetDisplayName()} has been upgraded! Now at +{Level}!");
+            GameLog.Write($"⚒️  {GetDisplayName()} has been upgraded! Now at +{Level}!");
             return true;
         }
 
@@ -268,9 +269,9 @@ namespace GameLogic.Items
                         MinDamage = MaxDamage;
                     }
 
-                    Console.WriteLine($"  Min Damage: {oldMin} → {MinDamage} (+{minIncrease})");
-                    Console.WriteLine($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
-                    Console.WriteLine($"  ✓ More consistent damage!");
+                    GameLog.Write($"  Min Damage: {oldMin} → {MinDamage} (+{minIncrease})");
+                    GameLog.Write($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
+                    GameLog.Write($"  ✓ More consistent damage!");
                     break;
 
                 case WeaponUpgradePath.ShiftDamageRange:
@@ -284,8 +285,8 @@ namespace GameLogic.Items
                         MinDamage = MaxDamage;
                     }
 
-                    Console.WriteLine($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
-                    Console.WriteLine($"  ✓ Balanced upgrade!");
+                    GameLog.Write($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
+                    GameLog.Write($"  ✓ Balanced upgrade!");
                     break;
 
                 case WeaponUpgradePath.IncreaseMaxDamage:
@@ -293,17 +294,17 @@ namespace GameLogic.Items
                     int maxIncrease = rng.Roll(MaxDamageUpgradeRange.min, MaxDamageUpgradeRange.max);
                     MaxDamage += maxIncrease;
 
-                    Console.WriteLine($"  Max Damage: {oldMax} → {MaxDamage} (+{maxIncrease})");
-                    Console.WriteLine($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
-                    Console.WriteLine($"  ✓ Higher damage potential!");
+                    GameLog.Write($"  Max Damage: {oldMax} → {MaxDamage} (+{maxIncrease})");
+                    GameLog.Write($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
+                    GameLog.Write($"  ✓ Higher damage potential!");
                     break;
 
                 case WeaponUpgradePath.Balanced:
                     // Balanced upgrade - small increase to both
                     MinDamage += 1;
                     MaxDamage += 1;
-                    Console.WriteLine($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
-                    Console.WriteLine($"  ✓ Balanced improvement!");
+                    GameLog.Write($"  Damage Range: {oldMin}-{oldMax} → {MinDamage}-{MaxDamage}");
+                    GameLog.Write($"  ✓ Balanced improvement!");
                     break;
             }
 
@@ -325,7 +326,7 @@ namespace GameLogic.Items
             }
 
             Level++;
-            Console.WriteLine($"{Name} leveled up to +{Level}! (Use CompleteUpgrade with path choice for stat increases)");
+            GameLog.Write($"{Name} leveled up to +{Level}! (Use CompleteUpgrade with path choice for stat increases)");
             return true;
         }
 
@@ -337,72 +338,73 @@ namespace GameLogic.Items
             return Level < MaxLevel;
         }
 
-        /// <summary>
-        /// Display upgrade path options to the player
-        /// Returns the chosen path, or null if cancelled
-        /// </summary>
-        public static WeaponUpgradePath? GetPlayerUpgradeChoice(Weapon weapon)
-        {
-            Console.WriteLine($"\n=== Upgrade {weapon.GetDisplayName()} ===");
-            Console.WriteLine($"Current Stats: {weapon.MinDamage}-{weapon.MaxDamage} damage");
-            Console.WriteLine($"\nChoose your upgrade path:");
-            Console.WriteLine();
-
-            // Option 1: Increase Minimum Damage
-            var minRange = weapon.MinDamageUpgradeRange;
-            string minRangeText = minRange.min == minRange.max ? $"+{minRange.min}" : $"+{minRange.min} to +{minRange.max}";
-            int minResultLow = weapon.MinDamage + minRange.min;
-            int minResultHigh = weapon.MinDamage + minRange.max;
-            string minResultText = minRange.min == minRange.max ? $"{minResultLow}" : $"{minResultLow}~{minResultHigh}";
-
-            Console.WriteLine($"1. Increase Minimum Damage ({minRangeText})");
-            Console.WriteLine($"   {weapon.MinDamage}-{weapon.MaxDamage} → {minResultText}-{weapon.MaxDamage}");
-            Console.WriteLine("   ✓ More consistent damage (narrows range)");
-            Console.WriteLine();
-
-            // Option 2: Shift Damage Range
-            var shiftRange = weapon.DamageShiftRange;
-            string shiftText = shiftRange.minShift == shiftRange.maxShift && shiftRange.minShift == 1
-                ? "+1 to both"
-                : $"+{shiftRange.minShift} min, +{shiftRange.maxShift} max";
-
-            Console.WriteLine($"2. Shift Damage Range ({shiftText})");
-            Console.WriteLine($"   {weapon.MinDamage}-{weapon.MaxDamage} → {weapon.MinDamage + shiftRange.minShift}-{weapon.MaxDamage + shiftRange.maxShift}");
-            Console.WriteLine("   ✓ Balanced overall upgrade");
-            Console.WriteLine();
-
-            // Option 3: Increase Maximum Damage
-            var maxRange = weapon.MaxDamageUpgradeRange;
-            string maxRangeText = maxRange.min == maxRange.max ? $"+{maxRange.min}" : $"+{maxRange.min} to +{maxRange.max}";
-            int maxResultLow = weapon.MaxDamage + maxRange.min;
-            int maxResultHigh = weapon.MaxDamage + maxRange.max;
-            string maxResultText = maxRange.min == maxRange.max ? $"{maxResultLow}" : $"{maxResultLow}~{maxResultHigh}";
-
-            Console.WriteLine($"3. Increase Maximum Damage ({maxRangeText})");
-            Console.WriteLine($"   {weapon.MinDamage}-{weapon.MaxDamage} → {weapon.MinDamage}-{maxResultText}");
-            Console.WriteLine("   ✓ Higher damage ceiling (wider range)");
-            Console.WriteLine();
-
-            Console.WriteLine("4. Cancel");
-            Console.WriteLine();
-
-            Console.Write("Your choice (1-4): ");
-            string input = Console.ReadLine();
-
-            switch (input)
-            {
-                case "1":
-                    return WeaponUpgradePath.IncreaseMinDamage;
-                case "2":
-                    return WeaponUpgradePath.ShiftDamageRange;
-                case "3":
-                    return WeaponUpgradePath.IncreaseMaxDamage;
-                case "4":
-                default:
-                    Console.WriteLine("Upgrade cancelled.");
-                    return null;
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display upgrade path options to the player
+        // /// Returns the chosen path, or null if cancelled
+        // /// </summary>
+        // public static WeaponUpgradePath? GetPlayerUpgradeChoice(Weapon weapon)
+        // {
+        //     Console.WriteLine($"\n=== Upgrade {weapon.GetDisplayName()} ===");
+        //     Console.WriteLine($"Current Stats: {weapon.MinDamage}-{weapon.MaxDamage} damage");
+        //     Console.WriteLine($"\nChoose your upgrade path:");
+        //     Console.WriteLine();
+        //
+        //     // Option 1: Increase Minimum Damage
+        //     var minRange = weapon.MinDamageUpgradeRange;
+        //     string minRangeText = minRange.min == minRange.max ? $"+{minRange.min}" : $"+{minRange.min} to +{minRange.max}";
+        //     int minResultLow = weapon.MinDamage + minRange.min;
+        //     int minResultHigh = weapon.MinDamage + minRange.max;
+        //     string minResultText = minRange.min == minRange.max ? $"{minResultLow}" : $"{minResultLow}~{minResultHigh}";
+        //
+        //     Console.WriteLine($"1. Increase Minimum Damage ({minRangeText})");
+        //     Console.WriteLine($"   {weapon.MinDamage}-{weapon.MaxDamage} → {minResultText}-{weapon.MaxDamage}");
+        //     Console.WriteLine("   ✓ More consistent damage (narrows range)");
+        //     Console.WriteLine();
+        //
+        //     // Option 2: Shift Damage Range
+        //     var shiftRange = weapon.DamageShiftRange;
+        //     string shiftText = shiftRange.minShift == shiftRange.maxShift && shiftRange.minShift == 1
+        //         ? "+1 to both"
+        //         : $"+{shiftRange.minShift} min, +{shiftRange.maxShift} max";
+        //
+        //     Console.WriteLine($"2. Shift Damage Range ({shiftText})");
+        //     Console.WriteLine($"   {weapon.MinDamage}-{weapon.MaxDamage} → {weapon.MinDamage + shiftRange.minShift}-{weapon.MaxDamage + shiftRange.maxShift}");
+        //     Console.WriteLine("   ✓ Balanced overall upgrade");
+        //     Console.WriteLine();
+        //
+        //     // Option 3: Increase Maximum Damage
+        //     var maxRange = weapon.MaxDamageUpgradeRange;
+        //     string maxRangeText = maxRange.min == maxRange.max ? $"+{maxRange.min}" : $"+{maxRange.min} to +{maxRange.max}";
+        //     int maxResultLow = weapon.MaxDamage + maxRange.min;
+        //     int maxResultHigh = weapon.MaxDamage + maxRange.max;
+        //     string maxResultText = maxRange.min == maxRange.max ? $"{maxResultLow}" : $"{maxResultLow}~{maxResultHigh}";
+        //
+        //     Console.WriteLine($"3. Increase Maximum Damage ({maxRangeText})");
+        //     Console.WriteLine($"   {weapon.MinDamage}-{weapon.MaxDamage} → {weapon.MinDamage}-{maxResultText}");
+        //     Console.WriteLine("   ✓ Higher damage ceiling (wider range)");
+        //     Console.WriteLine();
+        //
+        //     Console.WriteLine("4. Cancel");
+        //     Console.WriteLine();
+        //
+        //     Console.Write("Your choice (1-4): ");
+        //     string input = Console.ReadLine();
+        //
+        //     switch (input)
+        //     {
+        //         case "1":
+        //             return WeaponUpgradePath.IncreaseMinDamage;
+        //         case "2":
+        //             return WeaponUpgradePath.ShiftDamageRange;
+        //         case "3":
+        //             return WeaponUpgradePath.IncreaseMaxDamage;
+        //         case "4":
+        //         default:
+        //             Console.WriteLine("Upgrade cancelled.");
+        //             return null;
+        //     }
+        // }
 
         /// <summary>
         /// Get level progress percentage (for UI)

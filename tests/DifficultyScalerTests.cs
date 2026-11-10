@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Xunit;
 using GameLogic.Systems;
+using GameLogic.Entities.Enemies.EnemyTypes;
 
 namespace GameLogic.Tests
 {
@@ -17,7 +18,7 @@ namespace GameLogic.Tests
         public void CalculatePartyLevel_SoloPlayer_ReturnsPlayerLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevel(10);
@@ -27,51 +28,49 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void CalculatePartyLevel_PlayerWithOneCompanion_ReturnsWeightedAverage()
+        public void CalculatePartyLevel_PlayerWithOneCompanion_ReturnsPlainAverage()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevel(playerLevel: 10, companionLevels: 8);
 
-            // Assert - Player 50%, Companion 50%: (10 * 0.5) + (8 * 0.5) = 9 (ceiling)
+            // Assert - Plain average: (10 + 8) / 2 = 9
             Assert.Equal(9, partyLevel);
         }
 
         [Fact]
-        public void CalculatePartyLevel_PlayerWithTwoCompanions_ReturnsWeightedAverage()
+        public void CalculatePartyLevel_PlayerWithTwoCompanions_ReturnsPlainAverage()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevel(playerLevel: 10, companionLevels: new[] { 8, 6 });
 
-            // Assert - Player 50%, Each companion 25%: (10 * 0.5) + (8 * 0.25) + (6 * 0.25) = 8.5 = 9 (ceiling)
-            Assert.Equal(9, partyLevel);
+            // Assert - Plain average: (10 + 8 + 6) / 3 = 8
+            Assert.Equal(8, partyLevel);
         }
 
         [Fact]
-        public void CalculatePartyLevel_PlayerWithThreeCompanions_ReturnsWeightedAverage()
+        public void CalculatePartyLevel_PlayerWithThreeCompanions_ReturnsPlainAverageRoundedUp()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevel(playerLevel: 12, companionLevels: new[] { 10, 10, 10 });
 
-            // Assert - Player 50%, each companion ~16.67%: (12 * 0.5) + (10 * 0.5) = 11
-            // mathematically, but the weight split (0.5f / 3) is float arithmetic, so the
-            // sum lands at 11.000001 rather than exactly 11 and Math.Ceiling takes it to 12.
-            Assert.Equal(12, partyLevel);
+            // Assert - Plain average: (12 + 10 + 10 + 10) / 4 = 10.5, rounded up to 11
+            Assert.Equal(11, partyLevel);
         }
 
         [Fact]
         public void CalculatePartyLevel_AllSameLevel_ReturnsPlayerLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevel(playerLevel: 15, companionLevels: new[] { 15, 15, 15 });
@@ -84,7 +83,7 @@ namespace GameLogic.Tests
         public void CalculatePartyLevel_NullCompanions_ReturnsPlayerLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevel(20, null);
@@ -97,7 +96,7 @@ namespace GameLogic.Tests
         public void CalculatePartyLevelWithPenalty_NoUnderLeveledCompanions_ReturnsNormalPartyLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevelWithPenalty(playerLevel: 10, companionLevels: new[] { 9, 8 });
@@ -111,7 +110,7 @@ namespace GameLogic.Tests
         public void CalculatePartyLevelWithPenalty_OneUnderLeveledCompanion_AppliesPenalty()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevelWithPenalty(playerLevel: 20, companionLevels: new[] { 10 });
@@ -125,7 +124,7 @@ namespace GameLogic.Tests
         public void CalculatePartyLevelWithPenalty_MultipleUnderLeveledCompanions_AppliesMultiplePenalties()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int partyLevel = scaler.CalculatePartyLevelWithPenalty(playerLevel: 20, companionLevels: new[] { 10, 12 });
@@ -139,7 +138,7 @@ namespace GameLogic.Tests
         public void CalculatePartyLevelWithPenalty_NeverGoesBelowOne()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act - Many under-leveled companions, player at the real level cap (40, not
             // 100 - decided 2026-10-22). The penalty is supposed to push the level DOWN
@@ -158,7 +157,7 @@ namespace GameLogic.Tests
         public void CalculatePartyLevelBalanced_WellBalancedParty_ReceivesBonus()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act - All companions within 3 levels of each other and player
             int partyLevel = scaler.CalculatePartyLevelBalanced(playerLevel: 10, companionLevels: new[] { 9, 10, 8 });
@@ -172,7 +171,7 @@ namespace GameLogic.Tests
         public void CalculatePartyLevelBalanced_UnbalancedParty_NoBonus()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act - Large level spread
             int partyLevel = scaler.CalculatePartyLevelBalanced(playerLevel: 10, companionLevels: new[] { 15, 5 });
@@ -187,10 +186,10 @@ namespace GameLogic.Tests
         #region Enemy Scaling Tests
 
         [Fact]
-        public void ScaleEnemyHealth_Level1Normal_ReturnsBaseHealth()
+        public void ScaleEnemyHealth_Level1Hard_ReturnsBaseHealth()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int health = scaler.ScaleEnemyHealth(baseHealth: 100, partyLevel: 1);
@@ -203,7 +202,7 @@ namespace GameLogic.Tests
         public void ScaleEnemyHealth_IncreasesWithLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int health1 = scaler.ScaleEnemyHealth(100, partyLevel: 1);
@@ -216,40 +215,40 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void ScaleEnemyHealth_EasyDifficulty_ReducesHealth()
+        public void ScaleEnemyHealth_NormalDifficulty_ReducesHealth()
         {
             // Arrange
-            var easyScaler = new DifficultyScaler(GameDifficulty.Easy);
-            var normalScaler = new DifficultyScaler(GameDifficulty.Normal);
+            var normalScaler = new DifficultyScaler(DifficultyLevel.Normal);
+            var hardScaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
-            int easyHealth = easyScaler.ScaleEnemyHealth(100, partyLevel: 10);
             int normalHealth = normalScaler.ScaleEnemyHealth(100, partyLevel: 10);
-
-            // Assert
-            Assert.True(easyHealth < normalHealth);
-        }
-
-        [Fact]
-        public void ScaleEnemyHealth_HardDifficulty_IncreasesHealth()
-        {
-            // Arrange
-            var hardScaler = new DifficultyScaler(GameDifficulty.Hard);
-            var normalScaler = new DifficultyScaler(GameDifficulty.Normal);
-
-            // Act
             int hardHealth = hardScaler.ScaleEnemyHealth(100, partyLevel: 10);
-            int normalHealth = normalScaler.ScaleEnemyHealth(100, partyLevel: 10);
 
             // Assert
-            Assert.True(hardHealth > normalHealth);
+            Assert.True(normalHealth < hardHealth);
         }
 
         [Fact]
-        public void ScaleEnemyDamage_Level1Normal_ReturnsBaseDamage()
+        public void ScaleEnemyHealth_DifficultDifficulty_IncreasesHealth()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var difficultScaler = new DifficultyScaler(DifficultyLevel.Difficult);
+            var hardScaler = new DifficultyScaler(DifficultyLevel.Hard);
+
+            // Act
+            int difficultHealth = difficultScaler.ScaleEnemyHealth(100, partyLevel: 10);
+            int hardHealth = hardScaler.ScaleEnemyHealth(100, partyLevel: 10);
+
+            // Assert
+            Assert.True(difficultHealth > hardHealth);
+        }
+
+        [Fact]
+        public void ScaleEnemyDamage_Level1Hard_ReturnsBaseDamage()
+        {
+            // Arrange
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int damage = scaler.ScaleEnemyDamage(baseDamage: 10, partyLevel: 1);
@@ -262,7 +261,7 @@ namespace GameLogic.Tests
         public void ScaleEnemyDamage_IncreasesWithLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int damage1 = scaler.ScaleEnemyDamage(10, partyLevel: 1);
@@ -275,10 +274,10 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void ScaleEnemyXP_Level1Normal_ReturnsBaseXP()
+        public void ScaleEnemyXP_Level1Hard_ReturnsBaseXP()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int xp = scaler.ScaleEnemyXP(baseXP: 50, partyLevel: 1);
@@ -291,7 +290,7 @@ namespace GameLogic.Tests
         public void ScaleEnemyXP_IncreasesWithLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int xp1 = scaler.ScaleEnemyXP(50, partyLevel: 1);
@@ -304,40 +303,40 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void ScaleEnemyXP_HardDifficulty_GivesBonus()
+        public void ScaleEnemyXP_DifficultDifficulty_GivesBonus()
         {
             // Arrange
-            var hardScaler = new DifficultyScaler(GameDifficulty.Hard);
-            var normalScaler = new DifficultyScaler(GameDifficulty.Normal);
+            var difficultScaler = new DifficultyScaler(DifficultyLevel.Difficult);
+            var hardScaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
+            int difficultXP = difficultScaler.ScaleEnemyXP(50, partyLevel: 10);
             int hardXP = hardScaler.ScaleEnemyXP(50, partyLevel: 10);
-            int normalXP = normalScaler.ScaleEnemyXP(50, partyLevel: 10);
 
-            // Assert - Hard should give +25% XP
-            Assert.True(hardXP > normalXP);
+            // Assert - Difficult should give +25% XP
+            Assert.True(difficultXP > hardXP);
         }
 
         [Fact]
-        public void ScaleEnemyXP_EasyDifficulty_ReducesXP()
+        public void ScaleEnemyXP_NormalDifficulty_ReducesXP()
         {
             // Arrange
-            var easyScaler = new DifficultyScaler(GameDifficulty.Easy);
-            var normalScaler = new DifficultyScaler(GameDifficulty.Normal);
+            var normalScaler = new DifficultyScaler(DifficultyLevel.Normal);
+            var hardScaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
-            int easyXP = easyScaler.ScaleEnemyXP(50, partyLevel: 10);
             int normalXP = normalScaler.ScaleEnemyXP(50, partyLevel: 10);
+            int hardXP = hardScaler.ScaleEnemyXP(50, partyLevel: 10);
 
-            // Assert - Easy should give 80% XP
-            Assert.True(easyXP < normalXP);
+            // Assert - Normal should give 80% XP
+            Assert.True(normalXP < hardXP);
         }
 
         [Fact]
         public void ScaleEnemyGold_ReturnsPositiveValue()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
             var rng = new Random(42);
 
             // Act
@@ -351,7 +350,7 @@ namespace GameLogic.Tests
         public void ScaleEnemyGold_HasVariance()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
             var rng = new Random(42);
             var goldResults = new System.Collections.Generic.HashSet<int>();
 
@@ -370,7 +369,7 @@ namespace GameLogic.Tests
         public void ScaleEnemyGold_IncreasesWithLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
             var rng = new Random(42);
 
             // Act - Average over multiple rolls
@@ -389,24 +388,65 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void ScaleEnemyGold_NightmareDifficulty_GivesBonus()
+        public void ScaleEnemyGold_UnfairDifficulty_GivesBonus()
         {
             // Arrange
-            var nightmareScaler = new DifficultyScaler(GameDifficulty.Nightmare);
-            var normalScaler = new DifficultyScaler(GameDifficulty.Normal);
+            var unfairScaler = new DifficultyScaler(DifficultyLevel.Unfair);
+            var hardScaler = new DifficultyScaler(DifficultyLevel.Hard);
             var rng = new Random(42);
 
             // Act - Average over multiple rolls
-            int nightmareGold = 0;
-            int normalGold = 0;
+            int unfairGold = 0;
+            int hardGold = 0;
             for (int i = 0; i < 100; i++)
             {
-                nightmareGold += nightmareScaler.ScaleEnemyGold(20, partyLevel: 10, rng: rng);
-                normalGold += normalScaler.ScaleEnemyGold(20, partyLevel: 10, rng: rng);
+                unfairGold += unfairScaler.ScaleEnemyGold(20, partyLevel: 10, rng: rng);
+                hardGold += hardScaler.ScaleEnemyGold(20, partyLevel: 10, rng: rng);
             }
 
             // Assert
-            Assert.True(nightmareGold > normalGold);
+            Assert.True(unfairGold > hardGold);
+        }
+
+        #endregion
+
+        #region Applying Difficulty Tests
+
+        [Fact]
+        public void ApplyDifficultyToEnemy_Unfair_DoublesHealthAndDamage_OnlyOnce()
+        {
+            // Arrange - a level-1 Goblin has 15 HP and 2-5 damage
+            var scaler = new DifficultyScaler(DifficultyLevel.Unfair);
+            var goblin = new Goblin(1);
+
+            // Act - applying it a second time must not stack
+            scaler.ApplyDifficultyToEnemy(goblin);
+            scaler.ApplyDifficultyToEnemy(goblin);
+
+            // Assert
+            Assert.True(goblin.DifficultyApplied);
+            Assert.Equal(30, goblin.MaxHealth);
+            Assert.Equal(30, goblin.Health);
+            Assert.Equal(4, goblin.MinDamage);
+            Assert.Equal(10, goblin.MaxDamage);
+        }
+
+        [Fact]
+        public void ApplyDifficultyToEnemy_Normal_LowersStats_RoundingUp()
+        {
+            // Arrange
+            var scaler = new DifficultyScaler(DifficultyLevel.Normal);
+            var goblin = new Goblin(1);
+
+            // Act
+            scaler.ApplyDifficultyToEnemy(goblin);
+
+            // Assert - 75%, rounded up: 15 -> 12, 2 -> 2, 5 -> 4
+            Assert.Equal(12, goblin.MaxHealth);
+            Assert.Equal(2, goblin.MinDamage);
+            Assert.Equal(4, goblin.MaxDamage);
+            Assert.Equal(0.8f, scaler.GetXPMultiplier());
+            Assert.Equal(1.0f, scaler.GetGoldMultiplier());
         }
 
         #endregion
@@ -417,7 +457,7 @@ namespace GameLogic.Tests
         public void ScaleBossHealth_IsThreeTimesRegular()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int regularHealth = scaler.ScaleEnemyHealth(100, partyLevel: 10);
@@ -431,7 +471,7 @@ namespace GameLogic.Tests
         public void ScaleBossDamage_Is1Point5TimesRegular()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int regularDamage = scaler.ScaleEnemyDamage(10, partyLevel: 10);
@@ -445,7 +485,7 @@ namespace GameLogic.Tests
         public void ScaleBossXP_IsFiveTimesRegular()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int regularXP = scaler.ScaleEnemyXP(50, partyLevel: 10);
@@ -459,7 +499,7 @@ namespace GameLogic.Tests
         public void ScaleBossGold_IsMultipleTimesRegular()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
             var rng = new Random(42);
 
             // Act - Average over multiple rolls
@@ -483,7 +523,7 @@ namespace GameLogic.Tests
         public void ScaleEliteHealth_Is1Point75TimesRegular()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int regularHealth = scaler.ScaleEnemyHealth(100, partyLevel: 10);
@@ -497,7 +537,7 @@ namespace GameLogic.Tests
         public void ScaleEliteDamage_Is1Point25TimesRegular()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int regularDamage = scaler.ScaleEnemyDamage(10, partyLevel: 10);
@@ -511,7 +551,7 @@ namespace GameLogic.Tests
         public void ScaleEliteXP_IsTwoTimesRegular()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int regularXP = scaler.ScaleEnemyXP(50, partyLevel: 10);
@@ -525,7 +565,7 @@ namespace GameLogic.Tests
         public void ScaleEliteGold_IsBetweenRegularAndBoss()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
             var rng = new Random(42);
 
             // Act - Average over multiple rolls
@@ -550,7 +590,7 @@ namespace GameLogic.Tests
         public void GetScaledItemLevel_ReturnsValueNearPartyLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
             var rng = new Random(42);
 
             // Act
@@ -564,7 +604,7 @@ namespace GameLogic.Tests
         public void GetScaledItemLevel_ClampsToValidRange()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
             var rng = new Random(42);
 
             // Act
@@ -577,10 +617,10 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void GetLootQualityModifier_Normal_ReturnsOne()
+        public void GetLootQualityModifier_Hard_ReturnsOne()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             float modifier = scaler.GetLootQualityModifier();
@@ -590,10 +630,10 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void GetLootQualityModifier_Easy_ReducesQuality()
+        public void GetLootQualityModifier_Normal_ReducesQuality()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Easy);
+            var scaler = new DifficultyScaler(DifficultyLevel.Normal);
 
             // Act
             float modifier = scaler.GetLootQualityModifier();
@@ -603,10 +643,10 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void GetLootQualityModifier_Hard_IncreasesQuality()
+        public void GetLootQualityModifier_Difficult_IncreasesQuality()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Hard);
+            var scaler = new DifficultyScaler(DifficultyLevel.Difficult);
 
             // Act
             float modifier = scaler.GetLootQualityModifier();
@@ -616,10 +656,10 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void GetLootQualityModifier_Nightmare_MaximumQuality()
+        public void GetLootQualityModifier_Unfair_MaximumQuality()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Nightmare);
+            var scaler = new DifficultyScaler(DifficultyLevel.Unfair);
 
             // Act
             float modifier = scaler.GetLootQualityModifier();
@@ -636,41 +676,41 @@ namespace GameLogic.Tests
         public void GetGameDifficulty_ReturnsSetDifficulty()
         {
             // Arrange
-            var easyScaler = new DifficultyScaler(GameDifficulty.Easy);
-            var hardScaler = new DifficultyScaler(GameDifficulty.Hard);
+            var normalScaler = new DifficultyScaler(DifficultyLevel.Normal);
+            var difficultScaler = new DifficultyScaler(DifficultyLevel.Difficult);
 
             // Act & Assert
-            Assert.Equal(GameDifficulty.Easy, easyScaler.GetGameDifficulty());
-            Assert.Equal(GameDifficulty.Hard, hardScaler.GetGameDifficulty());
+            Assert.Equal(DifficultyLevel.Normal, normalScaler.GetGameDifficulty());
+            Assert.Equal(DifficultyLevel.Difficult, difficultScaler.GetGameDifficulty());
         }
 
         [Fact]
         public void GetDifficultyMultiplier_ReturnsCorrectMultipliers()
         {
             // Arrange
-            var easyScaler = new DifficultyScaler(GameDifficulty.Easy);
-            var normalScaler = new DifficultyScaler(GameDifficulty.Normal);
-            var hardScaler = new DifficultyScaler(GameDifficulty.Hard);
-            var nightmareScaler = new DifficultyScaler(GameDifficulty.Nightmare);
+            var normalScaler = new DifficultyScaler(DifficultyLevel.Normal);
+            var hardScaler = new DifficultyScaler(DifficultyLevel.Hard);
+            var difficultScaler = new DifficultyScaler(DifficultyLevel.Difficult);
+            var unfairScaler = new DifficultyScaler(DifficultyLevel.Unfair);
 
             // Act & Assert
-            Assert.Equal(0.75f, easyScaler.GetDifficultyMultiplier());
-            Assert.Equal(1.0f, normalScaler.GetDifficultyMultiplier());
-            Assert.Equal(1.5f, hardScaler.GetDifficultyMultiplier());
-            Assert.Equal(2.0f, nightmareScaler.GetDifficultyMultiplier());
+            Assert.Equal(0.75f, normalScaler.GetDifficultyMultiplier());
+            Assert.Equal(1.0f, hardScaler.GetDifficultyMultiplier());
+            Assert.Equal(1.5f, difficultScaler.GetDifficultyMultiplier());
+            Assert.Equal(2.0f, unfairScaler.GetDifficultyMultiplier());
         }
 
         [Fact]
         public void GetDifficultyDescription_ReturnsDescriptiveText()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Hard);
+            var scaler = new DifficultyScaler(DifficultyLevel.Difficult);
 
             // Act
             string description = scaler.GetDifficultyDescription();
 
             // Assert
-            Assert.Contains("Hard", description);
+            Assert.Contains("Difficult", description);
             Assert.Contains("150%", description);
         }
 
@@ -678,7 +718,7 @@ namespace GameLogic.Tests
         public void GetEffectiveEnemyLevel_RegularEnemy_ReturnsPartyLevel()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int level = scaler.GetEffectiveEnemyLevel(baseLevel: 1, partyLevel: 20);
@@ -691,7 +731,7 @@ namespace GameLogic.Tests
         public void GetEffectiveEnemyLevel_EliteEnemy_AddsTwo()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int level = scaler.GetEffectiveEnemyLevel(baseLevel: 1, partyLevel: 20, isElite: true);
@@ -704,7 +744,7 @@ namespace GameLogic.Tests
         public void GetEffectiveEnemyLevel_Boss_AddsFive()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int level = scaler.GetEffectiveEnemyLevel(baseLevel: 1, partyLevel: 20, isBoss: true);
@@ -717,7 +757,7 @@ namespace GameLogic.Tests
         public void GetEffectiveEnemyLevel_CapsAt100()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int level = scaler.GetEffectiveEnemyLevel(baseLevel: 1, partyLevel: 99, isBoss: true);
@@ -730,20 +770,20 @@ namespace GameLogic.Tests
         public void GetDangerRating_RegularEnemy_ReturnsBasicRating()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             string rating = scaler.GetDangerRating();
 
             // Assert
-            Assert.Equal("Normal", rating);
+            Assert.Equal("Fair Fight", rating);
         }
 
         [Fact]
         public void GetDangerRating_EliteEnemy_ContainsEliteTag()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Hard);
+            var scaler = new DifficultyScaler(DifficultyLevel.Difficult);
 
             // Act
             string rating = scaler.GetDangerRating(isElite: true);
@@ -756,7 +796,7 @@ namespace GameLogic.Tests
         public void GetDangerRating_Boss_ContainsBossTag()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Nightmare);
+            var scaler = new DifficultyScaler(DifficultyLevel.Unfair);
 
             // Act
             string rating = scaler.GetDangerRating(isBoss: true);
@@ -773,7 +813,7 @@ namespace GameLogic.Tests
         public void GetPartyCompositionInfo_SoloPlayer_ReturnsSoloMessage()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             string info = scaler.GetPartyCompositionInfo(playerLevel: 10);
@@ -787,7 +827,7 @@ namespace GameLogic.Tests
         public void GetPartyCompositionInfo_BalancedParty_ShowsBalanced()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             string info = scaler.GetPartyCompositionInfo(playerLevel: 10, companionLevels: new[] { 9, 10, 8 });
@@ -800,7 +840,7 @@ namespace GameLogic.Tests
         public void GetPartyCompositionInfo_UnderLeveledCompanions_ShowsWeakParty()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             string info = scaler.GetPartyCompositionInfo(playerLevel: 20, companionLevels: new[] { 10, 12 });
@@ -813,7 +853,7 @@ namespace GameLogic.Tests
         public void GetRecommendedCompanionLevel_ReturnsPlayerLevelMinus3()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int recommended = scaler.GetRecommendedCompanionLevel(playerLevel: 20);
@@ -826,7 +866,7 @@ namespace GameLogic.Tests
         public void GetRecommendedCompanionLevel_MinimumLevel1()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             int recommended = scaler.GetRecommendedCompanionLevel(playerLevel: 1);
@@ -839,7 +879,7 @@ namespace GameLogic.Tests
         public void IsCompanionUnderLeveled_WithinRange_ReturnsFalse()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             bool underLeveled = scaler.IsCompanionUnderLeveled(companionLevel: 15, playerLevel: 20);
@@ -852,7 +892,7 @@ namespace GameLogic.Tests
         public void IsCompanionUnderLeveled_MoreThan5Below_ReturnsTrue()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             bool underLeveled = scaler.IsCompanionUnderLeveled(companionLevel: 10, playerLevel: 20);
@@ -865,7 +905,7 @@ namespace GameLogic.Tests
         public void IsCompanionUnderLeveled_Exactly5Below_ReturnsFalse()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             bool underLeveled = scaler.IsCompanionUnderLeveled(companionLevel: 15, playerLevel: 20);
@@ -878,7 +918,7 @@ namespace GameLogic.Tests
         public void IsCompanionUnderLeveled_Exactly6Below_ReturnsTrue()
         {
             // Arrange
-            var scaler = new DifficultyScaler(GameDifficulty.Normal);
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
 
             // Act
             bool underLeveled = scaler.IsCompanionUnderLeveled(companionLevel: 14, playerLevel: 20);

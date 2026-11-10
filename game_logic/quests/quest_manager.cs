@@ -209,82 +209,84 @@ namespace GameLogic.Quests
             }
         }
 
-        /// <summary>
-        /// Display quest log
-        /// </summary>
-        public void DisplayQuestLog()
-        {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("            QUEST LOG");
-            Console.WriteLine("═══════════════════════════════════════\n");
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display quest log
+        // /// </summary>
+        // public void DisplayQuestLog()
+        // {
+        //     Console.Clear();
+        //     Console.WriteLine("═══════════════════════════════════════");
+        //     Console.WriteLine("            QUEST LOG");
+        //     Console.WriteLine("═══════════════════════════════════════\n");
+        //
+        //     var activeQuests = GetAcceptedQuests();
+        //     var completedQuests = GetCompletedQuests();
+        //     var claimedQuests = GetClaimedQuests();
+        //
+        //     // Active Quests
+        //     if (activeQuests.Count > 0)
+        //     {
+        //         Console.WriteLine("═══ ACTIVE QUESTS ═══");
+        //         foreach (var quest in activeQuests)
+        //         {
+        //             string activeMarker = quest.QuestId == _activeQuestId ? "★ " : "  ";
+        //             Console.WriteLine($"{activeMarker}{quest.GetQuestSummary()}");
+        //         }
+        //         Console.WriteLine();
+        //     }
+        //
+        //     // Completed Quests (awaiting claim)
+        //     if (completedQuests.Count > 0)
+        //     {
+        //         Console.WriteLine("═══ COMPLETED QUESTS (Claim Rewards) ═══");
+        //         foreach (var quest in completedQuests)
+        //         {
+        //             Console.WriteLine($"  {quest.GetQuestSummary()}");
+        //         }
+        //         Console.WriteLine();
+        //     }
+        //
+        //     // Claimed Quests
+        //     if (claimedQuests.Count > 0)
+        //     {
+        //         Console.WriteLine("═══ CLAIMED QUESTS ═══");
+        //         foreach (var quest in claimedQuests)
+        //         {
+        //             Console.WriteLine($"  {quest.QuestName}");
+        //         }
+        //         Console.WriteLine();
+        //     }
+        //
+        //     if (activeQuests.Count == 0 && completedQuests.Count == 0 && claimedQuests.Count == 0)
+        //     {
+        //         Console.WriteLine("No quests in progress.");
+        //         Console.WriteLine("Visit the Job Board or talk to NPCs to find quests!\n");
+        //     }
+        //
+        //     Console.WriteLine("═══════════════════════════════════════");
+        // }
 
-            var activeQuests = GetAcceptedQuests();
-            var completedQuests = GetCompletedQuests();
-            var claimedQuests = GetClaimedQuests();
-
-            // Active Quests
-            if (activeQuests.Count > 0)
-            {
-                Console.WriteLine("═══ ACTIVE QUESTS ═══");
-                foreach (var quest in activeQuests)
-                {
-                    string activeMarker = quest.QuestId == _activeQuestId ? "★ " : "  ";
-                    Console.WriteLine($"{activeMarker}{quest.GetQuestSummary()}");
-                }
-                Console.WriteLine();
-            }
-
-            // Completed Quests (awaiting claim)
-            if (completedQuests.Count > 0)
-            {
-                Console.WriteLine("═══ COMPLETED QUESTS (Claim Rewards) ═══");
-                foreach (var quest in completedQuests)
-                {
-                    Console.WriteLine($"  {quest.GetQuestSummary()}");
-                }
-                Console.WriteLine();
-            }
-
-            // Claimed Quests
-            if (claimedQuests.Count > 0)
-            {
-                Console.WriteLine("═══ CLAIMED QUESTS ═══");
-                foreach (var quest in claimedQuests)
-                {
-                    Console.WriteLine($"  {quest.QuestName}");
-                }
-                Console.WriteLine();
-            }
-
-            if (activeQuests.Count == 0 && completedQuests.Count == 0 && claimedQuests.Count == 0)
-            {
-                Console.WriteLine("No quests in progress.");
-                Console.WriteLine("Visit the Job Board or talk to NPCs to find quests!\n");
-            }
-
-            Console.WriteLine("═══════════════════════════════════════");
-        }
-
-        /// <summary>
-        /// Display active quest tracker (for HUD/status display)
-        /// </summary>
-        public void DisplayActiveQuestTracker()
-        {
-            var activeQuest = GetActiveQuest();
-            if (activeQuest == null)
-            {
-                Console.WriteLine("No active quest tracked.");
-                return;
-            }
-
-            Console.WriteLine($"═══ ACTIVE QUEST: {activeQuest.QuestName} ═══");
-            foreach (var objective in activeQuest.Objectives)
-            {
-                string checkmark = objective.IsCompleted ? "✓" : " ";
-                Console.WriteLine($"  [{checkmark}] {objective.Description} ({objective.GetProgressString()})");
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display active quest tracker (for HUD/status display)
+        // /// </summary>
+        // public void DisplayActiveQuestTracker()
+        // {
+        //     var activeQuest = GetActiveQuest();
+        //     if (activeQuest == null)
+        //     {
+        //         Console.WriteLine("No active quest tracked.");
+        //         return;
+        //     }
+        //
+        //     Console.WriteLine($"═══ ACTIVE QUEST: {activeQuest.QuestName} ═══");
+        //     foreach (var objective in activeQuest.Objectives)
+        //     {
+        //         string checkmark = objective.IsCompleted ? "✓" : " ";
+        //         Console.WriteLine($"  [{checkmark}] {objective.Description} ({objective.GetProgressString()})");
+        //     }
+        // }
 
         /// <summary>
         /// Get quest progress summary

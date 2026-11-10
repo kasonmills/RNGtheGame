@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GameLogic.Items;
+using GameLogic.Systems;
 
 namespace GameLogic.Progression
 {
@@ -316,19 +317,19 @@ namespace GameLogic.Progression
         {
             if (!_allQuests.TryGetValue(questId, out Quest quest))
             {
-                Console.WriteLine($"Quest '{questId}' not found.");
+                GameLog.Write($"Quest '{questId}' not found.");
                 return false;
             }
 
             if (!CanAcceptQuest(quest, playerLevel))
             {
-                Console.WriteLine($"Cannot accept quest '{quest.Name}'.");
+                GameLog.Write($"Cannot accept quest '{quest.Name}'.");
                 return false;
             }
 
             quest.Status = QuestStatus.Active;
             _activeQuests.Add(quest);
-            Console.WriteLine($"Quest started: {quest.Name}");
+            GameLog.Write($"Quest started: {quest.Name}");
             return true;
         }
 
@@ -340,7 +341,7 @@ namespace GameLogic.Progression
             var quest = _activeQuests.FirstOrDefault(q => q.Id == questId);
             if (quest == null)
             {
-                Console.WriteLine("Quest not found in active quests.");
+                GameLog.Write("Quest not found in active quests.");
                 return false;
             }
 
@@ -353,7 +354,7 @@ namespace GameLogic.Progression
                 obj.CurrentAmount = 0;
             }
 
-            Console.WriteLine($"Quest abandoned: {quest.Name}");
+            GameLog.Write($"Quest abandoned: {quest.Name}");
             return true;
         }
 
@@ -371,13 +372,13 @@ namespace GameLogic.Progression
                     {
                         if (objective.UpdateProgress(amount))
                         {
-                            Console.WriteLine($"Quest objective completed: {objective.Description}");
+                            GameLog.Write($"Quest objective completed: {objective.Description}");
 
                             // Check if quest is complete
                             if (quest.AreRequiredObjectivesComplete())
                             {
                                 quest.Status = QuestStatus.Completed;
-                                Console.WriteLine($"Quest ready to turn in: {quest.Name}");
+                                GameLog.Write($"Quest ready to turn in: {quest.Name}");
                             }
                         }
                     }
@@ -393,13 +394,13 @@ namespace GameLogic.Progression
             var quest = _activeQuests.FirstOrDefault(q => q.Id == questId);
             if (quest == null)
             {
-                Console.WriteLine("Quest not found in active quests.");
+                GameLog.Write("Quest not found in active quests.");
                 return null;
             }
 
             if (!quest.AreRequiredObjectivesComplete())
             {
-                Console.WriteLine("Quest objectives not completed yet.");
+                GameLog.Write("Quest objectives not completed yet.");
                 return null;
             }
 
@@ -431,16 +432,16 @@ namespace GameLogic.Progression
             if (quest.Reward.Gold > 0)
             {
                 player.Gold += quest.Reward.Gold;
-                Console.WriteLine($"Received {quest.Reward.Gold} gold!");
+                GameLog.Write($"Received {quest.Reward.Gold} gold!");
             }
 
             foreach (var item in quest.Reward.Items)
             {
                 player.Inventory.AddItem(item);
-                Console.WriteLine($"Received: {item.GetDisplayName()}");
+                GameLog.Write($"Received: {item.GetDisplayName()}");
             }
 
-            Console.WriteLine($"Quest completed: {quest.Name}");
+            GameLog.Write($"Quest completed: {quest.Name}");
 
             return quest.Reward;
         }

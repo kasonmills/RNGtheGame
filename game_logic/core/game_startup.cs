@@ -186,7 +186,7 @@ namespace GameLogic.Core
             mapManager.GenerateNewMap();
             mapManager.SetCurrentNode(saveData.CurrentMapNodeId);
 
-            Console.WriteLine($"Welcome back, {player.Name}!");
+            GameLog.Write($"Welcome back, {player.Name}!");
 
             return new GameStartupResult
             {
@@ -205,8 +205,10 @@ namespace GameLogic.Core
         /// Descriptive text for a difficulty-select screen (immutable choice per save file).
         /// TODO-GODOT: render as radio buttons + info panel.
         /// Only describes what difficulty actually changes in the game today (rewritten
-        /// 2026-11-03, core/ to-do 12). Add a line here as each planned difficulty effect is
-        /// built: starting stats (Bucket A #15), enemy accuracy (#16), boss strength (#11),
+        /// 2026-11-03, core/ to-do 12; enemy strength and rewards added 2026-11-10). The numbers
+        /// are read from the code (GameSettings.GetPartyAccuracyPenalty, DifficultyScaler), so the
+        /// text can't drift from them. Add a line here as each planned difficulty effect is
+        /// built: starting stats (Bucket A #15), enemy accuracy (#16), boss level (#11),
         /// the Giant House Centipede's poison, the Captain's crit chance.
         /// </summary>
         public static string GetDifficultyDescription(DifficultyLevel difficulty)
@@ -215,6 +217,20 @@ namespace GameLogic.Core
             string accuracy = penalty == 0
                 ? "Your party's attacks land as often as their weapons allow."
                 : $"Your party's chance to hit is {penalty}% lower.";
+
+            var scaler = new DifficultyScaler(difficulty);
+            int strength = (int)Math.Round(scaler.GetDifficultyMultiplier() * 100);
+            int xp = (int)Math.Round(scaler.GetXPMultiplier() * 100);
+            int gold = (int)Math.Round(scaler.GetGoldMultiplier() * 100);
+
+            string enemies = strength == 100
+                ? "Enemies are at their full strength."
+                : $"Enemies have {strength}% of their health and damage.";
+            string rewards = (xp == 100 && gold == 100)
+                ? "Fights pay the standard XP and gold."
+                : $"Fights pay {xp}% XP and {gold}% gold.";
+
+            accuracy = $"{enemies} {rewards} {accuracy}";
 
             string flavour = difficulty switch
             {

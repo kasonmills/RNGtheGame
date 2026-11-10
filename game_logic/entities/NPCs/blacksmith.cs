@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GameLogic.Items;
+using GameLogic.Systems;
 
 namespace GameLogic.Entities.NPCs
 {
@@ -38,28 +39,29 @@ namespace GameLogic.Entities.NPCs
             AddDialogue("I've been smithing for years. Your equipment is in good hands.");
         }
 
-        /// <summary>
-        /// Show the blacksmith's main menu
-        /// </summary>
-        public void ShowServices(Player.Player player)
-        {
-            Console.Clear();
-            Console.WriteLine("=".PadRight(50, '='));
-            Console.WriteLine($"    {Name}'s Forge");
-            Console.WriteLine("=".PadRight(50, '='));
-            Greet();
-            Console.WriteLine($"\nSkill Level: {SkillLevel}/10");
-            Console.WriteLine($"Can upgrade legendary items: {(CanUpgradeLegendary ? "Yes" : "No")}");
-            Console.WriteLine($"\nYour Gold: {player.Gold}");
-
-            Console.WriteLine("\nWhat would you like to do?");
-            Console.WriteLine("1. Upgrade Weapon");
-            Console.WriteLine("2. Upgrade Armor");
-            Console.WriteLine("3. View Upgrade Prices");
-            Console.WriteLine("4. Leave");
-
-            Console.Write("\nChoice: ");
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Show the blacksmith's main menu
+        // /// </summary>
+        // public void ShowServices(Player.Player player)
+        // {
+        //     Console.Clear();
+        //     Console.WriteLine("=".PadRight(50, '='));
+        //     Console.WriteLine($"    {Name}'s Forge");
+        //     Console.WriteLine("=".PadRight(50, '='));
+        //     Greet();
+        //     Console.WriteLine($"\nSkill Level: {SkillLevel}/10");
+        //     Console.WriteLine($"Can upgrade legendary items: {(CanUpgradeLegendary ? "Yes" : "No")}");
+        //     Console.WriteLine($"\nYour Gold: {player.Gold}");
+        //
+        //     Console.WriteLine("\nWhat would you like to do?");
+        //     Console.WriteLine("1. Upgrade Weapon");
+        //     Console.WriteLine("2. Upgrade Armor");
+        //     Console.WriteLine("3. View Upgrade Prices");
+        //     Console.WriteLine("4. Leave");
+        //
+        //     Console.Write("\nChoice: ");
+        // }
 
         /// <summary>
         /// Get all weapons from player's inventory that are ready for upgrade
@@ -119,91 +121,93 @@ namespace GameLogic.Entities.NPCs
             return upgradableArmor;
         }
 
-        /// <summary>
-        /// Display weapon upgrade menu and handle selection
-        /// </summary>
-        public void UpgradeWeaponMenu(Player.Player player)
-        {
-            var upgradableWeapons = GetUpgradableWeapons(player);
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display weapon upgrade menu and handle selection
+        // /// </summary>
+        // public void UpgradeWeaponMenu(Player.Player player)
+        // {
+        //     var upgradableWeapons = GetUpgradableWeapons(player);
+        //
+        //     if (upgradableWeapons.Count == 0)
+        //     {
+        //         Console.WriteLine("\n❌ You don't have any weapons ready for upgrade.");
+        //         Console.WriteLine("Weapons need to gain experience in combat before they can be upgraded!");
+        //         Console.WriteLine("\nPress any key to continue...");
+        //         Console.ReadKey();
+        //         return;
+        //     }
+        //
+        //     Console.Clear();
+        //     Console.WriteLine("=== WEAPON UPGRADES ===\n");
+        //     Console.WriteLine($"Your Gold: {player.Gold}\n");
+        //
+        //     for (int i = 0; i < upgradableWeapons.Count; i++)
+        //     {
+        //         var weapon = upgradableWeapons[i];
+        //         int cost = CalculateUpgradeCost(weapon);
+        //         string equipped = weapon == player.EquippedWeapon ? " [EQUIPPED]" : "";
+        //
+        //         Console.WriteLine($"{i + 1}. {weapon.GetDisplayName()}{equipped}");
+        //         Console.WriteLine($"   Current: +{weapon.Level} | Next: +{weapon.Level + 1}");
+        //         Console.WriteLine($"   Upgrade Cost: {cost} gold");
+        //         Console.WriteLine($"   Damage: {weapon.MinDamage}-{weapon.MaxDamage} → {GetPreviewDamage(weapon)}");
+        //         Console.WriteLine();
+        //     }
+        //
+        //     Console.WriteLine($"{upgradableWeapons.Count + 1}. Cancel");
+        //     Console.Write("\nSelect weapon to upgrade: ");
+        //
+        //     string input = Console.ReadLine();
+        //     if (int.TryParse(input, out int choice) && choice > 0 && choice <= upgradableWeapons.Count)
+        //     {
+        //         UpgradeWeapon(player, upgradableWeapons[choice - 1]);
+        //     }
+        // }
 
-            if (upgradableWeapons.Count == 0)
-            {
-                Console.WriteLine("\n❌ You don't have any weapons ready for upgrade.");
-                Console.WriteLine("Weapons need to gain experience in combat before they can be upgraded!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-                return;
-            }
-
-            Console.Clear();
-            Console.WriteLine("=== WEAPON UPGRADES ===\n");
-            Console.WriteLine($"Your Gold: {player.Gold}\n");
-
-            for (int i = 0; i < upgradableWeapons.Count; i++)
-            {
-                var weapon = upgradableWeapons[i];
-                int cost = CalculateUpgradeCost(weapon);
-                string equipped = weapon == player.EquippedWeapon ? " [EQUIPPED]" : "";
-
-                Console.WriteLine($"{i + 1}. {weapon.GetDisplayName()}{equipped}");
-                Console.WriteLine($"   Current: +{weapon.Level} | Next: +{weapon.Level + 1}");
-                Console.WriteLine($"   Upgrade Cost: {cost} gold");
-                Console.WriteLine($"   Damage: {weapon.MinDamage}-{weapon.MaxDamage} → {GetPreviewDamage(weapon)}");
-                Console.WriteLine();
-            }
-
-            Console.WriteLine($"{upgradableWeapons.Count + 1}. Cancel");
-            Console.Write("\nSelect weapon to upgrade: ");
-
-            string input = Console.ReadLine();
-            if (int.TryParse(input, out int choice) && choice > 0 && choice <= upgradableWeapons.Count)
-            {
-                UpgradeWeapon(player, upgradableWeapons[choice - 1]);
-            }
-        }
-
-        /// <summary>
-        /// Display armor upgrade menu and handle selection
-        /// </summary>
-        public void UpgradeArmorMenu(Player.Player player)
-        {
-            var upgradableArmor = GetUpgradableArmor(player);
-
-            if (upgradableArmor.Count == 0)
-            {
-                Console.WriteLine("\n❌ You don't have any armor ready for upgrade.");
-                Console.WriteLine("Armor needs to gain experience in combat before it can be upgraded!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-                return;
-            }
-
-            Console.Clear();
-            Console.WriteLine("=== ARMOR UPGRADES ===\n");
-            Console.WriteLine($"Your Gold: {player.Gold}\n");
-
-            for (int i = 0; i < upgradableArmor.Count; i++)
-            {
-                var armor = upgradableArmor[i];
-                int cost = CalculateUpgradeCost(armor);
-                string equipped = armor == player.EquippedArmor ? " [EQUIPPED]" : "";
-
-                Console.WriteLine($"{i + 1}. {armor.GetDisplayName()}{equipped}");
-                Console.WriteLine($"   Current: +{armor.Level} | Next: +{armor.Level + 1}");
-                Console.WriteLine($"   Upgrade Cost: {cost} gold");
-                Console.WriteLine($"   Defense: {armor.Defense} → {GetPreviewDefense(armor)}");
-                Console.WriteLine();
-            }
-
-            Console.WriteLine($"{upgradableArmor.Count + 1}. Cancel");
-            Console.Write("\nSelect armor to upgrade: ");
-
-            string input = Console.ReadLine();
-            if (int.TryParse(input, out int choice) && choice > 0 && choice <= upgradableArmor.Count)
-            {
-                UpgradeArmor(player, upgradableArmor[choice - 1]);
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display armor upgrade menu and handle selection
+        // /// </summary>
+        // public void UpgradeArmorMenu(Player.Player player)
+        // {
+        //     var upgradableArmor = GetUpgradableArmor(player);
+        //
+        //     if (upgradableArmor.Count == 0)
+        //     {
+        //         Console.WriteLine("\n❌ You don't have any armor ready for upgrade.");
+        //         Console.WriteLine("Armor needs to gain experience in combat before it can be upgraded!");
+        //         Console.WriteLine("\nPress any key to continue...");
+        //         Console.ReadKey();
+        //         return;
+        //     }
+        //
+        //     Console.Clear();
+        //     Console.WriteLine("=== ARMOR UPGRADES ===\n");
+        //     Console.WriteLine($"Your Gold: {player.Gold}\n");
+        //
+        //     for (int i = 0; i < upgradableArmor.Count; i++)
+        //     {
+        //         var armor = upgradableArmor[i];
+        //         int cost = CalculateUpgradeCost(armor);
+        //         string equipped = armor == player.EquippedArmor ? " [EQUIPPED]" : "";
+        //
+        //         Console.WriteLine($"{i + 1}. {armor.GetDisplayName()}{equipped}");
+        //         Console.WriteLine($"   Current: +{armor.Level} | Next: +{armor.Level + 1}");
+        //         Console.WriteLine($"   Upgrade Cost: {cost} gold");
+        //         Console.WriteLine($"   Defense: {armor.Defense} → {GetPreviewDefense(armor)}");
+        //         Console.WriteLine();
+        //     }
+        //
+        //     Console.WriteLine($"{upgradableArmor.Count + 1}. Cancel");
+        //     Console.Write("\nSelect armor to upgrade: ");
+        //
+        //     string input = Console.ReadLine();
+        //     if (int.TryParse(input, out int choice) && choice > 0 && choice <= upgradableArmor.Count)
+        //     {
+        //         UpgradeArmor(player, upgradableArmor[choice - 1]);
+        //     }
+        // }
 
         /// <summary>
         /// Calculate the upgrade cost with blacksmith skill discount
@@ -267,8 +271,6 @@ namespace GameLogic.Entities.NPCs
             if (!weapon.ReadyForUpgrade)
             {
                 Speak("That weapon isn't ready for an upgrade yet. It needs more battle experience!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
                 return false;
             }
 
@@ -276,8 +278,6 @@ namespace GameLogic.Entities.NPCs
             if (weapon.Rarity >= ItemRarity.Legendary && !CanUpgradeLegendary)
             {
                 Speak("I'm not skilled enough to work with legendary equipment. You'll need a master blacksmith!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
                 return false;
             }
 
@@ -287,36 +287,21 @@ namespace GameLogic.Entities.NPCs
             if (player.Gold < cost)
             {
                 Speak($"You need {cost} gold for this upgrade, but you only have {player.Gold} gold.");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
                 return false;
             }
 
-            // Confirm upgrade
-            Console.WriteLine($"\n⚒️  Upgrade {weapon.GetDisplayName()} for {cost} gold?");
-            Console.Write("(Y/N): ");
-            string confirm = Console.ReadLine()?.ToUpper();
-
-            if (confirm != "Y")
-            {
-                Speak("Come back when you're ready.");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-                return false;
-            }
+            // The "Upgrade for X gold?" confirmation is the blacksmith screen's job, before this
+            // call (the typed Y/N and the one-second pause were taken out 2026-11-10)
 
             // Perform upgrade
             player.Gold -= cost;
 
-            Console.WriteLine("\n*CLANG* *CLANG* *CLANG*");
+            GameLog.Write("*CLANG* *CLANG* *CLANG*");
             Speak("Let me work my magic...");
-            System.Threading.Thread.Sleep(1000);  // Dramatic pause
 
             weapon.CompleteUpgrade();
 
             Speak($"Done! Your {weapon.Name} is now +{weapon.Level}!");
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
             return true;
         }
 
@@ -329,8 +314,6 @@ namespace GameLogic.Entities.NPCs
             if (!armor.ReadyForUpgrade)
             {
                 Speak("That armor isn't ready for an upgrade yet. It needs more battle experience!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
                 return false;
             }
 
@@ -338,8 +321,6 @@ namespace GameLogic.Entities.NPCs
             if (armor.Rarity >= ItemRarity.Legendary && !CanUpgradeLegendary)
             {
                 Speak("I'm not skilled enough to work with legendary equipment. You'll need a master blacksmith!");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
                 return false;
             }
 
@@ -349,100 +330,87 @@ namespace GameLogic.Entities.NPCs
             if (player.Gold < cost)
             {
                 Speak($"You need {cost} gold for this upgrade, but you only have {player.Gold} gold.");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
                 return false;
             }
 
-            // Confirm upgrade
-            Console.WriteLine($"\n⚒️  Upgrade {armor.GetDisplayName()} for {cost} gold?");
-            Console.Write("(Y/N): ");
-            string confirm = Console.ReadLine()?.ToUpper();
-
-            if (confirm != "Y")
-            {
-                Speak("Come back when you're ready.");
-                Console.WriteLine("\nPress any key to continue...");
-                Console.ReadKey();
-                return false;
-            }
+            // The "Upgrade for X gold?" confirmation is the blacksmith screen's job, before this
+            // call (the typed Y/N and the one-second pause were taken out 2026-11-10)
 
             // Perform upgrade
             player.Gold -= cost;
 
-            Console.WriteLine("\n*CLANG* *CLANG* *CLANG*");
+            GameLog.Write("*CLANG* *CLANG* *CLANG*");
             Speak("Let me work my magic...");
-            System.Threading.Thread.Sleep(1000);  // Dramatic pause
 
             armor.CompleteUpgrade();
 
             Speak($"Done! Your {armor.Name} is now +{armor.Level}!");
-            Console.WriteLine("\nPress any key to continue...");
-            Console.ReadKey();
             return true;
         }
 
-        /// <summary>
-        /// Display price information based on rarity and level
-        /// </summary>
-        public void ShowPriceGuide()
-        {
-            Console.Clear();
-            Console.WriteLine("=== UPGRADE PRICING GUIDE ===\n");
-            Speak("Here's how I calculate my prices...\n");
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display price information based on rarity and level
+        // /// </summary>
+        // public void ShowPriceGuide()
+        // {
+        //     Console.Clear();
+        //     Console.WriteLine("=== UPGRADE PRICING GUIDE ===\n");
+        //     Speak("Here's how I calculate my prices...\n");
+        //
+        //     Console.WriteLine("Base Cost Formula: 30 gold × (item level + 1)\n");
+        //
+        //     Console.WriteLine("Rarity Multipliers:");
+        //     Console.WriteLine("  Common:    1.0x");
+        //     Console.WriteLine("  Uncommon:  1.5x");
+        //     Console.WriteLine("  Rare:      2.0x");
+        //     Console.WriteLine("  Legendary: 5.0x\n");
+        //
+        //     Console.WriteLine($"My Skill Discount: {SkillLevel * 5}% off all upgrades!\n");
+        //
+        //     Console.WriteLine("Examples:");
+        //     Console.WriteLine($"  Common Weapon Lv1→2:  {(int)(60 * (1.0 - SkillLevel * 0.05))} gold");
+        //     Console.WriteLine($"  Rare Weapon Lv5→6:    {(int)(360 * (1.0 - SkillLevel * 0.05))} gold");
+        //     Console.WriteLine($"  Legendary Armor Lv10→11: {(int)(1650 * (1.0 - SkillLevel * 0.05))} gold\n");
+        //
+        //     Console.WriteLine("Press any key to continue...");
+        //     Console.ReadKey();
+        // }
 
-            Console.WriteLine("Base Cost Formula: 30 gold × (item level + 1)\n");
-
-            Console.WriteLine("Rarity Multipliers:");
-            Console.WriteLine("  Common:    1.0x");
-            Console.WriteLine("  Uncommon:  1.5x");
-            Console.WriteLine("  Rare:      2.0x");
-            Console.WriteLine("  Legendary: 5.0x\n");
-
-            Console.WriteLine($"My Skill Discount: {SkillLevel * 5}% off all upgrades!\n");
-
-            Console.WriteLine("Examples:");
-            Console.WriteLine($"  Common Weapon Lv1→2:  {(int)(60 * (1.0 - SkillLevel * 0.05))} gold");
-            Console.WriteLine($"  Rare Weapon Lv5→6:    {(int)(360 * (1.0 - SkillLevel * 0.05))} gold");
-            Console.WriteLine($"  Legendary Armor Lv10→11: {(int)(1650 * (1.0 - SkillLevel * 0.05))} gold\n");
-
-            Console.WriteLine("Press any key to continue...");
-            Console.ReadKey();
-        }
-
-        /// <summary>
-        /// Main interaction loop with the blacksmith
-        /// </summary>
-        public void Interact(Player.Player player)
-        {
-            bool shopping = true;
-
-            while (shopping)
-            {
-                ShowServices(player);
-                string choice = Console.ReadLine();
-
-                switch (choice)
-                {
-                    case "1":
-                        UpgradeWeaponMenu(player);
-                        break;
-                    case "2":
-                        UpgradeArmorMenu(player);
-                        break;
-                    case "3":
-                        ShowPriceGuide();
-                        break;
-                    case "4":
-                        Speak("Come back anytime!");
-                        shopping = false;
-                        break;
-                    default:
-                        Console.WriteLine("\nInvalid choice. Press any key to continue...");
-                        Console.ReadKey();
-                        break;
-                }
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Main interaction loop with the blacksmith
+        // /// </summary>
+        // public void Interact(Player.Player player)
+        // {
+        //     bool shopping = true;
+        //
+        //     while (shopping)
+        //     {
+        //         ShowServices(player);
+        //         string choice = Console.ReadLine();
+        //
+        //         switch (choice)
+        //         {
+        //             case "1":
+        //                 UpgradeWeaponMenu(player);
+        //                 break;
+        //             case "2":
+        //                 UpgradeArmorMenu(player);
+        //                 break;
+        //             case "3":
+        //                 ShowPriceGuide();
+        //                 break;
+        //             case "4":
+        //                 Speak("Come back anytime!");
+        //                 shopping = false;
+        //                 break;
+        //             default:
+        //                 Console.WriteLine("\nInvalid choice. Press any key to continue...");
+        //                 Console.ReadKey();
+        //                 break;
+        //         }
+        //     }
+        // }
     }
 }

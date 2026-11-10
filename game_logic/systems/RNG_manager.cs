@@ -181,11 +181,11 @@ namespace GameLogic.Systems
             if (_availableAlgorithms.TryGetValue(algorithmName.ToLower(), out IRNGAlgorithm algorithm))
             {
                 _algorithm = algorithm;
-                Console.WriteLine($"Switched to RNG algorithm: {_algorithm.GetAlgorithmName()}");
+                GameLog.Write($"Switched to RNG algorithm: {_algorithm.GetAlgorithmName()}");
                 return true;
             }
 
-            Console.WriteLine($"RNG algorithm '{algorithmName}' not found.");
+            GameLog.Write($"RNG algorithm '{algorithmName}' not found.");
             return false;
         }
 

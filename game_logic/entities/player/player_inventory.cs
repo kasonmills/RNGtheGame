@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GameLogic.Items;
+using GameLogic.Systems;
 
 namespace GameLogic.Entities.Player
 {
@@ -141,11 +142,11 @@ namespace GameLogic.Entities.Player
         {
             if (Items.Remove(item))
             {
-                Console.WriteLine($"{item.Name} removed from inventory.");
+                GameLog.Write($"{item.Name} removed from inventory.");
                 return true;
             }
 
-            Console.WriteLine($"{item.Name} is not in your inventory.");
+            GameLog.Write($"{item.Name} is not in your inventory.");
             return false;
         }
 
@@ -156,7 +157,7 @@ namespace GameLogic.Entities.Player
         {
             if (!Items.Contains(item))
             {
-                Console.WriteLine($"{item.Name} is not in your inventory.");
+                GameLog.Write($"{item.Name} is not in your inventory.");
                 return false;
             }
 
@@ -243,68 +244,69 @@ namespace GameLogic.Entities.Player
             return Items.Sum(item => item.Quantity);
         }
 
-        /// <summary>
-        /// Display inventory with categories
-        /// </summary>
-        public void DisplayInventory()
-        {
-            if (Items.Count == 0)
-            {
-                Console.WriteLine("Inventory is empty.");
-                return;
-            }
-
-            Console.WriteLine($"\n=== Inventory ({GetUniqueItemCount()}/{MaxCapacity} slots) ===");
-            Console.WriteLine($"Total Items: {GetTotalItemCount()}\n");
-
-            // Weapons
-            var weapons = GetWeapons();
-            if (weapons.Count > 0)
-            {
-                Console.WriteLine("--- Weapons ---");
-                foreach (var weapon in weapons)
-                {
-                    Console.WriteLine($"  {weapon.GetDisplayName()}");
-                }
-                Console.WriteLine();
-            }
-
-            // Armor
-            var armor = GetArmor();
-            if (armor.Count > 0)
-            {
-                Console.WriteLine("--- Armor ---");
-                foreach (var a in armor)
-                {
-                    Console.WriteLine($"  {a.GetDisplayName()}");
-                }
-                Console.WriteLine();
-            }
-
-            // Consumables
-            var consumables = GetConsumables();
-            if (consumables.Count > 0)
-            {
-                Console.WriteLine("--- Consumables ---");
-                foreach (var consumable in consumables)
-                {
-                    Console.WriteLine($"  {consumable.GetDisplayName()}");
-                }
-                Console.WriteLine();
-            }
-
-            // Other items
-            var others = Items.Where(i => !(i is Weapon) && !(i is Armor) && !(i is Consumable)).ToList();
-            if (others.Count > 0)
-            {
-                Console.WriteLine("--- Other Items ---");
-                foreach (var other in others)
-                {
-                    Console.WriteLine($"  {other.GetDisplayName()}");
-                }
-                Console.WriteLine();
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display inventory with categories
+        // /// </summary>
+        // public void DisplayInventory()
+        // {
+        //     if (Items.Count == 0)
+        //     {
+        //         Console.WriteLine("Inventory is empty.");
+        //         return;
+        //     }
+        //
+        //     Console.WriteLine($"\n=== Inventory ({GetUniqueItemCount()}/{MaxCapacity} slots) ===");
+        //     Console.WriteLine($"Total Items: {GetTotalItemCount()}\n");
+        //
+        //     // Weapons
+        //     var weapons = GetWeapons();
+        //     if (weapons.Count > 0)
+        //     {
+        //         Console.WriteLine("--- Weapons ---");
+        //         foreach (var weapon in weapons)
+        //         {
+        //             Console.WriteLine($"  {weapon.GetDisplayName()}");
+        //         }
+        //         Console.WriteLine();
+        //     }
+        //
+        //     // Armor
+        //     var armor = GetArmor();
+        //     if (armor.Count > 0)
+        //     {
+        //         Console.WriteLine("--- Armor ---");
+        //         foreach (var a in armor)
+        //         {
+        //             Console.WriteLine($"  {a.GetDisplayName()}");
+        //         }
+        //         Console.WriteLine();
+        //     }
+        //
+        //     // Consumables
+        //     var consumables = GetConsumables();
+        //     if (consumables.Count > 0)
+        //     {
+        //         Console.WriteLine("--- Consumables ---");
+        //         foreach (var consumable in consumables)
+        //         {
+        //             Console.WriteLine($"  {consumable.GetDisplayName()}");
+        //         }
+        //         Console.WriteLine();
+        //     }
+        //
+        //     // Other items
+        //     var others = Items.Where(i => !(i is Weapon) && !(i is Armor) && !(i is Consumable)).ToList();
+        //     if (others.Count > 0)
+        //     {
+        //         Console.WriteLine("--- Other Items ---");
+        //         foreach (var other in others)
+        //         {
+        //             Console.WriteLine($"  {other.GetDisplayName()}");
+        //         }
+        //         Console.WriteLine();
+        //     }
+        // }
 
         /// <summary>
         /// Sort inventory by type and name

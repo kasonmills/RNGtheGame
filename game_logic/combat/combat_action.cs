@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using GameLogic.Entities;
+using GameLogic.Entities.Enemies;
 using GameLogic.Abilities;
 using GameLogic.Items;
 
@@ -24,6 +26,9 @@ namespace GameLogic.Combat
         public AbilityEffect AppliesEffect { get; set; }      // Applied to the target if the attack lands (e.g. a slow/grapple)
         public bool IsMagical { get; set; }                   // A magic attack - armor-based defenses (Risk's no-damage chance) don't apply
         public bool IgnoresDefense { get; set; }              // Skips the target's defense/armor reduction (e.g. a piercing bolt)
+
+        // For Summon: the enemies brought into the fight (e.g. the Princess's castle guards)
+        public List<EnemyBase> SummonedEnemies { get; set; }
 
         public CombatAction(ActionType type, Entity actor, Entity target = null)
         {
@@ -71,6 +76,30 @@ namespace GameLogic.Combat
         {
             return new CombatAction(ActionType.None, actor);
         }
+
+        /// <summary>
+        /// Enemy-only: put an effect on a target with no attack roll (e.g. the Princess's
+        /// "force a skip" with a SkipTurnEffect). The effect goes in AppliesEffect.
+        /// </summary>
+        public static CombatAction Inflict(Entity actor, Entity target, AbilityEffect effect)
+        {
+            return new CombatAction(ActionType.InflictEffect, actor, target)
+            {
+                AppliesEffect = effect
+            };
+        }
+
+        /// <summary>
+        /// Enemy-only: bring new enemies into the fight on the actor's side (e.g. the
+        /// Princess calling two castle guards). They act from the next round.
+        /// </summary>
+        public static CombatAction Summon(Entity actor, List<EnemyBase> enemies)
+        {
+            return new CombatAction(ActionType.Summon, actor)
+            {
+                SummonedEnemies = enemies
+            };
+        }
     }
 
     /// <summary>
@@ -83,6 +112,10 @@ namespace GameLogic.Combat
         UseItem,
         Defend,
         Flee,
-        None
+        None,
+
+        // Enemy-only (bosses) - the player can't submit these (ValidateAction refuses them)
+        InflictEffect,  // Put AppliesEffect on Target, no attack roll
+        Summon          // Bring SummonedEnemies into the fight
     }
 }

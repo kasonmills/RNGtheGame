@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GameLogic.Systems;
 
 namespace GameLogic.Entities.Enemies.Bosses
 {
@@ -137,7 +138,7 @@ namespace GameLogic.Entities.Enemies.Bosses
         {
             if (!_allBosses.TryGetValue(bossId, out BossEnemy boss))
             {
-                Console.WriteLine($"Boss '{bossId}' not found!");
+                GameLog.Write($"Boss '{bossId}' not found!");
                 return;
             }
 
@@ -151,16 +152,16 @@ namespace GameLogic.Entities.Enemies.Bosses
                 _defeatedBossIds.Add(bossId);
                 _bossesDefeated++;
 
-                Console.WriteLine($"\n🏆 BOSS DEFEATED!");
-                Console.WriteLine($"{boss.Name} has fallen for the first time!");
-                Console.WriteLine($"Unique bosses defeated: {_bossesDefeated}/{TotalBosses}");
+                GameLog.Write($"\n🏆 BOSS DEFEATED!");
+                GameLog.Write($"{boss.Name} has fallen for the first time!");
+                GameLog.Write($"Unique bosses defeated: {_bossesDefeated}/{TotalBosses}");
             }
             else
             {
                 // Repeat defeat
-                Console.WriteLine($"\n🏆 BOSS DEFEATED AGAIN!");
-                Console.WriteLine($"{boss.Name} has fallen once more!");
-                Console.WriteLine($"This is your {boss.TimesDefeated + 1}{GetOrdinalSuffix(boss.TimesDefeated + 1)} victory against this boss.");
+                GameLog.Write($"\n🏆 BOSS DEFEATED AGAIN!");
+                GameLog.Write($"{boss.Name} has fallen once more!");
+                GameLog.Write($"This is your {boss.TimesDefeated + 1}{GetOrdinalSuffix(boss.TimesDefeated + 1)} victory against this boss.");
             }
 
             // Increment repeat counter (tracks total defeats of THIS boss)
@@ -168,11 +169,13 @@ namespace GameLogic.Entities.Enemies.Bosses
         }
 
         /// <summary>
-        /// Apply strength scaling to a boss before combat
+        /// Apply strength scaling to a boss before combat. Returns the scaling summary for a
+        /// pop-up. MVP: dormant (the call in CombatManager.StartCombat is commented out) - kept
+        /// for a possible update/DLC.
         /// </summary>
-        public void ApplyBossScaling(BossEnemy boss)
+        public string ApplyBossScaling(BossEnemy boss)
         {
-            boss.ApplyStrengthScaling(_bossesDefeated);
+            return boss.ApplyStrengthScaling(_bossesDefeated);
         }
 
         /// <summary>

@@ -1,9 +1,15 @@
 # Generated output from tools/git_time_tracker.py - personal time-tracking data, never commit
 tools/coding_sessions.json
 tools/time_tracker_last_run.json
+# Same files when the tracker is run from the repo root
+/coding_sessions.json
+/time_tracker_last_run.json
 
 # Python virtual environment used to run tools/git_time_tracker.py
 .venv/
+
+# Python bytecode cache
+__pycache__/
 
 # .NET build output
 bin/

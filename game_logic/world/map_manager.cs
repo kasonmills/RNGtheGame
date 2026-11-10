@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GameLogic.Systems;
 
 namespace GameLogic.World
 {
@@ -50,7 +51,7 @@ namespace GameLogic.World
             // Discover adjacent nodes
             DiscoverAdjacentNodes();
 
-            Console.WriteLine($"Map loaded! Starting at: {GetCurrentLocationName()}");
+            GameLog.Write($"Map loaded! Starting at: {GetCurrentLocationName()}");
         }
 
         /// <summary>
@@ -206,11 +207,11 @@ namespace GameLogic.World
                 // TODO-GODOT: feedback below -> blocked-movement/locked UI cue instead of console text
                 if (GetCurrentNode() != null && !GetCurrentNode().ConnectedNodeIds.Contains(nodeId))
                 {
-                    Console.WriteLine("That location is not reachable from here!");
+                    GameLog.Write("That location is not reachable from here!");
                 }
                 else if (_nodes.ContainsKey(nodeId) && _nodes[nodeId].IsLocked)
                 {
-                    Console.WriteLine("That location is locked!");
+                    GameLog.Write("That location is locked!");
                 }
 
                 return false;
@@ -225,7 +226,7 @@ namespace GameLogic.World
             DiscoverAdjacentNodes();
 
             // TODO-GODOT: text below -> player sprite moves to newNode's position; newNode.EnterNode() becomes arrival popup/HUD text
-            Console.WriteLine($"\nTraveled to: {newNode.Name}");
+            GameLog.Write($"\nTraveled to: {newNode.Name}");
             newNode.EnterNode();
 
             return true;
@@ -275,32 +276,33 @@ namespace GameLogic.World
             }
         }
 
-        /// <summary>
-        /// Display the map (show discovered locations)
-        /// </summary>
-        public void DisplayMap()
-        {
-            // TODO-GODOT: text map below -> visual map scene using each node's PositionX/PositionY
-            Console.WriteLine("\n=== MAP ===");
-            Console.WriteLine($"Current Location: {GetCurrentLocationName()}\n");
-
-            var discoveredNodes = _nodes.Values.Where(n => n.IsDiscovered).OrderBy(n => n.Id);
-
-            foreach (var node in discoveredNodes)
-            {
-                string marker = node.Id == _currentNodeId ? " >>> " : "     ";
-                Console.WriteLine($"{marker}{node.GetDisplayString()}");
-            }
-
-            Console.WriteLine($"\nTotal Discovered: {discoveredNodes.Count()}/{_nodes.Count}");
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display the map (show discovered locations)
+        // /// </summary>
+        // public void DisplayMap()
+        // {
+        //     // TODO-GODOT: text map below -> visual map scene using each node's PositionX/PositionY
+        //     Console.WriteLine("\n=== MAP ===");
+        //     Console.WriteLine($"Current Location: {GetCurrentLocationName()}\n");
+        //
+        //     var discoveredNodes = _nodes.Values.Where(n => n.IsDiscovered).OrderBy(n => n.Id);
+        //
+        //     foreach (var node in discoveredNodes)
+        //     {
+        //         string marker = node.Id == _currentNodeId ? " >>> " : "     ";
+        //         Console.WriteLine($"{marker}{node.GetDisplayString()}");
+        //     }
+        //
+        //     Console.WriteLine($"\nTotal Discovered: {discoveredNodes.Count()}/{_nodes.Count}");
+        // }
 
         /// <summary>
         /// Load map from a saved map name (for future implementation)
         /// </summary>
         public void LoadMap(string mapName)
         {
-            Console.WriteLine($"Loading map: {mapName}");
+            GameLog.Write($"Loading map: {mapName}");
             // Future: Load custom/handcrafted maps from files
             GenerateNewMap();
         }

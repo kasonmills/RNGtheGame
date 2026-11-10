@@ -12,9 +12,8 @@ namespace GameLogic.Tests
     /// Unit tests for CombatManager
     /// Tests combat orchestration, reward calculation, and combat state management
     ///
-    /// NOTE: CombatManager has heavy Console I/O integration, so many tests focus on
-    /// the underlying logic (reward calculation, state management) rather than full
-    /// combat flow which would require mocking Console or refactoring for testability.
+    /// Combat text is read from CombatManager.CombatMessage / CombatEventOccurred - there is no
+    /// console output to capture (removed 2026-11-10).
     /// </summary>
     public class CombatManagerTests
     {
@@ -40,42 +39,8 @@ namespace GameLogic.Tests
             return new Goblin(level);
         }
 
-        /// <summary>
-        /// A StringWriter that restores the original Console.Out on Dispose. Without
-        /// this, a failed assertion inside `using (RedirectConsoleOutput())` skips the
-        /// RestoreConsoleOutput() call below it, leaving Console.Out pointing at a
-        /// disposed writer for every test that runs afterward in this process.
-        /// </summary>
-        private sealed class ConsoleRedirectWriter : StringWriter
-        {
-            private readonly TextWriter _original;
-            public ConsoleRedirectWriter(TextWriter original) => _original = original;
-            protected override void Dispose(bool disposing)
-            {
-                Console.SetOut(_original);
-                base.Dispose(disposing);
-            }
-        }
-
-        /// <summary>
-        /// Redirect console output to capture it for testing
-        /// </summary>
-        private StringWriter RedirectConsoleOutput()
-        {
-            var output = new ConsoleRedirectWriter(Console.Out);
-            Console.SetOut(output);
-            return output;
-        }
-
-        /// <summary>
-        /// Restore console output to standard output
-        /// </summary>
-        private void RestoreConsoleOutput()
-        {
-            var standardOutput = new StreamWriter(Console.OpenStandardOutput());
-            standardOutput.AutoFlush = true;
-            Console.SetOut(standardOutput);
-        }
+        // The console-capture helpers that used to be here were removed 2026-11-10: game_logic
+        // no longer prints to the console - combat text is read from CombatMessage instead.
 
         #endregion
 
@@ -340,27 +305,25 @@ namespace GameLogic.Tests
             var combatManager = new CombatManager(rng);
             var enemy = CreateTestGoblin(level: 10);
 
-            using (var output = RedirectConsoleOutput())
+            // Combat text comes through CombatMessage (no console output since 2026-11-10)
+            int bonusCount = 0;
+            combatManager.CombatMessage += message =>
             {
-                // Act - Calculate XP 1000 times and check for bonus messages
-                int bonusCount = 0;
-                for (int i = 0; i < 1000; i++)
+                if (message.Contains("Bonus XP!"))
                 {
-                    output.GetStringBuilder().Clear();
-                    combatManager.CalculateXPReward(enemy);
-
-                    if (output.ToString().Contains("Bonus XP!"))
-                    {
-                        bonusCount++;
-                    }
+                    bonusCount++;
                 }
+            };
 
-                // Assert - Bonus should occur ~10% of the time (allow 5% variance)
-                double bonusRate = (double)bonusCount / 1000;
-                Assert.InRange(bonusRate, 0.05, 0.15);
+            // Act - Calculate XP 1000 times and count the bonus messages
+            for (int i = 0; i < 1000; i++)
+            {
+                combatManager.CalculateXPReward(enemy);
             }
 
-            RestoreConsoleOutput();
+            // Assert - Bonus should occur ~10% of the time (allow 5% variance)
+            double bonusRate = (double)bonusCount / 1000;
+            Assert.InRange(bonusRate, 0.05, 0.15);
         }
 
         // Gold reward tests used to live here, against a CombatManager.CalculateGoldReward

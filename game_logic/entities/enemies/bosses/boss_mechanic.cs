@@ -90,11 +90,65 @@ namespace GameLogic.Entities.Enemies.Bosses
     }
 
     /// <summary>
-    /// What a reacting boss can see and do (IReactiveMechanic). Built by CombatManager.
+    /// Optional, for a boss that can take a bonus turn at the end of a round (the Cyclops
+    /// reviving his fallen brother, the Slime Dragon spawning draglings). A boss mechanic
+    /// implements this next to IBossMechanic.
+    ///
+    /// How it works: once every slot of the round has been played, each living boss still in
+    /// the fight whose mechanic implements this is asked WantsEndOfRoundTurn. If it says no,
+    /// nothing is added (not shown, not skipped). If it says yes, a bonus slot is added last in
+    /// TurnOrder (EndOfRoundTurnAdded event) and TakeEndOfRoundTurn is called when it comes up -
+    /// still before the round's end (effect countdown, cooldowns, next round's speeds). Several
+    /// bosses wanting one act fastest first.
+    ///
+    /// A bonus turn is not one of the boss's normal turns: it doesn't end the boss's Defend,
+    /// doesn't use up a lost turn (SkipTurnEffect), doesn't tick its status effects, doesn't
+    /// change its speed for next round, and an attack on it isn't joined (IAttackPartnerMechanic).
+    /// </summary>
+    public interface IEndOfRoundTurnMechanic
+    {
+        /// <summary>
+        /// Asked once when the round's slots have all been played (e.g. "is my brother down?",
+        /// "are fewer than 3 draglings alive?").
+        /// </summary>
+        bool WantsEndOfRoundTurn(BossEnemy self, BossReactionContext context);
+
+        /// <summary>
+        /// Take the bonus turn. Do it through the context (revive one of context.FallenAllies by
+        /// setting its Health, or context.Summon new enemies) and return null, or return an action
+        /// for CombatManager to resolve (an attack, a Defend...). Either way the changes are
+        /// reported as combat events. `message`, if non-null, is logged first.
+        /// </summary>
+        GameLogic.Combat.CombatAction TakeEndOfRoundTurn(BossEnemy self, BossReactionContext context, out string message);
+    }
+
+    /// <summary>
+    /// Optional, for a boss that joins another enemy's attack (the Cyclops Brothers always
+    /// attack together, decided 2026-10-15). A boss mechanic implements this next to
+    /// IBossMechanic.
+    ///
+    /// After an enemy attacks on its own turn (not on an end-of-round bonus turn), every other
+    /// living boss still in the fight whose mechanic implements this is asked JoinsAttack. If
+    /// yes, it makes a normal attack on the same target straight after (AttackJoined event, then
+    /// the attack's own events). Only attacks are joined - abilities, Defend and the rest aren't.
+    ///
+    /// Joining is not the joiner's turn: it doesn't end his Defend, doesn't use up his own slot
+    /// and doesn't change his speed for next round. If the first attack already took the target
+    /// down, the joiner doesn't attack (my default - not decided).
+    /// </summary>
+    public interface IAttackPartnerMechanic
+    {
+        bool JoinsAttack(BossEnemy self, Entity attacker, Entity target);
+    }
+
+    /// <summary>
+    /// What a boss can see and do outside its own DecideAction (IReactiveMechanic,
+    /// IEndOfRoundTurnMechanic). Built by CombatManager.
     /// </summary>
     public class BossReactionContext
     {
         private readonly System.Action<string> _log;
+        private readonly System.Func<EnemyBase, bool> _summon;
 
         public int Round { get; }
         public RNGManager Rng { get; }
@@ -103,24 +157,42 @@ namespace GameLogic.Entities.Enemies.Bosses
         /// <summary>The other enemies still in the fight (not down, not fled).</summary>
         public System.Collections.Generic.IReadOnlyList<EnemyBase> Allies { get; }
 
+        /// <summary>
+        /// The other enemies who are down (not fled). Revive one by setting its Health above 0
+        /// (e.g. the Cyclops bringing his brother back at 25%) - CombatManager reports the revive
+        /// and the revived enemy is back in the turn order from the next round.
+        /// </summary>
+        public System.Collections.Generic.IReadOnlyList<EnemyBase> FallenAllies { get; }
+
         /// <summary>The party members still standing.</summary>
         public System.Collections.Generic.IReadOnlyList<Entity> Opponents { get; }
 
         public BossReactionContext(int round, RNGManager rng, DifficultyLevel difficulty,
             System.Collections.Generic.IReadOnlyList<EnemyBase> allies,
+            System.Collections.Generic.IReadOnlyList<EnemyBase> fallenAllies,
             System.Collections.Generic.IReadOnlyList<Entity> opponents,
-            System.Action<string> log)
+            System.Action<string> log,
+            System.Func<EnemyBase, bool> summon)
         {
             Round = round;
             Rng = rng;
             Difficulty = difficulty;
             Allies = allies;
+            FallenAllies = fallenAllies;
             Opponents = opponents;
             _log = log;
+            _summon = summon;
         }
 
         /// <summary>Add a line to the combat log (e.g. "The Cyclops roars in fury!").</summary>
         public void Log(string message) => _log?.Invoke(message);
+
+        /// <summary>
+        /// Bring a new enemy into the fight on this boss's side (e.g. a dragling). It acts from
+        /// the next round. Returns false if it couldn't join (the fight is over, it is already
+        /// in the fight, it is down, or the fight is at CombatManager.MaxActiveEnemies).
+        /// </summary>
+        public bool Summon(EnemyBase enemy) => _summon != null && _summon(enemy);
     }
 
     /// <summary>

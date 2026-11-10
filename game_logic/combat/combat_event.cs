@@ -15,7 +15,9 @@ namespace GameLogic.Combat
         CombatStarted,
         RoundStarted,       // Round = the new round number; read CombatManager.TurnOrder for the 8 slots
         TurnStarted,        // Actor = whose turn it is
-        TurnSkipped,        // Actor = a party member whose slot came up while they were down
+        TurnSkipped,        // Actor's turn came up but was skipped: a party member who is down, a boss's
+                            // extra turn called off, or a lost turn (SkipTurnEffect - Message = "Turn lost")
+        EndOfRoundTurnAdded,// Actor (a boss) gets a bonus turn at the end of this round - TurnOrder has a new last slot
         WaitingForInput,    // Actor = the party member the player is choosing an action for
         ActionRejected,     // Message = why the submitted action was refused (nothing happened)
 
@@ -23,6 +25,8 @@ namespace GameLogic.Combat
         AttackMissed,       // Actor missed Target
         AttackEvaded,       // Target dodged (Evasion ability)
         AttackBlocked,      // Attack landed but did no damage (Risk's armor); status effects still apply
+        AttackJoined,       // Actor joins another enemy's attack on Target (the Cyclops Brothers) - the
+                            // joined attack's own AttackLanded/AttackMissed follows
         AbilityUsed,        // Actor used Ability on Target
         ItemUsed,           // Actor used Item on Target
 
@@ -30,6 +34,7 @@ namespace GameLogic.Combat
         Healed,             // Target gained Amount health
         Defeated,           // Target went down
         Revived,            // Target came back up with Amount health
+        EnemyJoined,        // Target (a new enemy) joined the fight, called by Actor (null if no one) - acts from next round
 
         DefendStarted,      // Actor is defending until their next turn
         DefendEnded,        // Actor's defend ran out (their next turn came)
@@ -99,6 +104,10 @@ namespace GameLogic.Combat
     /// A boss with more than one turn per round (IMultiTurnMechanic, e.g. the Princess) has
     /// one slot per turn, holding only that boss. TurnNumber says which of its turns the slot
     /// is (1 = its normal turn, 2 = its second...). Every other slot has TurnNumber 1.
+    ///
+    /// A boss's end-of-round bonus turn (IEndOfRoundTurnMechanic, e.g. the Cyclops revive) is
+    /// added when the round ends, after every other filled slot, with IsEndOfRoundTurn true and
+    /// Speed 0. It only exists in a round where the boss takes one.
     /// </summary>
     public class TurnSlot
     {
@@ -106,14 +115,16 @@ namespace GameLogic.Combat
         public IReadOnlyList<Entity> Members { get; }
         public int Speed { get; }
         public int TurnNumber { get; }
+        public bool IsEndOfRoundTurn { get; }
         public bool IsEmpty => Members.Count == 0;
 
-        public TurnSlot(bool isPartySlot, List<Entity> members, int speed, int turnNumber = 1)
+        public TurnSlot(bool isPartySlot, List<Entity> members, int speed, int turnNumber = 1, bool isEndOfRoundTurn = false)
         {
             IsPartySlot = isPartySlot;
             Members = members;
             Speed = speed;
             TurnNumber = turnNumber;
+            IsEndOfRoundTurn = isEndOfRoundTurn;
         }
     }
 }

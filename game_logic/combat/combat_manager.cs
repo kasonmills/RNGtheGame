@@ -40,11 +40,31 @@ namespace GameLogic.Combat
         /// </summary>
         public const int MaxFightingCompanions = 3;
 
+        /// <summary>
+        /// At most this many enemies can be in the fight at once - enemies joining mid-fight
+        /// (summons, draglings) are refused past it. Matches the "max 8 enemies per fight"
+        /// encounter-size rule (my reading - not decided for summons).
+        /// </summary>
+        public const int MaxActiveEnemies = 8;
+
+        /// <summary>
+        /// Diminishing rewards (decided 2026-11-10, for farming draglings): the first this many
+        /// enemies of one DiminishingRewardsGroup beaten in a fight pay full XP and gold...
+        /// </summary>
+        public const int DiminishingRewardsFullCount = 10;
+
+        /// <summary>
+        /// ...and each one after that pays this share of the one before (compounding: 11th 80%,
+        /// 12th 64%, 13th 51%...). Item drops are not reduced.
+        /// </summary>
+        public const double DiminishingRewardsFactor = 0.8;
+
         private const int SlotsPerSide = 4;
 
         private RNGManager _rngManager;
         private TurnManager _turnManager;
         private DamageCalculator _damageCalculator;
+        private DifficultyScaler _difficultyScaler;
         private BossManager _bossManager;
 
         private Player _player;
@@ -58,7 +78,11 @@ namespace GameLogic.Combat
         // Round-based combat tracking
         private int _currentRound;
         private List<TurnSlot> _turnOrder;
-        private readonly Queue<(Entity Entity, int TurnNumber)> _turnQueue;
+        private readonly Queue<(Entity Entity, int TurnNumber, bool EndOfRound)> _turnQueue;
+
+        // True once this round's end-of-round bonus turns (IEndOfRoundTurnMechanic) have been
+        // asked for - reset when the next round begins
+        private bool _endOfRoundTurnsChecked;
 
         // Who is defending (until their next turn), which enemies fled, and which
         // companions the player controls directly
@@ -118,6 +142,12 @@ namespace GameLogic.Combat
         /// </summary>
         public int CurrentTurnNumber { get; private set; }
 
+        /// <summary>
+        /// True while CurrentActor is taking an end-of-round bonus turn (IEndOfRoundTurnMechanic,
+        /// e.g. the Cyclops reviving his brother).
+        /// </summary>
+        public bool IsEndOfRoundTurn { get; private set; }
+
         public bool IsCombatActive => _combatActive;
         public int CurrentRound => _currentRound;
 
@@ -137,39 +167,50 @@ namespace GameLogic.Combat
         public IReadOnlyList<TurnSlot> TurnOrder => _turnOrder;
 
         /// <summary>
-        /// The save's difficulty (harder difficulties lower the party's hit chance). Set by
-        /// GameManager from the game settings.
+        /// The save's difficulty. Harder difficulties lower the party's hit chance, make enemies
+        /// stronger (health and damage, applied when a fight starts) and give more XP and gold.
+        /// Set by GameManager from the game settings on a new game and on load.
         /// </summary>
         public DifficultyLevel Difficulty
         {
             get => _damageCalculator.Difficulty;
-            set => _damageCalculator.Difficulty = value;
+            set
+            {
+                _damageCalculator.Difficulty = value;
+                _difficultyScaler = new DifficultyScaler(value);
+            }
         }
+
+        /// <summary>
+        /// The difficulty's numbers (enemy strength, XP and gold multipliers, danger ratings) -
+        /// always matches Difficulty.
+        /// </summary>
+        public DifficultyScaler DifficultyScaler => _difficultyScaler;
 
         public CombatManager(RNGManager rngManager)
         {
             _rngManager = rngManager;
             _turnManager = new TurnManager();
             _damageCalculator = new DamageCalculator(rngManager);
+            _difficultyScaler = new DifficultyScaler(_damageCalculator.Difficulty);
             _defendingEntities = new HashSet<Entity>();
             _fledEnemies = new HashSet<Enemy>();
             _directlyControlled = new HashSet<Entity>();
             _pendingRevivePenalties = new Dictionary<Entity, int>();
             _party = new List<Entity>();
             _allCombatants = new List<Entity>();
-            _turnQueue = new Queue<(Entity Entity, int TurnNumber)>();
+            _turnQueue = new Queue<(Entity Entity, int TurnNumber, bool EndOfRound)>();
             _turnOrder = new List<TurnSlot>();
             _enemies = new List<Enemy>();
             _currentRound = 0;
         }
 
         /// <summary>
-        /// Write a narrative combat-log line - keeps console text-testing working
-        /// while also notifying any subscriber (e.g. a Godot combat-log UI).
+        /// Write a narrative combat-log line for any subscriber (e.g. a Godot combat-log UI).
+        /// No console output (the console copy was removed 2026-11-10).
         /// </summary>
         private void Log(string message)
         {
-            Console.WriteLine(message);
             CombatMessage?.Invoke(message);
         }
 
@@ -211,7 +252,9 @@ namespace GameLogic.Combat
         public void StartCombat(Player player, List<Enemy> enemies, List<Entity> companions = null, BossManager bossManager = null)
         {
             _player = player;
-            _enemies = enemies ?? new List<Enemy>(); // Fallback only - the caller passes the enemies in
+            // A copy, so enemies joining mid-fight don't change the caller's list.
+            // (The empty fallback is only for a caller that passes none.)
+            _enemies = enemies != null ? new List<Enemy>(enemies) : new List<Enemy>();
             _bossManager = bossManager;
             _combatActive = true;
             _partyFled = false;
@@ -223,9 +266,14 @@ namespace GameLogic.Combat
             IsWaitingForPlayerAction = false;
             CurrentActor = null;
             CurrentTurnNumber = 0;
+            IsEndOfRoundTurn = false;
 
             foreach (var enemy in _enemies)
             {
+                // Enemies are as strong as the difficulty says (once per enemy - a boss fought
+                // again after a loss isn't made stronger again)
+                _difficultyScaler.ApplyDifficultyToEnemy(enemy);
+
                 if (enemy is BossEnemy boss)
                 {
                     // MVP (decided 2026-10-14): the old boss strength multipliers (+15% per boss
@@ -266,11 +314,12 @@ namespace GameLogic.Combat
             _allCombatants.AddRange(_party);
             _allCombatants.AddRange(_enemies);
 
-            // Nobody carries a speed change or last action over from a previous fight
+            // Nobody carries a speed change, last action or lost turn over from a previous fight
             foreach (var combatant in _allCombatants)
             {
                 combatant.ResetSpeedModifier();
                 combatant.LastAction = Entities.CombatAction.None;
+                combatant.ActiveEffects.RemoveAll(effect => effect is SkipTurnEffect);
             }
 
             // Clear tracking structures
@@ -280,6 +329,7 @@ namespace GameLogic.Combat
             _pendingReactions.Clear();
             _collectingReactions = false;
             _turnQueue.Clear();
+            _endOfRoundTurnsChecked = false;
             _turnOrder = new List<TurnSlot>();
             _currentRound = 1;
 
@@ -442,6 +492,11 @@ namespace GameLogic.Combat
 
                 case ActionType.Defend:
                     return true;
+
+                case ActionType.InflictEffect:
+                case ActionType.Summon:
+                    reason = "Only enemies can do that.";
+                    return false;
 
                 default:
                     reason = "Choose an action.";
@@ -686,11 +741,12 @@ namespace GameLogic.Combat
             // Fill the turn queue slot by slot. Fallen party members are queued too: if they
             // are revived before their slot comes up, they act this round.
             _turnQueue.Clear();
+            _endOfRoundTurnsChecked = false;
             foreach (var slot in _turnOrder)
             {
                 foreach (var member in slot.Members)
                 {
-                    _turnQueue.Enqueue((member, slot.TurnNumber));
+                    _turnQueue.Enqueue((member, slot.TurnNumber, false));
                 }
             }
 
@@ -850,6 +906,15 @@ namespace GameLogic.Combat
             {
                 if (_turnQueue.Count == 0)
                 {
+                    // Every slot has been played - bosses that want a bonus turn get it now,
+                    // before the round ends (asked once per round)
+                    if (!_endOfRoundTurnsChecked)
+                    {
+                        _endOfRoundTurnsChecked = true;
+                        QueueEndOfRoundTurns();
+                        if (_turnQueue.Count > 0) continue;
+                    }
+
                     EndRound();
                     if (CheckForCombatEnd()) return;
 
@@ -858,7 +923,19 @@ namespace GameLogic.Combat
                     continue;
                 }
 
-                var (entity, turnNumber) = _turnQueue.Dequeue();
+                var (entity, turnNumber, endOfRound) = _turnQueue.Dequeue();
+
+                // An end-of-round bonus turn isn't one of the boss's normal turns: no Defend
+                // ending, no lost turn used up, no effect tick
+                if (endOfRound)
+                {
+                    if (entity is BossEnemy bonusBoss && !IsOutOfFight(bonusBoss))
+                    {
+                        TakeEndOfRoundTurn(bonusBoss);
+                        if (CheckForCombatEnd()) return;
+                    }
+                    continue;
+                }
 
                 // Defend lasts until the defender's next turn - it ends when that turn comes,
                 // even if they can't act on it (decided 2026-10-12, skip rule 2026-10-14)
@@ -883,6 +960,16 @@ namespace GameLogic.Combat
                 {
                     Log($"\n{entity.Name} doesn't take a {OrdinalTurn(turnNumber)} turn.");
                     Raise(CombatEventType.TurnSkipped, entity);
+                    continue;
+                }
+
+                // A lost turn (SkipTurnEffect, e.g. the Princess's "force a skip") - checked
+                // after Defend has ended, so a skip never stretches a Defend
+                var lostTurn = entity.GetEffect<SkipTurnEffect>();
+                if (lostTurn != null)
+                {
+                    LoseTurn(entity, turnNumber, lostTurn);
+                    if (FinishTurn(entity)) return;
                     continue;
                 }
 
@@ -914,6 +1001,149 @@ namespace GameLogic.Combat
             {
                 Raise(CombatEventType.DefendEnded, entity);
             }
+        }
+
+        /// <summary>
+        /// The entity's turn came up but is lost (SkipTurnEffect): nothing is done or started
+        /// on it, and the effect is used up. Their status effects still tick when FinishTurn
+        /// runs (my default - not decided). A turn that does nothing counts as "no action" for
+        /// next round's speed, unless they already acted on an earlier turn this round.
+        /// </summary>
+        private void LoseTurn(Entity entity, int turnNumber, SkipTurnEffect lostTurn)
+        {
+            CurrentTurnNumber = turnNumber;
+            if (turnNumber <= 1)
+            {
+                entity.LastAction = Entities.CombatAction.None;
+            }
+
+            Log($"\n{entity.Name} loses their turn!");
+            Raise(new CombatEvent { Type = CombatEventType.TurnSkipped, Actor = entity, Message = "Turn lost" });
+
+            RunAndReport(() => entity.ActiveEffects.Remove(lostTurn));
+        }
+
+        /// <summary>
+        /// Ask every boss still in the fight that can take an end-of-round bonus turn
+        /// (IEndOfRoundTurnMechanic) whether it wants one this round. Each one that does gets a
+        /// slot added after every other filled slot (fastest first if there are several) and a
+        /// turn queued. A boss that doesn't want one adds nothing.
+        /// </summary>
+        private void QueueEndOfRoundTurns()
+        {
+            var takers = new List<BossEnemy>();
+            foreach (var boss in GetActiveEnemies().OfType<BossEnemy>())
+            {
+                if (boss.Mechanic is IEndOfRoundTurnMechanic mechanic
+                    && mechanic.WantsEndOfRoundTurn(boss, BuildBossContext(boss)))
+                {
+                    takers.Add(boss);
+                }
+            }
+            if (takers.Count == 0) return;
+
+            var tieBreak = takers.ToDictionary(b => b, b => _rngManager.Roll(1, 1000000));
+            takers = takers
+                .OrderByDescending(b => GetEntityEffectiveSpeed(b))
+                .ThenBy(b => tieBreak[b])
+                .ToList();
+
+            // After the filled slots, before the empty ones
+            int insertAt = _turnOrder.FindIndex(slot => slot.IsEmpty);
+            if (insertAt < 0) insertAt = _turnOrder.Count;
+
+            foreach (var boss in takers)
+            {
+                _turnOrder.Insert(insertAt++, new TurnSlot(false, new List<Entity> { boss }, 0, 1, isEndOfRoundTurn: true));
+                _turnQueue.Enqueue((boss, 1, true));
+
+                Log($"\n{boss.Name} takes a bonus turn at the end of the round!");
+                Raise(CombatEventType.EndOfRoundTurnAdded, boss);
+            }
+        }
+
+        /// <summary>
+        /// A boss's end-of-round bonus turn: the mechanic acts through the context (revive,
+        /// summon) and/or returns an action, and every change is reported as events. The boss's
+        /// last action is put back afterwards, so the bonus turn doesn't change its speed for
+        /// next round (my default - not decided).
+        /// </summary>
+        private void TakeEndOfRoundTurn(BossEnemy boss)
+        {
+            var mechanic = (IEndOfRoundTurnMechanic)boss.Mechanic;
+
+            CurrentActor = boss;
+            CurrentTurnNumber = 1;
+            IsEndOfRoundTurn = true;
+            Log($"\n{boss.Name}'s bonus turn!");
+            Raise(CombatEventType.TurnStarted, boss);
+
+            var lastAction = boss.LastAction;
+
+            RunAndReport(() =>
+            {
+                var action = mechanic.TakeEndOfRoundTurn(boss, BuildBossContext(boss), out string message);
+                if (!string.IsNullOrEmpty(message))
+                {
+                    Log(message);
+                }
+                if (action != null)
+                {
+                    ProcessAction(action);
+                }
+            });
+
+            boss.LastAction = lastAction;
+            CurrentActor = null;
+            CurrentTurnNumber = 0;
+            IsEndOfRoundTurn = false;
+        }
+
+        /// <summary>
+        /// What a boss mechanic can see and do outside its own DecideAction (reactions and
+        /// end-of-round bonus turns).
+        /// </summary>
+        private BossReactionContext BuildBossContext(BossEnemy boss)
+        {
+            return new BossReactionContext(
+                _currentRound, _rngManager, Difficulty,
+                GetActiveEnemies().Where(e => e != boss).ToList(),
+                _enemies.Where(e => e != boss && !e.IsAlive() && !_fledEnemies.Contains(e)).ToList(),
+                GetLivingParty(),
+                Log,
+                enemy => AddEnemyToFight(enemy, boss));
+        }
+
+        /// <summary>
+        /// An enemy joins the fight already in progress (a summon, a dragling) on the enemies'
+        /// side. It doesn't act this round - it is in the turn order from the next round (my
+        /// default - not decided). It counts like any other enemy for rewards when the fight
+        /// ends. Refused (false) if the fight is over, the enemy is null, down or already in the
+        /// fight, or MaxActiveEnemies are already in it.
+        /// </summary>
+        private bool AddEnemyToFight(Enemy enemy, Entity summoner)
+        {
+            if (!_combatActive || enemy == null || !enemy.IsAlive() || _enemies.Contains(enemy))
+            {
+                return false;
+            }
+            if (GetActiveEnemies().Count >= MaxActiveEnemies)
+            {
+                return false;
+            }
+
+            _difficultyScaler.ApplyDifficultyToEnemy(enemy);
+            _enemies.Add(enemy);
+            _allCombatants.Add(enemy);
+            enemy.ResetSpeedModifier();
+            enemy.LastAction = Entities.CombatAction.None;
+            enemy.ActiveEffects.RemoveAll(effect => effect is SkipTurnEffect);
+
+            Log(summoner != null
+                ? $"{enemy.Name} joins the fight at {summoner.Name}'s call!"
+                : $"{enemy.Name} joins the fight!");
+            Raise(CombatEventType.EnemyJoined, summoner, enemy);
+            return true;
         }
 
         /// <summary>
@@ -1394,12 +1624,7 @@ namespace GameLogic.Combat
                     {
                         if (IsOutOfFight(boss)) continue;
 
-                        var context = new BossReactionContext(
-                            _currentRound, _rngManager, Difficulty,
-                            GetActiveEnemies().Where(e => e != boss).ToList(),
-                            GetLivingParty(),
-                            Log);
-                        ((IReactiveMechanic)boss.Mechanic).OnCombatEvent(boss, combatEvent, context);
+                        ((IReactiveMechanic)boss.Mechanic).OnCombatEvent(boss, combatEvent, BuildBossContext(boss));
                     }
                 }
 
@@ -1419,6 +1644,16 @@ namespace GameLogic.Combat
             {
                 case ActionType.Attack:
                     ProcessAttack(action);
+                    if (!IsEndOfRoundTurn)
+                    {
+                        ProcessJoinedAttacks(action);
+                    }
+                    break;
+                case ActionType.InflictEffect:
+                    ProcessInflict(action);
+                    break;
+                case ActionType.Summon:
+                    ProcessSummon(action);
                     break;
                 case ActionType.UseAbility:
                     ProcessAbility(action);
@@ -1549,6 +1784,78 @@ namespace GameLogic.Combat
                 {
                     target.AddEffect(action.AppliesEffect);
                 }
+            }
+        }
+
+        /// <summary>
+        /// After an enemy attacks on its own turn, bosses that join their partner's attacks
+        /// (IAttackPartnerMechanic - the Cyclops Brothers) attack the same target straight
+        /// after. Joining isn't a turn: the joiner's Defend stays up, his own slot still comes,
+        /// and his last action is put back so his speed next round isn't changed by it. No
+        /// joined attack if the first one already took the target down (my default).
+        /// </summary>
+        private void ProcessJoinedAttacks(CombatAction action)
+        {
+            var attacker = action.Actor;
+            var target = action.Target;
+            if (attacker is not Enemy || IsPartyMember(attacker)) return;
+
+            var partners = GetActiveEnemies()
+                .OfType<BossEnemy>()
+                .Where(boss => boss != attacker && boss.Mechanic is IAttackPartnerMechanic)
+                .ToList();
+
+            foreach (var partner in partners)
+            {
+                if (IsOutOfFight(partner)) continue;
+                if (target == null || IsOutOfFight(target)) return;
+                if (!((IAttackPartnerMechanic)partner.Mechanic).JoinsAttack(partner, attacker, target)) continue;
+
+                Log($"\n{partner.Name} joins {attacker.Name}'s attack!");
+                Raise(CombatEventType.AttackJoined, partner, target);
+
+                var lastAction = partner.LastAction;
+                ProcessAttack(CombatAction.Attack(partner, target));
+                partner.LastAction = lastAction;
+            }
+        }
+
+        /// <summary>
+        /// An enemy puts an effect on a target with no attack roll (e.g. the Princess's "force
+        /// a skip"). Any narration comes from whatever decided the action. Counts like an
+        /// ability for next round's speed.
+        /// </summary>
+        private void ProcessInflict(CombatAction action)
+        {
+            action.Actor.LastAction = Entities.CombatAction.UseAbility;
+
+            var target = action.Target;
+            if (action.AppliesEffect == null || target == null || IsOutOfFight(target))
+            {
+                Log($"\n{action.Actor.Name} has no one to target!");
+                return;
+            }
+
+            target.AddEffect(action.AppliesEffect);
+        }
+
+        /// <summary>
+        /// An enemy calls new enemies into the fight (e.g. the Princess's castle guards). They
+        /// act from the next round. Counts like an ability for next round's speed.
+        /// </summary>
+        private void ProcessSummon(CombatAction action)
+        {
+            action.Actor.LastAction = Entities.CombatAction.UseAbility;
+
+            int joined = 0;
+            foreach (var enemy in action.SummonedEnemies ?? new List<Enemy>())
+            {
+                if (AddEnemyToFight(enemy, action.Actor)) joined++;
+            }
+
+            if (joined == 0)
+            {
+                Log($"\nNo one answers {action.Actor.Name}'s call.");
             }
         }
 
@@ -1951,6 +2258,7 @@ namespace GameLogic.Combat
             IsWaitingForPlayerAction = false;
             CurrentActor = null;
             CurrentTurnNumber = 0;
+            IsEndOfRoundTurn = false;
             LastResult = null;
 
             _player = null;
@@ -1966,6 +2274,7 @@ namespace GameLogic.Combat
             _pendingReactions.Clear();
             _collectingReactions = false;
             _turnQueue.Clear();
+            _endOfRoundTurnsChecked = false;
             _turnOrder = new List<TurnSlot>();
             _currentRound = 0;
         }
@@ -1980,8 +2289,15 @@ namespace GameLogic.Combat
             IsWaitingForPlayerAction = false;
             CurrentActor = null;
             CurrentTurnNumber = 0;
+            IsEndOfRoundTurn = false;
             _turnQueue.Clear();
             _defendingEntities.Clear();
+
+            // A lost turn never carries over to the overworld or the next fight
+            foreach (var combatant in _allCombatants)
+            {
+                combatant.ActiveEffects.RemoveAll(effect => effect is SkipTurnEffect);
+            }
 
             var result = new CombatResult
             {
@@ -2028,6 +2344,24 @@ namespace GameLogic.Combat
             }
         }
 
+        /// <summary>
+        /// The share (0-1) of its XP and gold this enemy pays: 1 for an enemy with no
+        /// DiminishingRewardsGroup and for the first DiminishingRewardsFullCount of a group in
+        /// this fight, then DiminishingRewardsFactor compounding for each one after.
+        /// </summary>
+        private static double GetDiminishingRewardsShare(Enemy enemy, Dictionary<string, int> groupCounts)
+        {
+            string group = enemy.DiminishingRewardsGroup;
+            if (string.IsNullOrEmpty(group)) return 1.0;
+
+            groupCounts.TryGetValue(group, out int count);
+            count++;
+            groupCounts[group] = count;
+
+            int over = count - DiminishingRewardsFullCount;
+            return over <= 0 ? 1.0 : Math.Pow(DiminishingRewardsFactor, over);
+        }
+
         private void HandleVictory(CombatResult result)
         {
             Log("\n" + "=".PadRight(50, '='));
@@ -2038,6 +2372,7 @@ namespace GameLogic.Combat
             int totalGold = 0;
             var allLootItems = new List<Items.Item>();
             var lootGenerator = new Progression.LootGenerator(new RNGManagerRandomAdapter(_rngManager));
+            var groupCounts = new Dictionary<string, int>();
 
             foreach (var enemy in _enemies)
             {
@@ -2049,13 +2384,24 @@ namespace GameLogic.Combat
                 // Roll for loot (gold + items) from the unified loot table system
                 var lootTable = Progression.LootTableTemplates.CreateForEnemyType(enemy.Type);
                 var loot = lootGenerator.GenerateLoot(lootTable, _player.Level, areaLevel: enemy.Level);
+                int gold = loot.Gold;
+
+                // Diminishing rewards for a group beaten many times in one fight (draglings).
+                // Every one that leaves the fight - beaten or fled - takes the next place in line.
+                double share = GetDiminishingRewardsShare(enemy, groupCounts);
+                if (share < 1.0)
+                {
+                    xp = (int)(xp * share);
+                    gold = (int)(gold * share);
+                    Log($"{enemy.Name}: rewards down to {Math.Round(share * 100)}% (more than {DiminishingRewardsFullCount} beaten this fight).");
+                }
 
                 if (fled)
                 {
                     // Half the XP and gold; each item has a 50% chance of being dropped while fleeing
                     Log($"\n{enemy.Name} got away - half rewards.");
                     totalXP += xp / 2;
-                    totalGold += loot.Gold / 2;
+                    totalGold += gold / 2;
                     foreach (var item in loot.Items)
                     {
                         if (_rngManager.Roll(1, 100) <= 50)
@@ -2069,7 +2415,7 @@ namespace GameLogic.Combat
                 {
                     Log($"\n{enemy.Name} has been defeated!");
                     totalXP += xp;
-                    totalGold += loot.Gold;
+                    totalGold += gold;
                     allLootItems.AddRange(loot.Items);
                     result.DefeatedEnemies.Add(enemy);
 
@@ -2087,6 +2433,16 @@ namespace GameLogic.Combat
             {
                 _player.Health = 1;
                 Log($"\n{_player.Name} gets back on their feet.");
+            }
+
+            // Harder difficulties pay more XP and gold (Normal pays less XP)
+            float xpMultiplier = _difficultyScaler.GetXPMultiplier();
+            float goldMultiplier = _difficultyScaler.GetGoldMultiplier();
+            totalXP = (int)Math.Round(totalXP * xpMultiplier);
+            totalGold = (int)Math.Round(totalGold * goldMultiplier);
+            if (xpMultiplier != 1.0f || goldMultiplier != 1.0f)
+            {
+                Log($"\n{Difficulty} difficulty: XP x{xpMultiplier:0.##}, gold x{goldMultiplier:0.##}");
             }
 
             int playerLevelBefore = _player.Level;

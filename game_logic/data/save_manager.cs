@@ -104,15 +104,18 @@ namespace GameLogic.Data
                     saveData.DefeatedBossIds = new System.Collections.Generic.List<string>(bossManager.DefeatedBossIds);
                     saveData.BossesDefeated = bossManager.BossesDefeated;
 
-                    // Save individual boss repeat counts
-                    saveData.BossTimesDefeated = new System.Collections.Generic.Dictionary<string, int>();
-                    foreach (var boss in bossManager.AllBosses.Values)
-                    {
-                        if (boss.TimesDefeated > 0)
-                        {
-                            saveData.BossTimesDefeated[boss.BossId] = boss.TimesDefeated;
-                        }
-                    }
+                    // MVP (decided 2026-10-14): no boss rematches, so each boss's repeat count
+                    // (TimesDefeated) is not saved. Kept for a possible update/DLC - to bring
+                    // rematches back, uncomment this and the matching block in LoadBossManager,
+                    // plus ApplyBossScaling in CombatManager.StartCombat.
+                    // saveData.BossTimesDefeated = new System.Collections.Generic.Dictionary<string, int>();
+                    // foreach (var boss in bossManager.AllBosses.Values)
+                    // {
+                    //     if (boss.TimesDefeated > 0)
+                    //     {
+                    //         saveData.BossTimesDefeated[boss.BossId] = boss.TimesDefeated;
+                    //     }
+                    // }
                 }
 
                 // Save quest progression data
@@ -197,7 +200,7 @@ namespace GameLogic.Data
 
                 if (!File.Exists(filePath))
                 {
-                    Console.WriteLine($"Save file not found: {filePath}");
+                    GameLog.Write($"Save file not found: {filePath}");
                     return null;
                 }
 
@@ -207,12 +210,12 @@ namespace GameLogic.Data
                 // Deserialize from JSON
                 SaveData saveData = JsonSerializer.Deserialize<SaveData>(json);
 
-                Console.WriteLine($"Game loaded successfully from: {filePath}");
+                GameLog.Write($"Game loaded successfully from: {filePath}");
                 return saveData;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading game: {ex.Message}");
+                GameLog.Write($"Error loading game: {ex.Message}");
                 return null;
             }
         }
@@ -528,7 +531,7 @@ namespace GameLogic.Data
                 }
                 else
                 {
-                    Console.WriteLine($"Warning: Invalid player class '{saveData.PlayerClass}'. Defaulting to Warrior.");
+                    GameLog.Write($"Warning: Invalid player class '{saveData.PlayerClass}'. Defaulting to Warrior.");
                     player.Class = PlayerClass.Warrior;
                 }
             }
@@ -632,14 +635,14 @@ namespace GameLogic.Data
                 if (File.Exists(filePath))
                 {
                     File.Delete(filePath);
-                    Console.WriteLine($"Save file deleted: {filePath}");
+                    GameLog.Write($"Save file deleted: {filePath}");
                     return true;
                 }
                 return false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deleting save: {ex.Message}");
+                GameLog.Write($"Error deleting save: {ex.Message}");
                 return false;
             }
         }
@@ -740,20 +743,21 @@ namespace GameLogic.Data
             // Restore boss defeat counts
             bossManager.SetBossesDefeated(data.BossesDefeated);
 
-            // Restore individual boss repeat counts
-            if (data.BossTimesDefeated != null)
-            {
-                foreach (var kvp in data.BossTimesDefeated)
-                {
-                    var boss = bossManager.GetBoss(kvp.Key);
-                    if (boss != null)
-                    {
-                        boss.TimesDefeated = kvp.Value;
-                    }
-                }
-            }
+            // MVP: boss repeat counts are not restored (no rematches - see the save side).
+            // Kept for a possible update/DLC:
+            // if (data.BossTimesDefeated != null)
+            // {
+            //     foreach (var kvp in data.BossTimesDefeated)
+            //     {
+            //         var boss = bossManager.GetBoss(kvp.Key);
+            //         if (boss != null)
+            //         {
+            //             boss.TimesDefeated = kvp.Value;
+            //         }
+            //     }
+            // }
 
-            Console.WriteLine($"Boss Progress: {data.BossesDefeated}/{bossManager.TotalBosses} defeated");
+            GameLog.Write($"Boss Progress: {data.BossesDefeated}/{bossManager.TotalBosses} defeated");
             return bossManager;
         }
 

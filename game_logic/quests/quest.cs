@@ -130,27 +130,28 @@ namespace GameLogic.Quests
             return totalProgress / Objectives.Count;
         }
 
-        /// <summary>
-        /// Display quest info to console
-        /// </summary>
-        public virtual void DisplayQuestInfo()
-        {
-            Console.WriteLine($"═══ {QuestName} ═══");
-            Console.WriteLine($"Status: {GetStateString()}");
-            Console.WriteLine($"\n{Description}");
-
-            Console.WriteLine("\nObjectives:");
-            foreach (var objective in Objectives)
-            {
-                string checkmark = objective.IsCompleted ? "✓" : " ";
-                Console.WriteLine($"  [{checkmark}] {objective.Description} ({objective.GetProgressString()})");
-            }
-
-            if (Reward.HasRewards())
-            {
-                Console.WriteLine($"\nRewards: {Reward.GetRewardSummary()}");
-            }
-        }
+        // Console-only screen, commented out 2026-11-10 (no console output - nothing calls it; the Godot screen replaces it). Kept for reference:
+        // /// <summary>
+        // /// Display quest info to console
+        // /// </summary>
+        // public virtual void DisplayQuestInfo()
+        // {
+        //     Console.WriteLine($"═══ {QuestName} ═══");
+        //     Console.WriteLine($"Status: {GetStateString()}");
+        //     Console.WriteLine($"\n{Description}");
+        //
+        //     Console.WriteLine("\nObjectives:");
+        //     foreach (var objective in Objectives)
+        //     {
+        //         string checkmark = objective.IsCompleted ? "✓" : " ";
+        //         Console.WriteLine($"  [{checkmark}] {objective.Description} ({objective.GetProgressString()})");
+        //     }
+        //
+        //     if (Reward.HasRewards())
+        //     {
+        //         Console.WriteLine($"\nRewards: {Reward.GetRewardSummary()}");
+        //     }
+        // }
 
         /// <summary>
         /// Get quest state as a readable string

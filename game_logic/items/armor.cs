@@ -1,4 +1,5 @@
 using System;
+using GameLogic.Systems;
 
 namespace GameLogic.Items
 {
@@ -128,13 +129,13 @@ namespace GameLogic.Items
             }
 
             Experience += amount;
-            Console.WriteLine($"{GetDisplayName()} gained {amount} XP! ({Experience}/{ExperienceToNextLevel})");
+            GameLog.Write($"{GetDisplayName()} gained {amount} XP! ({Experience}/{ExperienceToNextLevel})");
 
             // Check if ready for upgrade
             if (Experience >= ExperienceToNextLevel)
             {
                 ReadyForUpgrade = true;
-                Console.WriteLine($"⚒️  {GetDisplayName()} has enough experience! Take it to a blacksmith to upgrade (Cost: {GetUpgradeCost()} gold)");
+                GameLog.Write($"⚒️  {GetDisplayName()} has enough experience! Take it to a blacksmith to upgrade (Cost: {GetUpgradeCost()} gold)");
             }
         }
 
@@ -193,7 +194,7 @@ namespace GameLogic.Items
             ReadyForUpgrade = false;
 
             UpdateStatsForLevel();
-            Console.WriteLine($"⚒️  {GetDisplayName()} has been upgraded! Now at +{Level}!");
+            GameLog.Write($"⚒️  {GetDisplayName()} has been upgraded! Now at +{Level}!");
             return true;
         }
 
@@ -211,7 +212,7 @@ namespace GameLogic.Items
 
             Level++;
             UpdateStatsForLevel();
-            Console.WriteLine($"{Name} leveled up to +{Level}!");
+            GameLog.Write($"{Name} leveled up to +{Level}!");
             return true;
         }
 

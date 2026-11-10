@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GameLogic.Items;
 using GameLogic.Data;
+using GameLogic.Systems;
 
 namespace GameLogic.Entities.Player
 {
@@ -47,8 +48,8 @@ namespace GameLogic.Entities.Player
             Inventory = new PlayerInventory();
             SelectedAbility = null; // Will be set during character creation
 
-            Console.WriteLine($"{Name} created as {PlayerClassInfo.GetClassName(playerClass)}!");
-            Console.WriteLine($"Base Health: {MaxHealth} | Base Speed: {Speed}");
+            GameLog.Write($"{Name} created as {PlayerClassInfo.GetClassName(playerClass)}!");
+            GameLog.Write($"Base Health: {MaxHealth} | Base Speed: {Speed}");
         }
 
         // Set the player's permanent ability (called during character creation)
@@ -56,12 +57,12 @@ namespace GameLogic.Entities.Player
         {
             if (SelectedAbility != null)
             {
-                Console.WriteLine($"Warning: Ability already set to {SelectedAbility.Name}. Ability cannot be changed.");
+                GameLog.Write($"Warning: Ability already set to {SelectedAbility.Name}. Ability cannot be changed.");
                 return;
             }
 
             SelectedAbility = ability;
-            Console.WriteLine($"{Name} has chosen the ability: {ability.Name}!");
+            GameLog.Write($"{Name} has chosen the ability: {ability.Name}!");
         }
 
         // Helper method to create an ability instance from name
@@ -112,7 +113,7 @@ namespace GameLogic.Entities.Player
                 case "Wand Mastery":
                     return new Abilities.WeaponMasteries.WandMasteryAbility();
                 default:
-                    Console.WriteLine($"Warning: Unknown ability '{abilityName}'. No ability loaded.");
+                    GameLog.Write($"Warning: Unknown ability '{abilityName}'. No ability loaded.");
                     return null;
             }
         }
@@ -162,7 +163,7 @@ namespace GameLogic.Entities.Player
                 {
                     player.SelectedAbility.Level = Math.Clamp(data.SelectedAbilityLevel, 1, player.SelectedAbility.MaxLevel);
                     player.SelectedAbility.Experience = data.SelectedAbilityExperience;
-                    Console.WriteLine($"Ability restored: {player.SelectedAbility.Name} (Lv.{player.SelectedAbility.Level})");
+                    GameLog.Write($"Ability restored: {player.SelectedAbility.Name} (Lv.{player.SelectedAbility.Level})");
                 }
             }
 
@@ -178,7 +179,7 @@ namespace GameLogic.Entities.Player
         public void AddExperience(int exp)
         {
             Experience += exp;
-            Console.WriteLine($"{Name} gained {exp} experience!");
+            GameLog.Write($"{Name} gained {exp} experience!");
 
             while (Level < MaxLevel && Experience >= ExperienceToLevelUp())
             {
@@ -198,10 +199,10 @@ namespace GameLogic.Entities.Player
             if (Level % 3 == 0) // Every 3 levels
             {
                 Speed++;
-                Console.WriteLine($"{Name}'s speed increased to {Speed}!");
+                GameLog.Write($"{Name}'s speed increased to {Speed}!");
             }
 
-            Console.WriteLine($"{Name} leveled up to level {Level}!");
+            GameLog.Write($"{Name} leveled up to level {Level}!");
         }
 
         // Calculate XP needed for next level
@@ -215,25 +216,26 @@ namespace GameLogic.Entities.Player
             return Convert.ToInt32(expCalc);
         }
 
-        // Override Heal to add console output
+        // Heal and TakeDamage only added console lines. Those are commented out (2026-11-10):
+        // in a fight they would repeat what combat already reports (Damaged/Healed/Defeated
+        // events and the combat log), and items and Rest() write their own lines.
         public override void Heal(int amount)
         {
             base.Heal(amount);
-            Console.WriteLine($"{Name} healed for {amount} HP. Current health: {Health}/{MaxHealth}");
+            // GameLog.Write($"{Name} healed for {amount} HP. Current health: {Health}/{MaxHealth}");
         }
 
-        // Override TakeDamage to add console output
         public override void TakeDamage(int damage)
         {
             base.TakeDamage(damage);
-            if (Health <= 0)
-            {
-                Console.WriteLine($"{Name} has been defeated!");
-            }
-            else
-            {
-                Console.WriteLine($"{Name} took {damage} damage. Current health: {Health}/{MaxHealth}");
-            }
+            // if (Health <= 0)
+            // {
+            //     GameLog.Write($"{Name} has been defeated!");
+            // }
+            // else
+            // {
+            //     GameLog.Write($"{Name} took {damage} damage. Current health: {Health}/{MaxHealth}");
+            // }
         }
 
         // Add item to inventory
@@ -246,7 +248,7 @@ namespace GameLogic.Entities.Player
         public void EquipWeapon(Weapon weapon)
         {
             EquippedWeapon = weapon;
-            Console.WriteLine($"{Name} equipped {weapon.Name}.");
+            GameLog.Write($"{Name} equipped {weapon.Name}.");
         }
 
         // Equip armor
@@ -260,21 +262,21 @@ namespace GameLogic.Entities.Player
             double abilityPowerPenalty = PlayerClassInfo.GetArmorAbilityPowerPenalty(Class, armor.Type);
             double accuracyPenalty = PlayerClassInfo.GetArmorAccuracyPenalty(Class, armor.Type);
 
-            Console.WriteLine($"{Name} equipped {armor.Name}.");
+            GameLog.Write($"{Name} equipped {armor.Name}.");
 
             // Display any penalties or bonuses
             if (speedPenalty < 0)
-                Console.WriteLine($"  ⚠️  Speed penalty: {speedPenalty * 100:F0}% (armor too heavy for {PlayerClassInfo.GetClassName(Class)})");
+                GameLog.Write($"  ⚠️  Speed penalty: {speedPenalty * 100:F0}% (armor too heavy for {PlayerClassInfo.GetClassName(Class)})");
             if (defensePenalty < 0)
-                Console.WriteLine($"  ⚠️  Defense penalty: {defensePenalty * 100:F0}% (armor not optimal for {PlayerClassInfo.GetClassName(Class)})");
+                GameLog.Write($"  ⚠️  Defense penalty: {defensePenalty * 100:F0}% (armor not optimal for {PlayerClassInfo.GetClassName(Class)})");
             else if (defensePenalty > 0)
-                Console.WriteLine($"  ✅ Defense bonus: +{defensePenalty * 100:F0}% ({PlayerClassInfo.GetClassName(Class)} proficiency)");
+                GameLog.Write($"  ✅ Defense bonus: +{defensePenalty * 100:F0}% ({PlayerClassInfo.GetClassName(Class)} proficiency)");
             if (abilityPowerPenalty < 0)
-                Console.WriteLine($"  ⚠️  Ability Power penalty: {abilityPowerPenalty * 100:F0}% (armor interferes with magic)");
+                GameLog.Write($"  ⚠️  Ability Power penalty: {abilityPowerPenalty * 100:F0}% (armor interferes with magic)");
             else if (abilityPowerPenalty > 0)
-                Console.WriteLine($"  ✅ Ability Power bonus: +{abilityPowerPenalty * 100:F0}% (enhanced magical channeling)");
+                GameLog.Write($"  ✅ Ability Power bonus: +{abilityPowerPenalty * 100:F0}% (enhanced magical channeling)");
             if (accuracyPenalty < 0)
-                Console.WriteLine($"  ⚠️  Accuracy penalty: {accuracyPenalty * 100:F0}% (armor interferes with precision)");
+                GameLog.Write($"  ⚠️  Accuracy penalty: {accuracyPenalty * 100:F0}% (armor interferes with precision)");
         }
 
         /// <summary>
@@ -360,7 +362,7 @@ namespace GameLogic.Entities.Player
         {
             // Placeholder implementation
             // Can be used later for player abilities or special actions
-            Console.WriteLine($"{Name} performs an action!");
+            GameLog.Write($"{Name} performs an action!");
         }
     }
 }

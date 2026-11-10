@@ -74,9 +74,10 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
-        /// Reduce duration by 1 round
+        /// Reduce duration by 1 round. Virtual so an effect that lasts until it is used up
+        /// (e.g. SkipTurnEffect) can opt out of the end-of-round countdown.
         /// </summary>
-        public void TickDuration()
+        public virtual void TickDuration()
         {
             if (Duration > 0)
             {

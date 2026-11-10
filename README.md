@@ -69,6 +69,7 @@ RNGtheGame/
 │   │   ├── leadership_ability.cs        # Disabled for the MVP
 │   │   ├── precision_training_ability.cs
 │   │   ├── rallying_cry_ability.cs
+│   │   ├── skip_turn_effect.cs          # "Skip your next turn" (lost turns)
 │   │   ├── swift_tactics_ability.cs
 │   │   ├── player_abilities/
 │   │   │   ├── attack_boost.cs
@@ -112,7 +113,7 @@ RNGtheGame/
 │   │   └── *_quest.cs                   # Quest types: boss_defeat, final_boss, enemy_kill,
 │   │                                    # gold_collection, level, equipment, weapon_upgrade, challenge
 │   │
-│   ├── menus/                           # Old console menus, kept as reference only
+│   ├── menus/                           # Old console menus - whole files commented out, reference only
 │   │   ├── job_board.cs
 │   │   ├── settings_menu.cs
 │   │   └── statistics_menu.cs
@@ -232,7 +233,7 @@ RNGtheGame/
 
 ### ✅ Difficulty Scaling
 - **Party-based scaling** considers player + companions
-- **Difficulty modes**: Easy, Normal, Hard, Nightmare
+- **Difficulty modes**: Normal, Hard, Difficult, Unfair
 - **Boss/Elite modifiers** (3x health for bosses, etc.)
 - **Loot quality scaling** based on difficulty
 

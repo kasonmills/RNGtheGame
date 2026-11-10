@@ -151,7 +151,7 @@ namespace GameLogic.Data
         // Boss Progression
         public List<string> DefeatedBossIds { get; set; }          // IDs of defeated bosses
         public int BossesDefeated { get; set; }                    // Count of unique bosses defeated
-        public Dictionary<string, int> BossTimesDefeated { get; set; }  // bossId -> defeat count
+        public Dictionary<string, int> BossTimesDefeated { get; set; }  // bossId -> defeat count. Dormant in the MVP (no rematches): not written or read, kept so older saves load and for a possible update/DLC
 
         // Quest System
         public List<SerializedQuest> Quests { get; set; }          // All quest states and progress

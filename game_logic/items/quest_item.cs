@@ -1,4 +1,5 @@
 using System;
+using GameLogic.Systems;
 
 namespace GameLogic.Items
 {
@@ -61,8 +62,8 @@ namespace GameLogic.Items
         /// </summary>
         public override void Use(Entities.Player.Player player)
         {
-            Console.WriteLine($"{player.Name} examines the {Name}.");
-            Console.WriteLine(Description);
+            GameLog.Write($"{player.Name} examines the {Name}.");
+            GameLog.Write(Description);
 
             // Quest items might trigger specific events
             // TODO: Implement quest event system

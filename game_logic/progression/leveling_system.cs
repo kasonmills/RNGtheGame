@@ -284,19 +284,20 @@ namespace GameLogic.Progression
         #region XP Difficulty Scaling
 
         /// <summary>
-        /// Calculate the XP multiplier for a given difficulty.
-        /// Distinct from GameLogic.Systems.DifficultyLevel (which scales enemy stats/rewards) -
-        /// harder difficulty gives modestly more XP to compensate for tougher fights,
-        /// rather than scaling 1:1 with enemy toughness.
+        /// Calculate the XP multiplier for a given difficulty (the one list the player picks:
+        /// GameLogic.Systems.DifficultyLevel). These numbers are XP's own, kept apart from the
+        /// enemy-stat multipliers on purpose: harder difficulty gives modestly more XP to
+        /// compensate for tougher fights, rather than scaling 1:1 with enemy toughness.
+        /// (The separate XpDifficultyLevel list was merged into DifficultyLevel 2026-11-10.)
         /// </summary>
-        public static float GetDifficultyMultiplier(XpDifficultyLevel difficulty)
+        public static float GetDifficultyMultiplier(GameLogic.Systems.DifficultyLevel difficulty)
         {
             return difficulty switch
             {
-                XpDifficultyLevel.Normal => 0.8f,
-                XpDifficultyLevel.Hard => 1.0f,
-                XpDifficultyLevel.Difficult => 1.25f,
-                XpDifficultyLevel.Unfair => 1.5f,
+                GameLogic.Systems.DifficultyLevel.Normal => 0.8f,
+                GameLogic.Systems.DifficultyLevel.Hard => 1.0f,
+                GameLogic.Systems.DifficultyLevel.Difficult => 1.25f,
+                GameLogic.Systems.DifficultyLevel.Unfair => 1.5f,
                 _ => 1.0f
             };
         }
@@ -331,17 +332,4 @@ namespace GameLogic.Progression
         #endregion
     }
 
-    /// <summary>
-    /// Difficulty tiers for XP scaling specifically - kept distinct from
-    /// GameLogic.Systems.DifficultyLevel (enemy stats/reward scaling) because
-    /// XP is meant to scale differently: harder difficulty gives somewhat more XP
-    /// to compensate for tougher fights, not a 1:1 multiplier with enemy toughness.
-    /// </summary>
-    public enum XpDifficultyLevel
-    {
-        Normal,
-        Hard,
-        Difficult,
-        Unfair
-    }
 }

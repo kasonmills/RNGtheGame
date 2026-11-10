@@ -74,7 +74,7 @@ namespace GameLogic.Entities.NPCs
         /// </summary>
         public void Speak(string message)
         {
-            Console.WriteLine($"{Name}: \"{message}\"");
+            GameLog.Write($"{Name}: \"{message}\"");
         }
 
         /// <summary>
@@ -188,16 +188,16 @@ namespace GameLogic.Entities.NPCs
                     break;
 
                 case NPCType.Merchant:
-                    Console.WriteLine($"{Name} stands ready to trade.");
+                    GameLog.Write($"{Name} stands ready to trade.");
                     break;
 
                 case NPCType.QuestGiver:
-                    Console.WriteLine($"{Name} has a quest for you.");
+                    GameLog.Write($"{Name} has a quest for you.");
                     break;
 
                 default:
                     // Generic NPCs just exist
-                    Console.WriteLine($"{Name} is here.");
+                    GameLog.Write($"{Name} is here.");
                     break;
             }
         }
@@ -209,11 +209,11 @@ namespace GameLogic.Entities.NPCs
         {
             if (!IsCompanion || !InParty)
             {
-                Console.WriteLine($"{Name} cannot attack (not an active companion).");
+                GameLog.Write($"{Name} cannot attack (not an active companion).");
                 return;
             }
 
-            Console.WriteLine($"\n{Name} attacks {target.Name}!");
+            GameLog.Write($"\n{Name} attacks {target.Name}!");
 
             // Calculate accuracy
             int accuracy = GetCompanionAccuracy();
@@ -221,7 +221,7 @@ namespace GameLogic.Entities.NPCs
 
             if (hitRoll > accuracy)
             {
-                Console.WriteLine($"{Name}'s attack missed!");
+                GameLog.Write($"{Name}'s attack missed!");
                 return;
             }
 
@@ -238,13 +238,13 @@ namespace GameLogic.Entities.NPCs
 
             if (critRoll <= critChance)
             {
-                Console.WriteLine("CRITICAL HIT!");
+                GameLog.Write("CRITICAL HIT!");
                 damage = (int)(damage * 1.5f);
             }
 
             // Deal damage
             target.TakeDamage(damage);
-            Console.WriteLine($"{Name} dealt {damage} damage to {target.Name}!");
+            GameLog.Write($"{Name} dealt {damage} damage to {target.Name}!");
         }
 
         /// <summary>
@@ -316,12 +316,12 @@ namespace GameLogic.Entities.NPCs
         {
             if (!IsCompanion)
             {
-                Console.WriteLine($"{Name} cannot equip weapons (not a companion).");
+                GameLog.Write($"{Name} cannot equip weapons (not a companion).");
                 return;
             }
 
             EquippedWeapon = weapon;
-            Console.WriteLine($"{Name} equipped {weapon.Name}!");
+            GameLog.Write($"{Name} equipped {weapon.Name}!");
         }
 
         /// <summary>
@@ -331,12 +331,12 @@ namespace GameLogic.Entities.NPCs
         {
             if (!IsCompanion)
             {
-                Console.WriteLine($"{Name} cannot equip armor (not a companion).");
+                GameLog.Write($"{Name} cannot equip armor (not a companion).");
                 return;
             }
 
             EquippedArmor = armor;
-            Console.WriteLine($"{Name} equipped {armor.Name}!");
+            GameLog.Write($"{Name} equipped {armor.Name}!");
         }
     }
 }

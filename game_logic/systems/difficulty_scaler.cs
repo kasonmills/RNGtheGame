@@ -3,17 +3,9 @@ using GameLogic.Progression;
 
 namespace GameLogic.Systems
 {
-    /// <summary>
-    /// Base game difficulty setting chosen at character creation
-    /// Affects all enemies, loot, and rewards
-    /// </summary>
-    public enum GameDifficulty
-    {
-        Easy,       // 0.75x difficulty
-        Normal,     // 1.0x difficulty (baseline)
-        Hard,       // 1.5x difficulty
-        Nightmare   // 2.0x difficulty
-    }
+    // Difficulty uses the one list the player picks from: DifficultyLevel (game_settings.cs) -
+    // Normal / Hard / Difficult / Unfair (merged 2026-11-10; this file had its own
+    // Easy/Normal/Hard/Nightmare list, same multipliers in the same order). Hard is the 1.0x baseline.
 
     /// <summary>
     /// Difficulty scaler that adjusts enemy stats based on party strength and game difficulty
@@ -23,7 +15,7 @@ namespace GameLogic.Systems
     public class DifficultyScaler
     {
         // Base game difficulty multiplier
-        private readonly GameDifficulty _gameDifficulty;
+        private readonly DifficultyLevel _gameDifficulty;
         private readonly float _difficultyMultiplier;
 
         // Scaling configuration
@@ -32,7 +24,7 @@ namespace GameLogic.Systems
         private const float XP_SCALING_PER_LEVEL = 0.12f;          // +12% XP per level
         private const float GOLD_SCALING_PER_LEVEL = 0.10f;        // +10% gold per level
 
-        public DifficultyScaler(GameDifficulty gameDifficulty)
+        public DifficultyScaler(DifficultyLevel gameDifficulty)
         {
             _gameDifficulty = gameDifficulty;
             _difficultyMultiplier = GetDifficultyMultiplier(gameDifficulty);
@@ -41,8 +33,10 @@ namespace GameLogic.Systems
         #region Party Power Calculation
 
         /// <summary>
-        /// Calculate the effective "party level" for scaling enemies
-        /// Takes into account player level + all active companions
+        /// Calculate the effective "party level" for scaling enemies: a plain average of the
+        /// player and the companions passed in (pass only the fighting party), rounded up.
+        /// Decided 2026-11-10: a plain average, not player-weighted - it balances better across
+        /// more party set-ups.
         /// </summary>
         public int CalculatePartyLevel(int playerLevel, params int[] companionLevels)
         {
@@ -52,18 +46,19 @@ namespace GameLogic.Systems
                 return playerLevel;
             }
 
-            // Calculate weighted average with player counting more
-            // Player weight: 50%, Companions: 50% total split among them
-            float playerWeight = 0.5f;
-            float companionWeight = 0.5f / companionLevels.Length;
+            float totalLevel = playerLevel + companionLevels.Sum();
+            return (int)Math.Ceiling(totalLevel / (companionLevels.Length + 1));
 
-            float totalLevel = playerLevel * playerWeight;
-            foreach (int companionLevel in companionLevels)
-            {
-                totalLevel += companionLevel * companionWeight;
-            }
-
-            return (int)Math.Ceiling(totalLevel);
+            // Old player-weighted version (player 50%, companions share the other 50%) - not
+            // used in the MVP, kept in case it is wanted later:
+            // float playerWeight = 0.5f;
+            // float companionWeight = 0.5f / companionLevels.Length;
+            // float weightedLevel = playerLevel * playerWeight;
+            // foreach (int companionLevel in companionLevels)
+            // {
+            //     weightedLevel += companionLevel * companionWeight;
+            // }
+            // return (int)Math.Ceiling(weightedLevel);
         }
 
         /// <summary>
@@ -130,17 +125,78 @@ namespace GameLogic.Systems
         /// <summary>
         /// Get the difficulty multiplier for the game difficulty
         /// </summary>
-        private float GetDifficultyMultiplier(GameDifficulty difficulty)
+        private float GetDifficultyMultiplier(DifficultyLevel difficulty)
         {
             return difficulty switch
             {
-                GameDifficulty.Easy => 0.75f,
-                GameDifficulty.Normal => 1.0f,
-                GameDifficulty.Hard => 1.5f,
-                GameDifficulty.Nightmare => 2.0f,
+                DifficultyLevel.Normal => 0.75f,
+                DifficultyLevel.Hard => 1.0f,
+                DifficultyLevel.Difficult => 1.5f,
+                DifficultyLevel.Unfair => 2.0f,
                 _ => 1.0f
             };
         }
+
+        #region Applying difficulty in play
+
+        /// <summary>
+        /// Make an enemy as strong as this difficulty says: its health and damage are multiplied
+        /// by GetDifficultyMultiplier() (Normal 75%, Hard 100%, Difficult 150%, Unfair 200%), on
+        /// top of the stats its level gave it. Done once per enemy (EnemyBase.DifficultyApplied),
+        /// so a boss that is fought again after a loss doesn't grow every attempt. Called by
+        /// CombatManager when a fight starts and when an enemy joins one.
+        /// </summary>
+        public void ApplyDifficultyToEnemy(Entities.Enemies.EnemyBase enemy)
+        {
+            if (enemy == null || enemy.DifficultyApplied) return;
+
+            bool atFullHealth = enemy.Health >= enemy.MaxHealth;
+
+            enemy.MaxHealth = ScaleForDifficulty(enemy.MaxHealth);
+            enemy.Health = atFullHealth
+                ? enemy.MaxHealth
+                : Math.Min(enemy.MaxHealth, ScaleForDifficulty(enemy.Health));
+            enemy.MinDamage = ScaleForDifficulty(enemy.MinDamage);
+            enemy.MaxDamage = ScaleForDifficulty(enemy.MaxDamage);
+
+            enemy.DifficultyApplied = true;
+        }
+
+        /// <summary>
+        /// A stat multiplied by the difficulty, rounded up, never below 1 (for a stat above 0).
+        /// </summary>
+        public int ScaleForDifficulty(int value)
+        {
+            if (value <= 0) return value;
+            return Math.Max(1, (int)Math.Ceiling(value * _difficultyMultiplier));
+        }
+
+        /// <summary>
+        /// The XP multiplier for this difficulty (Normal 80%, Hard 100%, Difficult 125%, Unfair
+        /// 150%). The numbers live in LevelingSystem.GetDifficultyMultiplier - one place for them.
+        /// </summary>
+        public float GetXPMultiplier()
+        {
+            return LevelingSystem.GetDifficultyMultiplier(_gameDifficulty);
+        }
+
+        /// <summary>
+        /// The gold multiplier for this difficulty (Normal and Hard 100%, Difficult 120%,
+        /// Unfair 140%).
+        /// </summary>
+        public float GetGoldMultiplier()
+        {
+            return _gameDifficulty switch
+            {
+                DifficultyLevel.Normal => 1.0f,
+                DifficultyLevel.Hard => 1.0f,
+                DifficultyLevel.Difficult => 1.2f,   // +20% gold
+                DifficultyLevel.Unfair => 1.4f,      // +40% gold
+                _ => 1.0f
+            };
+        }
+
+        #endregion
 
         #region Enemy Stat Scaling
 
@@ -186,16 +242,7 @@ namespace GameLogic.Systems
             float levelMultiplier = 1.0f + ((partyLevel - 1) * XP_SCALING_PER_LEVEL);
 
             // Difficulty bonus: harder difficulties give more XP
-            float difficultyBonus = _gameDifficulty switch
-            {
-                GameDifficulty.Easy => 0.8f,       // Less XP on easy
-                GameDifficulty.Normal => 1.0f,
-                GameDifficulty.Hard => 1.25f,      // +25% XP on hard
-                GameDifficulty.Nightmare => 1.5f,  // +50% XP on nightmare
-                _ => 1.0f
-            };
-
-            float scaledXP = baseXP * levelMultiplier * difficultyBonus;
+            float scaledXP = baseXP * levelMultiplier * GetXPMultiplier();
 
             return (int)Math.Ceiling(scaledXP);
         }
@@ -212,16 +259,7 @@ namespace GameLogic.Systems
             float levelMultiplier = 1.0f + ((partyLevel - 1) * GOLD_SCALING_PER_LEVEL);
 
             // Apply difficulty (harder = more gold)
-            float difficultyBonus = _gameDifficulty switch
-            {
-                GameDifficulty.Easy => 1.0f,
-                GameDifficulty.Normal => 1.0f,
-                GameDifficulty.Hard => 1.2f,       // +20% gold
-                GameDifficulty.Nightmare => 1.4f,  // +40% gold
-                _ => 1.0f
-            };
-
-            float averageGold = baseGold * levelMultiplier * difficultyBonus;
+            float averageGold = baseGold * levelMultiplier * GetGoldMultiplier();
 
             // Add variance: ±25%
             float minGold = averageGold * 0.75f;
@@ -357,10 +395,10 @@ namespace GameLogic.Systems
         {
             return _gameDifficulty switch
             {
-                GameDifficulty.Easy => 0.8f,       // 20% worse drops
-                GameDifficulty.Normal => 1.0f,
-                GameDifficulty.Hard => 1.3f,       // 30% better drops
-                GameDifficulty.Nightmare => 1.6f,  // 60% better drops
+                DifficultyLevel.Normal => 0.8f,       // 20% worse drops
+                DifficultyLevel.Hard => 1.0f,
+                DifficultyLevel.Difficult => 1.3f,   // 30% better drops
+                DifficultyLevel.Unfair => 1.6f,      // 60% better drops
                 _ => 1.0f
             };
         }
@@ -372,7 +410,7 @@ namespace GameLogic.Systems
         /// <summary>
         /// Get the current game difficulty
         /// </summary>
-        public GameDifficulty GetGameDifficulty()
+        public DifficultyLevel GetGameDifficulty()
         {
             return _gameDifficulty;
         }
@@ -392,10 +430,10 @@ namespace GameLogic.Systems
         {
             return _gameDifficulty switch
             {
-                GameDifficulty.Easy => "Easy (75% difficulty, good for learning)",
-                GameDifficulty.Normal => "Normal (100% difficulty, balanced experience)",
-                GameDifficulty.Hard => "Hard (150% difficulty, for experienced players)",
-                GameDifficulty.Nightmare => "Nightmare (200% difficulty, brutal challenge)",
+                DifficultyLevel.Normal => "Normal (75% difficulty, good for learning)",
+                DifficultyLevel.Hard => "Hard (100% difficulty, the intended experience)",
+                DifficultyLevel.Difficult => "Difficult (150% difficulty, for experienced players)",
+                DifficultyLevel.Unfair => "Unfair (200% difficulty, brutal challenge)",
                 _ => "Unknown"
             };
         }
@@ -432,10 +470,10 @@ namespace GameLogic.Systems
             {
                 return _gameDifficulty switch
                 {
-                    GameDifficulty.Easy => "[BOSS] Challenging",
-                    GameDifficulty.Normal => "[BOSS] Dangerous",
-                    GameDifficulty.Hard => "[BOSS] Deadly",
-                    GameDifficulty.Nightmare => "[BOSS] Lethal",
+                    DifficultyLevel.Normal => "[BOSS] Challenging",
+                    DifficultyLevel.Hard => "[BOSS] Dangerous",
+                    DifficultyLevel.Difficult => "[BOSS] Deadly",
+                    DifficultyLevel.Unfair => "[BOSS] Lethal",
                     _ => "[BOSS]"
                 };
             }
@@ -443,10 +481,10 @@ namespace GameLogic.Systems
             {
                 return _gameDifficulty switch
                 {
-                    GameDifficulty.Easy => "[Elite] Moderate",
-                    GameDifficulty.Normal => "[Elite] Tough",
-                    GameDifficulty.Hard => "[Elite] Dangerous",
-                    GameDifficulty.Nightmare => "[Elite] Deadly",
+                    DifficultyLevel.Normal => "[Elite] Moderate",
+                    DifficultyLevel.Hard => "[Elite] Tough",
+                    DifficultyLevel.Difficult => "[Elite] Dangerous",
+                    DifficultyLevel.Unfair => "[Elite] Deadly",
                     _ => "[Elite]"
                 };
             }
@@ -454,10 +492,10 @@ namespace GameLogic.Systems
             {
                 return _gameDifficulty switch
                 {
-                    GameDifficulty.Easy => "Easy",
-                    GameDifficulty.Normal => "Normal",
-                    GameDifficulty.Hard => "Tough",
-                    GameDifficulty.Nightmare => "Dangerous",
+                    DifficultyLevel.Normal => "Manageable",
+                    DifficultyLevel.Hard => "Fair Fight",
+                    DifficultyLevel.Difficult => "Tough",
+                    DifficultyLevel.Unfair => "Dangerous",
                     _ => "Unknown"
                 };
             }
