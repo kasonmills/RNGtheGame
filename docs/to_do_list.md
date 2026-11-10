@@ -18,11 +18,10 @@
 
 ### Bosses - shared engine work
 _Several bosses need the same engine changes. Build each one once._
-- [ ] **A combatant who acts in more than one turn slot per round** - needed for the Cyclops Brothers and the Princess.
-- [ ] **A boss mechanic that can react to events** (being hit, an ally falling) - `IBossMechanic` can only choose the boss's own turn today. Needed for the Cyclops revive and the Slime Dragon.
+- [ ] **A "joined attack" for the Cyclops Brothers** - when one brother attacks on his turn, the other attacks the same target alongside him. The joiner's attack is not a turn of his own, so his Defend doesn't end and his own slot still comes up. (Each brother keeps one slot of his own. The "more than one slot per round" engine piece is built for the Princess - see section 3.)
 - [ ] **Enemies joining a fight already in progress** - needed for the Slime Dragon's draglings and the Princess's guards.
 - [ ] **A "skip your next turn" effect** - general, so it can be reused. The combat screen shows that the turn was skipped.
-- [ ] **An extra turn added at the end of a round** - needed for the Cyclops revive.
+- [ ] **An extra turn added at the end of a round** - needed for the Cyclops revive and the Slime Dragon. The boss decides each round whether it gets one. If it doesn't, no turn is added at all (not shown, not skipped).
 
 ### Bosses - strength
 - [ ] 🔴 **Hand-set level-1 stats for every boss** (health, damage, defense, accuracy, crit, speed, rewards) to replace the shared stopgap formula. Then tune Skarn against the player's starting stats. (notes: Bucket A #11)
@@ -43,7 +42,8 @@ _Several bosses need the same engine changes. Build each one once._
   - When one falls, the other enrages and, in a bonus turn at the end of the round, revives him at 25% health. There is no limit on revives. Both down in the same round = win.
   - XP and rewards only once both are beaten (`DefeatBoss` called once).
 - [ ] **#6 Demon Prince - a random condition on every hit.** He picks from 7+ equally likely conditions, some unique to him. Nothing on a miss. A 0-damage hit still applies it. His attack power is lower to balance this. Several conditions can sit on one target at once. ⛔ Needs his unique conditions designed (section 2).
-- [ ] **#7 Slime Dragon - spawns draglings whenever hit.** ⛔ Needs the reactive hook and mid-fight joining above.
+- [ ] **#7 Slime Dragon - spawns draglings whenever hit.** ⛔ Needs mid-fight joining and the end-of-round extra turn above (the reactive hook is built - section 3).
+  - End-of-round spawn (decided 2026-11-09): when a round ends, if fewer than 3 draglings are alive, he takes an extra turn that spawns more. With 3 or more alive, no extra turn is added that round.
 - [ ] **#8 Captain of the Royal Guard (Risk as a boss)** - very high crit chance (about 55%, higher on harder difficulties) and a very high crit multiplier.
 - [ ] **Companion → boss plumbing for Risk** - a leave-party trigger, and a way to turn a `CompanionBase` into a matching `BossEnemy`.
 - [ ] **#9 Princess (final boss).** 🤫 She is a hidden twist: no foreshadowing text anywhere.
@@ -123,7 +123,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 
 ### Code cleanup
 - [ ] Delete the duplicate settings/statistics save code in `QuestSerializationHelper` (about 190 lines).
-- [ ] `turn_manager.cs` is unused by combat, but its tests were reworked and pass (2026-11-04). Decide: delete both, or keep them.
+- [ ] **Keep `turn_manager.cs` and `TurnManagerTests`** (decided 2026-11-05). Combat runs its own turn queue today, but the class may be reworked to fit the new combat engine and the 8-slot rounds instead. Check that when the turn-order code is next touched.
 - [ ] Rename one of the two `CombatAction` types.
 - [ ] Merge the 9 identical weapon-mastery files into one class, and fix the `\\n` typo in their text. (Wait for the masteries-vs-families decision.)
 - [ ] Merge the duplicate effects (Regeneration twice, Bleed/Bleeding).
@@ -167,7 +167,7 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Centipede:** should "a restack only adds the minimum duration" be the rule for every stacking damage-over-time effect (Burn, Bleed too), or only his poison?
 - [ ] **Cyclops Brothers:** their names (which also sets who is faster); what the enrage boosts, how much, for how long, and whether it stacks; their stats. Confirm: while one is down, his slot is skipped. Later: a combined attack with its own animation.
 - [ ] **Demon Prince:** his unique conditions (names and effects); which existing ones join the pool (Poisoned, Burn, Bleed, Grappled, Pinned); what happens when he lands a condition the target already has (stack, refresh or reroll); how much lower his attack is; what sets each condition's strength and duration.
-- [ ] **Slime Dragon:** does beating the main dragon end the fight, or must every dragling be cleared? How many draglings per hit, and is there a cap?
+- [ ] **Slime Dragon:** does beating the main dragon end the fight, or must every dragling be cleared? How many draglings per hit, and is there a cap? How many his end-of-round turn spawns. Confirm: exactly 3 alive = no extra turn (it only happens with 0-2 alive), and the count is taken when the round ends (my defaults).
 - [ ] **Captain (Risk as a boss):** crit multiplier and crit chance per difficulty; why and when Risk leaves the party; what happens to his gear.
 - [ ] **Princess:** her action weights and how they shift with her health; the exact second-turn slowdown per difficulty and level; the castle guards' stats.
 
@@ -255,6 +255,23 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Defend** lasts until the defender's next turn and halves every hit in that window.
 - [ ] **One damage path** - companion hits are reduced by enemy defense; enemy hits on companions roll to hit and crit and go through armor; no hit does less than 1 damage.
 - [ ] **8 turn slots** - fights with 1, 2, 4, 5 and 8 enemies give the expected slots (extras to the slowest slots, shared speed = average rounded up, empty slots skipped); speeds change between rounds after attacking or defending.
+- [ ] **More than one turn slot per round** (written 2026-11-09, for the Princess). A boss whose mechanic implements `IMultiTurnMechanic` gets one opponent slot per turn, each with its own speed. No boss uses it yet, so test it with a small test mechanic (e.g. 2 turns, second turn 5 slower). Check:
+  - The boss shows up twice in `TurnOrder`, the second slot with `TurnNumber` 2, and the log reads "Name (2nd turn)".
+  - It acts on both turns, and `CurrentTurnNumber` is 1 and then 2.
+  - Its second turn never comes before its first, even if it rolls the same or a higher speed.
+  - Other enemies share the slots that are left (boss with 2 turns + 3 others: the 2 slowest others share a slot).
+  - With too few slots, the extra turns are dropped so every other enemy still gets a slot.
+  - `ShouldTakeExtraTurn` returning false skips the turn with a `TurnSkipped` event.
+  - A poison on the boss ticks once per round, not once per turn (my default, to confirm).
+  - A Defend from its first turn ends when its second turn comes.
+- [ ] **Bosses reacting to events** (written 2026-11-10, for the Cyclops revive and the Slime Dragon). A boss whose mechanic implements `IReactiveMechanic` is told about each event from an action or effect tick once it has been resolved. No boss uses it yet, so test it with a small test mechanic. Check:
+  - It hears an `AttackLanded`/`Damaged` when it is hit, and a `Defeated` when an ally falls.
+  - Poison ticks and end-of-round effect expiry are heard too.
+  - Changes a reaction makes (e.g. healing itself) show up as normal events, and can be reacted to.
+  - Two reactions that set each other off stop after 10 passes.
+  - A boss that is down or fled doesn't react (my default, to confirm).
+  - A reaction doesn't end the boss's Defend or use up its turn.
+  - A fight without a reacting boss plays exactly as before.
 - [ ] **Actions are checked** - a bad action (wrong turn, dead target, ability on cooldown, missing item, boss flee) is refused with an `ActionRejected` event.
 - [ ] **Direct control** - combat waits for you on a directly controlled companion's turn.
 - [ ] **Items in combat** - anyone can use an item on any standing party member. A revive works on a fallen companion or the fallen player, the revived member is slower the next round, and a revive can't target someone standing.

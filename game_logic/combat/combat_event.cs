@@ -95,19 +95,25 @@ namespace GameLogic.Combat
     /// One of the 8 turn slots in a round - 4 for the party, 4 for the opponents. A party slot
     /// holds one party member; an opponent slot can hold more than one enemy when there are
     /// more than 4 (they act one after another in the same slot). An empty slot is skipped.
+    ///
+    /// A boss with more than one turn per round (IMultiTurnMechanic, e.g. the Princess) has
+    /// one slot per turn, holding only that boss. TurnNumber says which of its turns the slot
+    /// is (1 = its normal turn, 2 = its second...). Every other slot has TurnNumber 1.
     /// </summary>
     public class TurnSlot
     {
         public bool IsPartySlot { get; }
         public IReadOnlyList<Entity> Members { get; }
         public int Speed { get; }
+        public int TurnNumber { get; }
         public bool IsEmpty => Members.Count == 0;
 
-        public TurnSlot(bool isPartySlot, List<Entity> members, int speed)
+        public TurnSlot(bool isPartySlot, List<Entity> members, int speed, int turnNumber = 1)
         {
             IsPartySlot = isPartySlot;
             Members = members;
             Speed = speed;
+            TurnNumber = turnNumber;
         }
     }
 }

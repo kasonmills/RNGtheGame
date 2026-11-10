@@ -58,7 +58,7 @@ namespace GameLogic.Combat
         // Round-based combat tracking
         private int _currentRound;
         private List<TurnSlot> _turnOrder;
-        private readonly Queue<Entity> _turnQueue;
+        private readonly Queue<(Entity Entity, int TurnNumber)> _turnQueue;
 
         // Who is defending (until their next turn), which enemies fled, and which
         // companions the player controls directly
@@ -68,6 +68,12 @@ namespace GameLogic.Combat
 
         // Speed penalties from being revived, waiting to be added to the next round's speed
         private readonly Dictionary<Entity, int> _pendingRevivePenalties;
+
+        // Events raised while an action or effect tick resolves, waiting to be handed to
+        // reacting bosses (IReactiveMechanic) once it has been reported. See RunAndReport.
+        private const int MaxReactionPasses = 10;
+        private bool _collectingReactions;
+        private readonly List<CombatEvent> _pendingReactions = new List<CombatEvent>();
 
         /// <summary>
         /// Fired for narrative combat-log lines (attacks, abilities, items, round events, rewards).
@@ -105,6 +111,12 @@ namespace GameLogic.Combat
         /// Whose turn it is (null between turns and after the fight).
         /// </summary>
         public Entity CurrentActor { get; private set; }
+
+        /// <summary>
+        /// Which of CurrentActor's turns this round it is: 1 for a normal turn, 2 or more for a
+        /// boss with extra turns (e.g. the Princess's second turn). 0 between turns.
+        /// </summary>
+        public int CurrentTurnNumber { get; private set; }
 
         public bool IsCombatActive => _combatActive;
         public int CurrentRound => _currentRound;
@@ -145,7 +157,7 @@ namespace GameLogic.Combat
             _pendingRevivePenalties = new Dictionary<Entity, int>();
             _party = new List<Entity>();
             _allCombatants = new List<Entity>();
-            _turnQueue = new Queue<Entity>();
+            _turnQueue = new Queue<(Entity Entity, int TurnNumber)>();
             _turnOrder = new List<TurnSlot>();
             _enemies = new List<Enemy>();
             _currentRound = 0;
@@ -171,6 +183,11 @@ namespace GameLogic.Combat
         {
             combatEvent.Round = _currentRound;
             CombatEventOccurred?.Invoke(combatEvent);
+
+            if (_collectingReactions)
+            {
+                _pendingReactions.Add(combatEvent);
+            }
         }
 
         private void Raise(CombatEventType type, Entity actor = null, Entity target = null, int amount = 0, string message = null)
@@ -205,6 +222,7 @@ namespace GameLogic.Combat
             LastResult = null;
             IsWaitingForPlayerAction = false;
             CurrentActor = null;
+            CurrentTurnNumber = 0;
 
             foreach (var enemy in _enemies)
             {
@@ -259,6 +277,8 @@ namespace GameLogic.Combat
             _defendingEntities.Clear();
             _fledEnemies.Clear();
             _pendingRevivePenalties.Clear();
+            _pendingReactions.Clear();
+            _collectingReactions = false;
             _turnQueue.Clear();
             _turnOrder = new List<TurnSlot>();
             _currentRound = 1;
@@ -657,8 +677,9 @@ namespace GameLogic.Combat
                 if (slot.IsEmpty) continue;
 
                 string names = string.Join(" + ", slot.Members.Select(m => m.Name));
+                string turnText = slot.TurnNumber > 1 ? $" ({OrdinalTurn(slot.TurnNumber)} turn)" : "";
                 string downText = slot.Members.All(m => !m.IsAlive()) ? " - down" : "";
-                Log($"  {names} (Speed: {slot.Speed}){downText}");
+                Log($"  {names}{turnText} (Speed: {slot.Speed}){downText}");
             }
             Log("");
 
@@ -669,7 +690,7 @@ namespace GameLogic.Combat
             {
                 foreach (var member in slot.Members)
                 {
-                    _turnQueue.Enqueue(member);
+                    _turnQueue.Enqueue((member, slot.TurnNumber));
                 }
             }
 
@@ -685,6 +706,11 @@ namespace GameLogic.Combat
         ///   8: 2,2,2,2). A shared slot acts at its members' average speed, rounded up.
         /// - Slots act fastest first. Ties are broken at random (my default - not decided).
         /// - Unused slots are empty, placed last, and skipped.
+        /// - A boss with more than one turn this round (IMultiTurnMechanic - the Princess) gets
+        ///   one opponent slot per turn, each with its own speed, never shared. The other
+        ///   enemies share the opponent slots that are left, by the rules above. If there are
+        ///   not enough slots, extra turns are dropped until every other enemy can still have a
+        ///   slot. A boss's turns always come in order (turn 2 never before turn 1).
         /// </summary>
         private List<TurnSlot> BuildTurnOrder()
         {
@@ -696,23 +722,77 @@ namespace GameLogic.Combat
             }
 
             var activeEnemies = GetActiveEnemies().Cast<Entity>().ToList();
-            var enemyTieBreak = activeEnemies.ToDictionary(e => e, e => _rngManager.Roll(1, 1000000));
-            var sortedEnemies = activeEnemies
+
+            // Bosses with extra turns this round
+            var multiTurn = new List<(BossEnemy Boss, IMultiTurnMechanic Mechanic, int Turns)>();
+            foreach (var enemy in activeEnemies)
+            {
+                if (enemy is BossEnemy boss && boss.Mechanic is IMultiTurnMechanic mechanic)
+                {
+                    int turns = mechanic.GetTurnsThisRound(boss);
+                    if (turns > 1) multiTurn.Add((boss, mechanic, turns));
+                }
+            }
+
+            var others = activeEnemies.Where(e => !multiTurn.Any(m => m.Boss == e)).ToList();
+
+            // Not enough opponent slots: drop extra turns, from whoever has the most, until the
+            // other enemies still have at least one slot to share. A boss left with one turn
+            // is treated like any other enemy.
+            while (true)
+            {
+                int slotsForOthers = others.Count > 0 ? 1 : 0;
+                if (multiTurn.Sum(m => m.Turns) <= SlotsPerSide - slotsForOthers) break;
+
+                int most = multiTurn.FindIndex(m => m.Turns == multiTurn.Max(x => x.Turns));
+                var reduced = multiTurn[most];
+                reduced.Turns--;
+
+                if (reduced.Turns <= 1)
+                {
+                    multiTurn.RemoveAt(most);
+                    others.Add(reduced.Boss);
+                }
+                else
+                {
+                    multiTurn[most] = reduced;
+                }
+            }
+
+            int enemySlotCount = 0;
+
+            foreach (var (boss, mechanic, turns) in multiTurn)
+            {
+                int firstSpeed = GetEntityEffectiveSpeed(boss);
+                slots.Add(new TurnSlot(false, new List<Entity> { boss }, firstSpeed, 1));
+                enemySlotCount++;
+
+                for (int turn = 2; turn <= turns; turn++)
+                {
+                    int speed = Math.Max(1, mechanic.GetExtraTurnSpeed(boss, turn, firstSpeed, _rngManager, Difficulty));
+                    slots.Add(new TurnSlot(false, new List<Entity> { boss }, speed, turn));
+                    enemySlotCount++;
+                }
+            }
+
+            // Everyone else shares the slots that are left
+            int otherSlots = SlotsPerSide - enemySlotCount;
+            var enemyTieBreak = others.ToDictionary(e => e, e => _rngManager.Roll(1, 1000000));
+            var sortedEnemies = others
                 .OrderByDescending(e => GetEntityEffectiveSpeed(e))
                 .ThenBy(e => enemyTieBreak[e])
                 .ToList();
 
             int enemyCount = sortedEnemies.Count;
-            int baseSize = enemyCount / SlotsPerSide;
-            int extras = enemyCount % SlotsPerSide;
-            int enemySlotCount = 0;
+            int baseSize = otherSlots > 0 ? enemyCount / otherSlots : 0;
+            int extras = otherSlots > 0 ? enemyCount % otherSlots : 0;
             int index = 0;
 
-            for (int i = 0; i < SlotsPerSide && index < enemyCount; i++)
+            for (int i = 0; i < otherSlots && index < enemyCount; i++)
             {
-                int size = enemyCount <= SlotsPerSide
+                int size = enemyCount <= otherSlots
                     ? 1
-                    : baseSize + (i >= SlotsPerSide - extras ? 1 : 0);
+                    : baseSize + (i >= otherSlots - extras ? 1 : 0);
 
                 var members = sortedEnemies.GetRange(index, size);
                 index += size;
@@ -727,6 +807,26 @@ namespace GameLogic.Combat
                 .OrderByDescending(s => s.Speed)
                 .ThenBy(s => slotTieBreak[s])
                 .ToList();
+
+            // A boss's turns are numbered in the order they come up, so turn 2 never acts
+            // before turn 1 (e.g. an extra turn that rolled the same or a higher speed)
+            var turnsSeen = new Dictionary<Entity, int>();
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                var slot = ordered[i];
+                if (slot.IsPartySlot || slot.Members.Count != 1) continue;
+
+                var boss = slot.Members[0];
+                if (!multiTurn.Any(m => m.Boss == boss)) continue;
+
+                int number = turnsSeen.TryGetValue(boss, out int seen) ? seen + 1 : 1;
+                turnsSeen[boss] = number;
+
+                if (number != slot.TurnNumber)
+                {
+                    ordered[i] = new TurnSlot(false, new List<Entity> { boss }, slot.Speed, number);
+                }
+            }
 
             for (int i = _party.Count; i < SlotsPerSide; i++)
             {
@@ -758,7 +858,7 @@ namespace GameLogic.Combat
                     continue;
                 }
 
-                var entity = _turnQueue.Dequeue();
+                var (entity, turnNumber) = _turnQueue.Dequeue();
 
                 // Defend lasts until the defender's next turn - it ends when that turn comes,
                 // even if they can't act on it (decided 2026-10-12, skip rule 2026-10-14)
@@ -774,7 +874,21 @@ namespace GameLogic.Combat
                     continue;
                 }
 
+                var multiTurnMechanic = (entity as BossEnemy)?.Mechanic as IMultiTurnMechanic;
+
+                // A boss's extra turn can be called off when it comes up (e.g. the Princess
+                // skips her second turn when only one opponent is left)
+                if (turnNumber > 1 && multiTurnMechanic != null
+                    && !multiTurnMechanic.ShouldTakeExtraTurn((BossEnemy)entity, turnNumber, GetLivingParty().Count))
+                {
+                    Log($"\n{entity.Name} doesn't take a {OrdinalTurn(turnNumber)} turn.");
+                    Raise(CombatEventType.TurnSkipped, entity);
+                    continue;
+                }
+
                 CurrentActor = entity;
+                CurrentTurnNumber = turnNumber;
+                multiTurnMechanic?.OnTurnStarting((BossEnemy)entity, turnNumber);
                 Raise(CombatEventType.TurnStarted, entity);
 
                 if (entity == _player || _directlyControlled.Contains(entity))
@@ -805,16 +919,18 @@ namespace GameLogic.Combat
         /// <summary>
         /// Apply an entity's end-of-turn status effects (poison/bleed/etc. tick here),
         /// then check whether combat ended. Returns true if it did (stop advancing turns).
+        /// A boss with extra turns has its effects applied once per round, at the end of its
+        /// first turn only (my default - not decided), so a poison doesn't hurt it twice as often.
         /// </summary>
         private bool FinishTurn(Entity entity)
         {
+            int turnNumber = CurrentTurnNumber;
             CurrentActor = null;
+            CurrentTurnNumber = 0;
 
-            if (entity.IsAlive() && !HasFled(entity))
+            if (entity.IsAlive() && !HasFled(entity) && turnNumber <= 1)
             {
-                var before = TakeSnapshot();
-                entity.ProcessEffects(_rngManager);
-                ReportChanges(before);
+                RunAndReport(() => entity.ProcessEffects(_rngManager));
 
                 if (!entity.IsAlive())
                 {
@@ -958,32 +1074,33 @@ namespace GameLogic.Combat
 
             // Tick down effect durations (duration only - effects were already applied at
             // each entity's own end-of-turn this round)
-            var before = TakeSnapshot();
-            foreach (var entity in _allCombatants)
+            RunAndReport(() =>
             {
-                if (entity.IsAlive())
+                foreach (var entity in _allCombatants)
                 {
-                    entity.TickEffectDurations();
-                }
-            }
-
-            // Check for Iron Will passive ability cleanse (after effects tick, before next round)
-            if (_player.IsAlive() && _player.SelectedAbility is IronWillAbility ironWill)
-            {
-                // Check if player has any negative effects to cleanse
-                if (_player.ActiveEffects.Any(e =>
-                    e.Type == EffectType.Debuff ||
-                    e.Type == EffectType.DamageOverTime ||
-                    e.Type == EffectType.CrowdControl))
-                {
-                    bool cleansed = ironWill.TryCleanseEffects(_player, _rngManager);
-                    if (cleansed)
+                    if (entity.IsAlive())
                     {
-                        Log($"\n{_player.Name}'s Iron Will activated! All negative effects cleansed!");
+                        entity.TickEffectDurations();
                     }
                 }
-            }
-            ReportChanges(before);
+
+                // Check for Iron Will passive ability cleanse (after effects tick, before next round)
+                if (_player.IsAlive() && _player.SelectedAbility is IronWillAbility ironWill)
+                {
+                    // Check if player has any negative effects to cleanse
+                    if (_player.ActiveEffects.Any(e =>
+                        e.Type == EffectType.Debuff ||
+                        e.Type == EffectType.DamageOverTime ||
+                        e.Type == EffectType.CrowdControl))
+                    {
+                        bool cleansed = ironWill.TryCleanseEffects(_player, _rngManager);
+                        if (cleansed)
+                        {
+                            Log($"\n{_player.Name}'s Iron Will activated! All negative effects cleansed!");
+                        }
+                    }
+                }
+            });
 
             // Reduce ability cooldowns for everyone at end of round
             foreach (var combatant in _allCombatants)
@@ -1225,9 +1342,72 @@ namespace GameLogic.Combat
         /// </summary>
         private void RunAction(CombatAction action)
         {
+            RunAndReport(() => ProcessAction(action));
+        }
+
+        /// <summary>
+        /// Do something that can change health or effects (an action, an effect tick), report
+        /// every change as combat events, then let reacting bosses respond to those events.
+        /// </summary>
+        private void RunAndReport(Action work)
+        {
+            bool wasCollecting = _collectingReactions;
+            _collectingReactions = true;
+
             var before = TakeSnapshot();
-            ProcessAction(action);
+            work();
             ReportChanges(before);
+
+            _collectingReactions = wasCollecting;
+            if (!wasCollecting)
+            {
+                DispatchReactions();
+            }
+        }
+
+        /// <summary>
+        /// Hand the collected events to every living boss still in the fight whose mechanic
+        /// implements IReactiveMechanic. What the reactions change is reported as new events,
+        /// which go round again - at most MaxReactionPasses times.
+        /// </summary>
+        private void DispatchReactions()
+        {
+            for (int pass = 0; pass < MaxReactionPasses && _pendingReactions.Count > 0; pass++)
+            {
+                var events = new List<CombatEvent>(_pendingReactions);
+                _pendingReactions.Clear();
+
+                if (!_combatActive) break;
+
+                var reactors = _enemies
+                    .OfType<BossEnemy>()
+                    .Where(boss => boss.Mechanic is IReactiveMechanic)
+                    .ToList();
+                if (reactors.Count == 0) break;
+
+                _collectingReactions = true;
+                var before = TakeSnapshot();
+
+                foreach (var combatEvent in events)
+                {
+                    foreach (var boss in reactors)
+                    {
+                        if (IsOutOfFight(boss)) continue;
+
+                        var context = new BossReactionContext(
+                            _currentRound, _rngManager, Difficulty,
+                            GetActiveEnemies().Where(e => e != boss).ToList(),
+                            GetLivingParty(),
+                            Log);
+                        ((IReactiveMechanic)boss.Mechanic).OnCombatEvent(boss, combatEvent, context);
+                    }
+                }
+
+                ReportChanges(before);
+                _collectingReactions = false;
+            }
+
+            _pendingReactions.Clear();
         }
 
         /// <summary>
@@ -1717,6 +1897,21 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
+        /// "2nd", "3rd", "4th"... for turn labels in the log.
+        /// </summary>
+        private static string OrdinalTurn(int number)
+        {
+            if (number % 100 >= 11 && number % 100 <= 13) return $"{number}th";
+            return (number % 10) switch
+            {
+                1 => $"{number}st",
+                2 => $"{number}nd",
+                3 => $"{number}rd",
+                _ => $"{number}th"
+            };
+        }
+
+        /// <summary>
         /// The combatant with the lowest health percentage (the first one on a tie), or null.
         /// </summary>
         private static Entity MostWounded(List<Entity> candidates)
@@ -1755,6 +1950,7 @@ namespace GameLogic.Combat
             _partyFled = false;
             IsWaitingForPlayerAction = false;
             CurrentActor = null;
+            CurrentTurnNumber = 0;
             LastResult = null;
 
             _player = null;
@@ -1767,6 +1963,8 @@ namespace GameLogic.Combat
             _fledEnemies.Clear();
             _directlyControlled.Clear();
             _pendingRevivePenalties.Clear();
+            _pendingReactions.Clear();
+            _collectingReactions = false;
             _turnQueue.Clear();
             _turnOrder = new List<TurnSlot>();
             _currentRound = 0;
@@ -1781,6 +1979,7 @@ namespace GameLogic.Combat
             _combatActive = false;
             IsWaitingForPlayerAction = false;
             CurrentActor = null;
+            CurrentTurnNumber = 0;
             _turnQueue.Clear();
             _defendingEntities.Clear();
 

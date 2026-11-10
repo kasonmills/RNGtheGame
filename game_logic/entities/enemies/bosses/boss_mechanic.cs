@@ -30,6 +30,100 @@ namespace GameLogic.Entities.Enemies.Bosses
     }
 
     /// <summary>
+    /// Optional, for a boss that acts in more than one turn slot per round (the Princess:
+    /// two turns per round, decided 2026-10-14). A boss mechanic implements this next to
+    /// IBossMechanic. Each turn is its own slot in the round, with its own speed, and is
+    /// never shared with another enemy. A boss whose mechanic doesn't implement this gets
+    /// one turn per round, as normal.
+    ///
+    /// Turn numbers start at 1 (1 = the boss's normal turn, 2 = its first extra turn...).
+    /// </summary>
+    public interface IMultiTurnMechanic
+    {
+        /// <summary>
+        /// How many turns the boss gets this round (1 = normal). Asked once at the start of
+        /// every round, when the turn slots are built.
+        /// </summary>
+        int GetTurnsThisRound(BossEnemy self);
+
+        /// <summary>
+        /// The speed of an extra turn (turnNumber 2 or more), given the speed of the boss's
+        /// first turn this round. Asked when the round's slots are built. CombatManager keeps
+        /// the result at 1 or more.
+        /// </summary>
+        int GetExtraTurnSpeed(BossEnemy self, int turnNumber, int firstTurnSpeed, RNGManager rng, DifficultyLevel difficulty);
+
+        /// <summary>
+        /// Asked when an extra turn (turnNumber 2 or more) comes up, before anything happens.
+        /// Return false to skip it (e.g. the Princess skips her second turn when only one
+        /// opponent is left). `livingOpponents` = party members still standing.
+        /// </summary>
+        bool ShouldTakeExtraTurn(BossEnemy self, int turnNumber, int livingOpponents);
+
+        /// <summary>
+        /// Called right before the boss acts on one of its turns (including turn 1), so
+        /// DecideAction can tell its turns apart. Turn 1 also marks the start of a new round
+        /// for this boss.
+        /// </summary>
+        void OnTurnStarting(BossEnemy self, int turnNumber);
+    }
+
+    /// <summary>
+    /// Optional, for a boss that reacts to things happening in the fight outside its own turn
+    /// (the Cyclops enraging when his brother falls, the Slime Dragon spawning draglings when
+    /// hit). A boss mechanic implements this next to IBossMechanic.
+    ///
+    /// How it works: the events from one action (or one effect tick) are collected while it
+    /// resolves. Once it has been resolved and reported, every living boss still in the fight
+    /// whose mechanic implements this gets those events, one at a time, in order. Changes a
+    /// reaction makes (health, effects) are reported as events too, and bosses can react to
+    /// those in the same way - up to 10 passes, so two reactions can't set each other off
+    /// forever. A boss does not react to its own defeat (it is no longer alive).
+    ///
+    /// Useful events: AttackLanded (Actor hit Target), Damaged (Target lost Amount health, from
+    /// any source), Defeated, Revived, EffectApplied / EffectRemoved. A reaction is not a turn:
+    /// it doesn't end the boss's Defend or use up its slot.
+    /// </summary>
+    public interface IReactiveMechanic
+    {
+        void OnCombatEvent(BossEnemy self, CombatEvent combatEvent, BossReactionContext context);
+    }
+
+    /// <summary>
+    /// What a reacting boss can see and do (IReactiveMechanic). Built by CombatManager.
+    /// </summary>
+    public class BossReactionContext
+    {
+        private readonly System.Action<string> _log;
+
+        public int Round { get; }
+        public RNGManager Rng { get; }
+        public DifficultyLevel Difficulty { get; }
+
+        /// <summary>The other enemies still in the fight (not down, not fled).</summary>
+        public System.Collections.Generic.IReadOnlyList<EnemyBase> Allies { get; }
+
+        /// <summary>The party members still standing.</summary>
+        public System.Collections.Generic.IReadOnlyList<Entity> Opponents { get; }
+
+        public BossReactionContext(int round, RNGManager rng, DifficultyLevel difficulty,
+            System.Collections.Generic.IReadOnlyList<EnemyBase> allies,
+            System.Collections.Generic.IReadOnlyList<Entity> opponents,
+            System.Action<string> log)
+        {
+            Round = round;
+            Rng = rng;
+            Difficulty = difficulty;
+            Allies = allies;
+            Opponents = opponents;
+            _log = log;
+        }
+
+        /// <summary>Add a line to the combat log (e.g. "The Cyclops roars in fury!").</summary>
+        public void Log(string message) => _log?.Invoke(message);
+    }
+
+    /// <summary>
     /// Skarn, the Eagle Bear's unique mechanic:
     /// - Above 50% HP: always grapples - one hit, then holds the target (slowing them,
     ///   itself taking no attack action) for a randomized 1-3 turns.
