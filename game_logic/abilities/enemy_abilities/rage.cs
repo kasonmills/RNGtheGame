@@ -28,12 +28,12 @@ namespace GameLogic.Abilities.EnemyAbilities
 
         /// <summary>
         /// Damage bonus %, defense reduction % and duration for this enemy's level. Same range as
-        /// before, reached at the level cap of 40 instead of 100; bosses above the cap use the cap's numbers.
+        /// before, reached at the level cap of 40 instead of 100; bosses keep climbing to level 45 (+87% / -43%).
         /// Level 1: +20% damage, -10% defense, 3 turns. Level 40: +80% damage, -40% defense, 5 turns.
         /// </summary>
         private (int damageBonus, int defenseReduction, int duration) GetRageStats()
         {
-            int level = Math.Min(_enemyLevel, GameLogic.Items.LevelCaps.MaxLevel);
+            int level = Math.Min(_enemyLevel, GameLogic.Items.LevelCaps.MaxBossLevel);
             int steps = GameLogic.Items.LevelCaps.MaxLevel - 1;
             return (20 + ((level - 1) * 60 / steps),    // 20 to 80
                     10 + ((level - 1) * 30 / steps),    // 10 to 40

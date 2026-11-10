@@ -268,27 +268,6 @@ namespace GameLogic.Combat
             CurrentTurnNumber = 0;
             IsEndOfRoundTurn = false;
 
-            foreach (var enemy in _enemies)
-            {
-                // Enemies are as strong as the difficulty says (once per enemy - a boss fought
-                // again after a loss isn't made stronger again)
-                _difficultyScaler.ApplyDifficultyToEnemy(enemy);
-
-                if (enemy is BossEnemy boss)
-                {
-                    // MVP (decided 2026-10-14): the old boss strength multipliers (+15% per boss
-                    // beaten, +50% per repeat fight) are switched off - boss strength is to come
-                    // from the party's level through the difficulty scaler (Bucket A #11).
-                    // Kept for a possible update/DLC:
-                    // _bossManager?.ApplyBossScaling(boss);
-
-                    // A boss is the same object every attempt - start it at full health, and
-                    // reset its mechanic so a new attempt doesn't carry over grapple/charge state.
-                    boss.Health = boss.MaxHealth;
-                    boss.Mechanic?.Reset();
-                }
-            }
-
             // The party: the player plus up to three companions who are in the party and standing
             _party.Clear();
             _sittingOut.Clear();
@@ -308,6 +287,39 @@ namespace GameLogic.Combat
 
                 // Benched, or already down when the fight began
                 _sittingOut.AddRange(companions.OfType<CompanionBase>().Where(c => !_party.Contains(c)).Distinct());
+            }
+
+            // The enemies - set up once the fighting party is known (a boss's level comes from it)
+            foreach (var enemy in _enemies)
+            {
+                if (enemy is BossEnemy boss)
+                {
+                    // MVP (decided 2026-10-14): the old boss strength multipliers (+15% per boss
+                    // beaten, +50% per repeat fight) are switched off - boss strength comes from
+                    // the party's level through the difficulty scaler (Bucket A #11).
+                    // Kept for a possible update/DLC:
+                    // _bossManager?.ApplyBossScaling(boss);
+
+                    // A boss is the same object every attempt, so it is rebuilt fresh each fight:
+                    // at the fighting party's average level + 5, capped at 45 (decided 2026-10-14 /
+                    // 2026-11-10), or at its own level if it has a fixed one (Skarn, the tutorial).
+                    // InitializeStats also clears DifficultyApplied, so the difficulty below is
+                    // applied once to the fresh stats and never stacks across attempts.
+                    int bossLevel = boss.HasFixedLevel ? boss.Level : GetBossLevelForParty();
+                    boss.InitializeStats(bossLevel);
+                    boss.ActiveEffects.Clear(); // Nothing left over from a lost attempt
+
+                    // Reset its mechanic so a new attempt doesn't carry over grapple/charge state
+                    boss.Mechanic?.Reset();
+                }
+
+                // Enemies are as strong as the difficulty says (once per enemy)
+                _difficultyScaler.ApplyDifficultyToEnemy(enemy);
+
+                if (enemy is BossEnemy freshBoss)
+                {
+                    freshBoss.Health = freshBoss.MaxHealth;
+                }
             }
 
             _allCombatants.Clear();
@@ -638,6 +650,18 @@ namespace GameLogic.Combat
         /// True when a boss is among the enemies - the party can't flee (decided 2026-10-14).
         /// </summary>
         public bool IsBossFight() => _enemies.Any(e => e is BossEnemy);
+
+        /// <summary>
+        /// The level a boss fights at against this fight's party: the plain average level of the
+        /// fighting party (the player and the companions fighting - not the benched ones), rounded
+        /// up, + 5, capped at 45. Set when the fight starts.
+        /// </summary>
+        public int GetBossLevelForParty()
+        {
+            var companionLevels = _party.Where(member => member != _player).Select(member => member.Level).ToArray();
+            int partyLevel = _difficultyScaler.CalculatePartyLevel(_player?.Level ?? 1, companionLevels);
+            return _difficultyScaler.GetBossLevel(partyLevel);
+        }
 
         /// <summary>
         /// The party's chance (1-100) to escape right now: the lowest flee chance among the

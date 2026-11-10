@@ -34,14 +34,19 @@ namespace GameLogic.Entities.Player
             Level = 1;
             Experience = 0;
 
-            // Base stats (before class bonuses)
-            int baseHealth = 20;
+            // Base stats. Health raised from 20 to 100 (decided 2026-11-10) so the player is on the
+            // same footing as the companions and the harder difficulties have room to lower it -
+            // first pass, to be tested and adjusted.
+            int baseHealth = 100;
             int baseSpeed = 10;
 
-            // Apply class bonuses to base stats
-            MaxHealth = (int)(baseHealth * (1.0 + PlayerClassInfo.GetHealthBonus(playerClass)));
+            // MVP: no class bonuses (player classes are out of the MVP). The Warrior default's
+            // +20% health was turning 20 into 24. Kept for a possible update:
+            // MaxHealth = (int)(baseHealth * (1.0 + PlayerClassInfo.GetHealthBonus(playerClass)));
+            // Speed = (int)(baseSpeed * (1.0 + PlayerClassInfo.GetSpeedBonus(playerClass)));
+            MaxHealth = baseHealth;
             Health = MaxHealth;
-            Speed = (int)(baseSpeed * (1.0 + PlayerClassInfo.GetSpeedBonus(playerClass)));
+            Speed = baseSpeed;
 
             Gold = 0;
             PlayTime = TimeSpan.Zero;
@@ -192,7 +197,9 @@ namespace GameLogic.Entities.Player
         private void LevelUp()
         {
             Level++;
-            MaxHealth += rd.Next(1, 7);
+            // Same health growth as the companions (NPCBase.LevelUp) - decided 2026-11-10 with the
+            // 100 HP start; was a random +1 to +6
+            MaxHealth += 10 + (Level / 5);
             Health = MaxHealth; // Full heal on level up
 
             // Increase Speed every few levels (small incremental gains)

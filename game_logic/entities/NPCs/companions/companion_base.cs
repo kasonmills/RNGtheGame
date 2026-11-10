@@ -142,14 +142,16 @@ namespace GameLogic.Entities.NPCs.Companions
 
         /// <summary>
         /// Base damage roll for a basic attack, before effects, crits and defense: the weapon's
-        /// range (1-3 unarmed) plus 1 per 2 levels. Companions that don't fight with a weapon override this.
+        /// range (1-3 unarmed) plus 1 per 2 levels, ×2 like the player (Combat.DamageCalculator
+        /// .PartyDamageScale, 2026-11-10). Companions that don't fight with a weapon override this
+        /// (Chance's cat-form hit is not doubled).
         /// </summary>
         public virtual int RollAttackDamage(RNGManager rng)
         {
             int weaponDamage = EquippedWeapon != null
                 ? rng.Roll(EquippedWeapon.MinDamage, EquippedWeapon.MaxDamage)
                 : rng.Roll(1, 3);
-            return weaponDamage + Level / 2; // Same level bonus as the player
+            return (weaponDamage + Level / 2) * Combat.DamageCalculator.PartyDamageScale; // Same level bonus and scale as the player
         }
 
         /// <summary>

@@ -16,6 +16,14 @@ namespace GameLogic.Entities.Enemies.Bosses
         // Boss Tracking
         public bool IsDefeated { get; set; }            // Has this boss been defeated at least once?
         public int BossNumber { get; set; }             // Sequence number for scaling (managed by BossManager)
+
+        /// <summary>
+        /// True for a boss that keeps the level it was defined with instead of following the
+        /// party (party average + 5, set by CombatManager when the fight starts). Only Skarn, the
+        /// tutorial boss, so the tutorial can be tuned against the player's starting stats
+        /// (decided 2026-11-10).
+        /// </summary>
+        public bool HasFixedLevel { get; set; }
         public int TimesDefeated { get; set; }          // How many times this specific boss has been defeated
 
         // Unique Combat Mechanics

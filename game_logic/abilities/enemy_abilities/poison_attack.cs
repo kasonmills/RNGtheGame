@@ -33,7 +33,7 @@ namespace GameLogic.Abilities.EnemyAbilities
         {
 
             // Calculate poison damage based on enemy level (same range as before, reached at
-            // the level cap of 40 instead of 100; bosses above the cap use the cap's numbers)
+            // the level cap of 40 instead of 100; bosses keep climbing to level 45: 13-26)
             // Level 1: 2-4 damage per turn for 3 turns
             // Level 40: 12-24 damage per turn for 5 turns
             var (minPoisonDamage, maxPoisonDamage, duration) = GetPoisonStats();
@@ -58,7 +58,7 @@ namespace GameLogic.Abilities.EnemyAbilities
         /// </summary>
         private (int min, int max, int duration) GetPoisonStats()
         {
-            int level = Math.Min(_enemyLevel, GameLogic.Items.LevelCaps.MaxLevel);
+            int level = Math.Min(_enemyLevel, GameLogic.Items.LevelCaps.MaxBossLevel);
             return (2 + (level / 4),     // 2 to 12
                     4 + (level / 2),     // 4 to 24
                     3 + (level / 20));   // 3 to 5 turns

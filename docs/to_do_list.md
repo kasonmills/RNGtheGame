@@ -17,8 +17,7 @@
 # 1. Ready to build
 
 ### Bosses - strength
-- [ ] 🔴 **Hand-set level-1 stats for every boss** (health, damage, defense, accuracy, crit, speed, rewards) to replace the shared stopgap formula. Then tune Skarn against the player's starting stats. (notes: Bucket A #11)
-- [ ] **A boss's level = the party's average level + 5**, set when the fight starts, applied through `DifficultyScaler`. Count only the fighting party. Bosses can go above 40, up to 45. The scaler's boss multipliers (health x3, damage x1.5, XP x5, gold x3-5) stay on top of the hand-set stats (decided 2026-11-10). The party level is a plain average, rounded up (`CalculatePartyLevel()` switched 2026-11-10). Changes `GetEffectiveEnemyLevel()`'s cap and its test.
+- [ ] 🔴 **Hand-set level-1 stats for every boss** (health, damage, defense, accuracy, crit, speed, rewards) to replace the shared stopgap formula. A first draft is in `boss_stats_draft.md` (2026-11-10), waiting on your review. Then tune Skarn against the player's starting stats. (notes: Bucket A #11) When they go in, switch on `DifficultyScaler`'s boss multipliers on top of them (health x3, damage x1.5, XP x5, gold x3-5 - decided 2026-11-10); today's stopgap formula already builds boss strength in, so they aren't applied yet. Bosses already fight at the party's average level + 5 (section 3), so the level-1 stats are what that level grows from. Skarn keeps a fixed level (2 today) - tune him against the player's starting stats.
 
 ### Bosses - one by one
 - [ ] **#2 Librarian-Monk - shield.** He raises a shield that reduces the damage of incoming attacks. The shield has its own HP, drained by the amount it blocks. It breaks at 0, and he has a 3-turn cooldown before he can raise it again. Needs a new `IBossMechanic` and a damage-pipeline hook. (Open details in section 2.)
@@ -57,6 +56,8 @@
 - [ ] **The Mage: rework `companion_mage.cs`** into the angry wild-magic Mage. ⛔ Design in section 2, and needs the magic system.
 
 ### Combat
+- [ ] **Rebalance the regular enemies for the new player** (100 HP, party damage ×2 - 2026-11-10). Goblin, Bandit and Dragon were tuned for the old 24 HP player and will now be pushovers. Do it with the enemy list (section 2), the same way as the boss sheet (`boss_stats_draft.md`).
+- [ ] **Weapon screens show the un-doubled damage.** The party's weapon damage is ×2 in the damage calculation (`DamageCalculator.PartyDamageScale`), but `Weapon.GetInfo()`/`GetDisplayName()` still show the weapon's own range. Show the real range, or fold the ×2 into the item numbers once the scale is settled.
 - [ ] **Enemy accuracy bonus per difficulty** - none on Normal, rising through Hard and Difficult to Unfair. (Numbers in section 2.)
 - [ ] **Enemy XP and gold values become the guaranteed base reward**, with a random extra on top. Do this together with XP rework item "Random XP rewards" below.
 - [ ] **Reposition action** - a 5th combat button. Swap places with a party member. It costs the turn of whoever chose it; the partner doesn't lose a turn. Front positions are attacked more often; back positions are harder to hit. Add it to the tutorial's "try each action" list. ⛔ Needs the position layout (section 2).
@@ -175,7 +176,7 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Enemy accuracy per difficulty** - the bonus per level and a ceiling (e.g. never above 95%).
 - [ ] **Positions** - how many (front/back rows or a line of four), how much more often front positions are attacked, how much harder back positions are to hit, whether position affects the party's own attacks, the starting formation, ranged-weapon penalties per position, which weapons count as ranged, and melee rules.
 - [ ] **Confirm the combat defaults:** speed ties broken at random; the player gets up at 1 HP if the party wins while they're down; an enemy that flees drops each loot item with a 50% chance.
-- [ ] **Small numbers:** percentage bonuses round down to nothing on small hits. Use the fraction as a chance to round up, raise all the base numbers, or both?
+- [ ] **Small numbers:** percentage bonuses round down to nothing on small hits. Use the fraction as a chance to round up, raise all the base numbers, or both? (Partly eased 2026-11-10: the player's health is 100 and the party's damage ×2, so party hits are bigger. Enemy hits are still small until the enemies are rebalanced.)
 - [ ] **How long spells and buffs last** (with the magic system).
 - [ ] **Combat screen timing:** queue the events and play them back, or have combat advance one turn at a time?
 
@@ -300,6 +301,18 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Items in combat** - anyone can use an item on any standing party member. A revive works on a fallen companion or the fallen player, the revived member is slower the next round, and a revive can't target someone standing.
 - [ ] **The fight goes on** while anyone in the party stands; if the party wins while the player is down, the player gets up at 1 HP.
 - [ ] **Bosses** have stats (Skarn about 160 HP, 16-30 damage - probably too strong, note it); the old 15%/50% multipliers are off; a beaten boss can't be challenged again; boss fights include the party.
+- [ ] **Stronger player and party** (2026-11-10, first pass - to be tested and adjusted). Check:
+  - A new player starts at 100 HP and speed 10, with no class bonus (the Warrior +20% that made 24 is commented out - classes are out of the MVP).
+  - Each level adds 10 + level/5 HP, the same as the companions (it was +1-6).
+  - The player's and every weapon-using companion's hits are doubled (weapon roll + level bonus, ×2 - `DamageCalculator.PartyDamageScale`), unarmed too. Chance's cat-form hit (his level to 100) is not.
+  - Test changed: `CalculatePlayerAttackDamage_DamageRange_WithinExpectedBounds` now expects the ×2 range.
+- [ ] **Boss level follows the party** (2026-11-10). When a boss fight starts, the boss is rebuilt at the fighting party's plain average level (rounded up) + 5, capped at 45 (`LevelCaps.MaxBossLevel`); Skarn keeps his fixed level (`HasFixedLevel`). Difficulty is applied on top. Check:
+  - A level-10 player with companions at 8 and 9 faces a level-14 boss (average 9, rounded up, + 5); benched companions don't count.
+  - A max-level party faces a level-45 boss, never higher.
+  - Skarn is level 2 in the tutorial whatever the party's level.
+  - Losing to a boss and trying again: the boss comes back at full health, at the current party's level, with no effects left on it, and the difficulty isn't applied twice.
+  - Poison and rage keep climbing past level 40 for bosses up to 45 (poison 13-26 per turn, rage +87% damage at 45).
+  - Test changed: `GetEffectiveEnemyLevel_CapsAt100` is now `..._Boss_CapsAt45`; new `GetBossLevel_IsPartyLevelPlusFive_CappedAt45`.
 - [ ] **One difficulty list** (2026-11-10) - `DifficultyScaler` and the XP multiplier now use `DifficultyLevel` (Normal / Hard / Difficult / Unfair) instead of their own lists; numbers unchanged, Hard is the 1x baseline. The party level is a plain average now (the weighted one is commented out). Check: it builds; `DifficultyScalerTests` and `LevelingSystemTests` pass (updated: names, two party-level answers, the "Fair Fight" danger label - the general danger labels Manageable / Fair Fight / Tough / Dangerous are placeholders to reword).
 - [ ] **No console output anywhere** (2026-11-10). Every `Console.WriteLine`/`Write`/`ReadKey`/`ReadLine`/`Clear` in the repo is gone from live code. Check:
   - It builds. Nothing in `game_logic` prints; messages outside a fight come through `GameLog.MessageLogged` (nothing subscribes yet - an autoload can show them as pop-ups), and fight text through `CombatMessage`.

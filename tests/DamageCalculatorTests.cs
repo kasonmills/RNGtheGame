@@ -573,10 +573,12 @@ namespace GameLogic.Tests
                     damages.Add(result.FinalDamage);
             }
 
-            // Assert - Weapon damage 10-20 (level 1 means no level bonus), minus the
-            // Goblin's flat Defense reduction, floored at 1 (never less than 1 damage).
-            int expectedMin = Math.Max(1, 10 - enemy.Defense);
-            int expectedMax = Math.Max(1, 20 - enemy.Defense);
+            // Assert - Weapon damage 10-20 (level 1 means no level bonus), ×2 for the party
+            // (DamageCalculator.PartyDamageScale, 2026-11-10), minus the Goblin's flat Defense
+            // reduction, floored at 1 (never less than 1 damage).
+            int scale = DamageCalculator.PartyDamageScale;
+            int expectedMin = Math.Max(1, 10 * scale - enemy.Defense);
+            int expectedMax = Math.Max(1, 20 * scale - enemy.Defense);
             foreach (var damage in damages)
             {
                 Assert.InRange(damage, expectedMin, expectedMax);

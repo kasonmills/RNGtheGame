@@ -27,6 +27,14 @@ namespace GameLogic.Combat
         /// </summary>
         public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Normal;
 
+        /// <summary>
+        /// The player's and the companions' weapon damage (weapon roll + level bonus) is
+        /// multiplied by this - 2× decided 2026-11-10, a first pass to be tested and adjusted.
+        /// Chance's cat-form hit (his level to 100) is not multiplied. Weapon info screens still
+        /// show the weapon's own numbers.
+        /// </summary>
+        public const int PartyDamageScale = 2;
+
         public DamageCalculator(RNGManager rngManager)
         {
             _rngManager = rngManager;
@@ -180,7 +188,7 @@ namespace GameLogic.Combat
             switch (attacker)
             {
                 case Player player:
-                    int playerDamage = GetPlayerBaseDamage(player) + player.Level / 2; // +1 damage per 2 levels
+                    int playerDamage = (GetPlayerBaseDamage(player) + player.Level / 2) * PartyDamageScale; // +1 damage per 2 levels, then ×2
                     return ApplyPlayerPassiveAbilities(player, playerDamage);
 
                 case CompanionBase partyCompanion:

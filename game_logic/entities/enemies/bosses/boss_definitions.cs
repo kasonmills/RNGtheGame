@@ -38,7 +38,10 @@ namespace GameLogic.Entities.Enemies.Bosses
                     level: 2,
                     mechanicType: BossMechanicType.MultiPhase)
                 {
-                    Mechanic = new EagleBearMechanic()
+                    Mechanic = new EagleBearMechanic(),
+                    // The tutorial boss keeps his own level - every later boss follows the party
+                    // (average level + 5) - decided 2026-11-10
+                    HasFixedLevel = true
                 }
             };
         }

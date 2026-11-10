@@ -27,6 +27,12 @@ namespace GameLogic.Items
         /// </summary>
         public const int MaxLevel = 40;
 
+        /// <summary>
+        /// Bosses can go 5 levels past MaxLevel (decided 2026-11-10): a boss is the fighting
+        /// party's average level + 5, so a max-level party still faces a boss 5 levels higher.
+        /// </summary>
+        public const int MaxBossLevel = MaxLevel + 5;
+
         public const int Common = 10;
         public const int Uncommon = 20;
         public const int Rare = 30;

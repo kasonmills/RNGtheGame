@@ -190,6 +190,7 @@ RNGtheGame/
 │   ├── godot_frontend_plan.md           # Planned folder/file structure of the Godot frontend
 │   ├── abilities.md
 │   ├── boss_ideas_archive.md
+│   ├── boss_stats_draft.md              # Draft level-1 stats for every boss (not in the code yet)
 │   └── player_class_system.md
 │
 ├── tools/

@@ -445,20 +445,36 @@ namespace GameLogic.Systems
         /// </summary>
         public int GetEffectiveEnemyLevel(int baseLevel, int partyLevel, bool isElite = false, bool isBoss = false)
         {
+            // Bosses: the party's level + 5, capped at 45 (the real rule, used by CombatManager)
+            if (isBoss)
+            {
+                return GetBossLevel(partyLevel);
+            }
+
             // In level-scaling games, enemies are always at party level
             int effectiveLevel = partyLevel;
 
-            // Bosses/elites can be considered "higher level" for display purposes
-            if (isBoss)
-            {
-                effectiveLevel += 5; // Bosses are shown as +5 levels
-            }
-            else if (isElite)
+            if (isElite)
             {
                 effectiveLevel += 2; // Elites are shown as +2 levels
             }
 
             return Math.Min(effectiveLevel, 100); // Cap at level 100
+        }
+
+        /// <summary>
+        /// How many levels above the party a boss is (decided 2026-10-14).
+        /// </summary>
+        public const int BossLevelsAboveParty = 5;
+
+        /// <summary>
+        /// A boss's level for a party at this level (CalculatePartyLevel - the plain average of
+        /// the fighting party): the party level + 5, between 1 and LevelCaps.MaxBossLevel (45).
+        /// Bosses with HasFixedLevel (Skarn, the tutorial) don't use this.
+        /// </summary>
+        public int GetBossLevel(int partyLevel)
+        {
+            return Math.Clamp(partyLevel + BossLevelsAboveParty, 1, GameLogic.Items.LevelCaps.MaxBossLevel);
         }
 
         /// <summary>

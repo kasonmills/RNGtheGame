@@ -754,7 +754,7 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void GetEffectiveEnemyLevel_CapsAt100()
+        public void GetEffectiveEnemyLevel_Boss_CapsAt45()
         {
             // Arrange
             var scaler = new DifficultyScaler(DifficultyLevel.Hard);
@@ -762,8 +762,20 @@ namespace GameLogic.Tests
             // Act
             int level = scaler.GetEffectiveEnemyLevel(baseLevel: 1, partyLevel: 99, isBoss: true);
 
-            // Assert - 99 + 5 = 104, but should cap at 100
-            Assert.Equal(100, level);
+            // Assert - 99 + 5 = 104, but a boss caps at 45 (decided 2026-11-10; was 100)
+            Assert.Equal(45, level);
+        }
+
+        [Theory]
+        [InlineData(1, 6)]    // A level-1 party faces a level-6 boss
+        [InlineData(20, 25)]
+        [InlineData(40, 45)]  // A max-level party: 5 above the level cap
+        [InlineData(43, 45)]  // Never above 45
+        public void GetBossLevel_IsPartyLevelPlusFive_CappedAt45(int partyLevel, int expected)
+        {
+            var scaler = new DifficultyScaler(DifficultyLevel.Hard);
+
+            Assert.Equal(expected, scaler.GetBossLevel(partyLevel));
         }
 
         [Fact]
