@@ -24,7 +24,7 @@ namespace GameLogic.Entities.Enemies.Bosses
         public int BossesDefeated { get { return _bossesDefeated; } }
 
         // Total bosses in the roster - tracks whatever has been registered so far
-        // (currently 1 of the confirmed 9; grows as the other 8 are added).
+        // (8 entries today - the Cyclops Brothers are one; the final boss is still to come).
         public int TotalBosses { get { return _allBosses.Count; } }
 
         // Configuration
@@ -103,6 +103,49 @@ namespace GameLogic.Entities.Enemies.Bosses
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// The boss list for a Godot screen, in story order (decided 2026-11-11): only the next
+        /// boss the player hasn't beaten shows its information. Every boss after it is locked -
+        /// no name, title or description, nothing at all, just that it is locked. Bosses already
+        /// beaten show their name and title (my default - they have been met).
+        /// </summary>
+        public List<BossListEntry> GetBossList()
+        {
+            var list = new List<BossListEntry>();
+            string nextBossId = GetNextBoss()?.BossId;
+
+            for (int i = 0; i < _bossOrder.Count; i++)
+            {
+                var boss = _allBosses[_bossOrder[i]];
+                bool defeated = IsBossDefeated(boss.BossId);
+                bool isNext = boss.BossId == nextBossId;
+
+                var entry = new BossListEntry
+                {
+                    Position = i + 1,
+                    IsDefeated = defeated,
+                    IsNext = isNext,
+                    IsLocked = !defeated && !isNext
+                };
+
+                if (!entry.IsLocked)
+                {
+                    entry.BossId = boss.BossId;
+                    entry.Name = boss.Name;
+                    entry.Title = boss.Title;
+                }
+                if (isNext)
+                {
+                    entry.Description = boss.Description;
+                    entry.UniqueAbilityDescription = boss.UniqueAbilityDescription;
+                }
+
+                list.Add(entry);
+            }
+
+            return list;
         }
 
         /// <summary>
@@ -294,5 +337,23 @@ namespace GameLogic.Entities.Enemies.Bosses
         {
             _bossesDefeated = count;
         }
+    }
+
+    /// <summary>
+    /// One line of the boss list (BossManager.GetBossList). A locked entry has only Position and
+    /// IsLocked - every other field is null, so a screen can't show anything about that boss.
+    /// </summary>
+    public class BossListEntry
+    {
+        public int Position { get; set; }                    // 1 = first in story order
+        public bool IsDefeated { get; set; }
+        public bool IsNext { get; set; }                     // The next boss to beat - the only one with full information
+        public bool IsLocked { get; set; }                   // Show "Locked" - nothing else
+
+        public string BossId { get; set; }                   // Null when locked
+        public string Name { get; set; }                     // Null when locked
+        public string Title { get; set; }                    // Null when locked
+        public string Description { get; set; }              // The next boss only
+        public string UniqueAbilityDescription { get; set; } // The next boss only
     }
 }

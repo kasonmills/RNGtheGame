@@ -17,35 +17,12 @@
 # 1. Ready to build
 
 ### Bosses - strength
-- [ ] 🔴 **Hand-set level-1 stats for every boss** (health, damage, defense, accuracy, crit, speed, rewards) to replace the shared stopgap formula. A first draft is in `boss_stats_draft.md` (2026-11-10), waiting on your review. Then tune Skarn against the player's starting stats. (notes: Bucket A #11) When they go in, switch on `DifficultyScaler`'s boss multipliers on top of them (health x3, damage x1.5, XP x5, gold x3-5 - decided 2026-11-10); today's stopgap formula already builds boss strength in, so they aren't applied yet. Bosses already fight at the party's average level + 5 (section 3), so the level-1 stats are what that level grows from. Skarn keeps a fixed level (2 today) - tune him against the player's starting stats.
+Nothing left here - the hand-set boss stats are built (section 3). Boss rewards are with the XP rework ("Enemy XP and gold values become the guaranteed base reward", Combat).
 
 ### Bosses - one by one
-- [ ] **#2 Librarian-Monk - shield.** He raises a shield that reduces the damage of incoming attacks. The shield has its own HP, drained by the amount it blocks. It breaks at 0, and he has a 3-turn cooldown before he can raise it again. Needs a new `IBossMechanic` and a damage-pipeline hook. (Open details in section 2.)
-- [ ] **#3 Giant House Centipede - poison bite.**
-  - Every normal bite has a chance to poison. Chance by difficulty, rolled fresh each bite: Normal 25-35%, Hard 35-45%, Difficult 45-55%, Unfair 55-65%.
-  - Duration by difficulty, also rolled: Normal 2-3 turns, Hard 3-4, Difficult 3-5, Unfair 4-6.
-  - Damage per turn comes from his level (existing `PoisonedEffect` formula).
-  - Poison stacks, but a restack only adds the band's minimum duration (it doesn't refresh to a full roll).
-  - Targeting: favours unpoisoned targets about 3-4x, but doesn't strictly avoid poisoned ones.
-- [ ] **#4/#5 Cyclops Brothers - always attack together.**
-  - They take 2 opponent slots, and the other 2 stay empty. When one brother attacks, the other joins in on the same target. Only attacks are joined; defend and abilities are done alone.
-  - One brother is faster than the other. A brother's Defend ends on his own next turn, and joining his brother's attack doesn't count as his turn.
-  - When one falls, the other enrages and, in a bonus turn at the end of the round, revives him at 25% health. There is no limit on revives. Both down in the same round = win.
-  - XP and rewards only once both are beaten (`DefeatBoss` called once).
-- [ ] **#6 Demon Prince - a random condition on every hit.** He picks from 7+ equally likely conditions, some unique to him. Nothing on a miss. A 0-damage hit still applies it. His attack power is lower to balance this. Several conditions can sit on one target at once. ⛔ Needs his unique conditions designed (section 2).
-- [ ] **#7 Slime Dragon - spawns draglings whenever hit.** The engine pieces are built (reactive hook, mid-fight joining, end-of-round bonus turn - section 3); the open details in section 2 come first.
-  - End-of-round spawn (decided 2026-11-09): when a round ends, if fewer than 3 draglings are alive, he takes an extra turn that spawns more. With 3 or more alive, no extra turn is added that round.
-  - Farming draglings is allowed, with diminishing rewards (decided 2026-11-10, built - section 3): the dragling enemy sets `DiminishingRewardsGroup = "Dragling"`.
-- [ ] **#8 Captain of the Royal Guard (Risk as a boss)** - very high crit chance (about 55%, higher on harder difficulties) and a very high crit multiplier.
-- [ ] **Companion → boss plumbing for Risk** - a leave-party trigger, and a way to turn a `CompanionBase` into a matching `BossEnemy`.
-- [ ] **#9 Princess (final boss).** 🤫 She is a hidden twist: no foreshadowing text anywhere.
-  - Two turns per round in two opponent slots. Her second turn's speed = her speed minus a random amount: the gap is wide on easy difficulties (about -7 on Normal) and narrow on hard ones (about -1 on Unfair).
-  - Each turn she picks one of: **force a skip** (a random opponent loses their next turn), **attack** (random target), or **call two castle guards** (only when no guards are alive, uses her turn).
-  - Her two actions in a round never hit the same person. If only one opponent is left, her second turn is skipped.
-  - A skipped turn does nothing at all. A Defend still ends when the skipped turn would have come.
-  - Castle guards: a new enemy type with normal rewards (farming them is accepted).
-  - Quest-giver → boss transition (she gives story quests for most of the game).
-  - 🔴 **Spoiler fix:** `GameStartup.InitializeQuests()` reveals the final quest at game start. Reveal it only once she is unlocked.
+- [ ] **#6 Demon Prince - add his unique conditions.** He is built (2026-11-11, section 3) with the 5 existing conditions; the design is 7+ equally likely conditions, some unique to him. Each new one is one entry in `DemonPrinceMechanic.ConditionPool`. ⛔ Needs his unique conditions designed (section 2).
+- [ ] **Companion → boss plumbing for Risk** - a leave-party trigger, and a way to turn the companion Risk into the Captain boss (built 2026-11-11 as a standalone boss - section 3), with his gear. ⛔ When he leaves and what happens to his gear are in section 2.
+- [ ] **Princess: quest-giver → boss transition.** 🤫 She gives story quests for most of the game, then becomes the final boss (built 2026-11-11 as a standalone boss - section 3). Needs the story quests and the moment she turns. No foreshadowing text anywhere.
 
 ### Companions
 - [ ] **Save the per-companion direct-control toggle** (it is lost on load today).
@@ -59,7 +36,7 @@
 - [ ] **Rebalance the regular enemies for the new player** (100 HP, party damage ×2 - 2026-11-10). Goblin, Bandit and Dragon were tuned for the old 24 HP player and will now be pushovers. Do it with the enemy list (section 2), the same way as the boss sheet (`boss_stats_draft.md`).
 - [ ] **Weapon screens show the un-doubled damage.** The party's weapon damage is ×2 in the damage calculation (`DamageCalculator.PartyDamageScale`), but `Weapon.GetInfo()`/`GetDisplayName()` still show the weapon's own range. Show the real range, or fold the ×2 into the item numbers once the scale is settled.
 - [ ] **Enemy accuracy bonus per difficulty** - none on Normal, rising through Hard and Difficult to Unfair. (Numbers in section 2.)
-- [ ] **Enemy XP and gold values become the guaranteed base reward**, with a random extra on top. Do this together with XP rework item "Random XP rewards" below.
+- [ ] **Enemy XP and gold values become the guaranteed base reward**, with a random extra on top. Do this together with XP rework item "Random XP rewards" below. Bosses too: today a boss's fight XP is rolled from its level and its gold from the loot table, so `BossEnemy.XPValue`/`GoldValue` and the scaler's boss reward multipliers (XP x5, gold x3-5) aren't used yet - wire them in here (decided 2026-11-10, left out of the boss stat build 2026-11-11).
 - [ ] **Reposition action** - a 5th combat button. Swap places with a party member. It costs the turn of whoever chose it; the partner doesn't lose a turn. Front positions are attacked more often; back positions are harder to hit. Add it to the tutorial's "try each action" list. ⛔ Needs the position layout (section 2).
 - [ ] **Random names for regular enemies**, picked fresh each fight, with no repeats in one fight. Bosses keep their own names. (Name list in section 2.)
 - [ ] **Fix the buff/cooldown timing** - effect timers tick at the end of the round they were applied in, so 1-turn buffs vanish before they're used. Settle it with the magic system's spell durations.
@@ -92,7 +69,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 ### Quests
 - [ ] 🔴 **Give quest rewards to the player** (gold, XP, items). Today claiming does nothing.
 - [ ] 🔴 **Wire quest progress into play** - for the boss quests and the new NPC quests only.
-- [ ] **Main quests unlock in story order**, with a new "locked" quest state that is saved.
+- [ ] **Main quests unlock in story order**, with a new "locked" quest state that is saved. (Boss quests already follow the boss order since 2026-11-11 - only the next boss's quest is shown, later ones stay `NotDiscovered`, worked out from the boss progress so nothing new is saved. This item is for the other main/story quests.)
 - [ ] **Save quest item rewards** (only gold and XP are saved today).
 - [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. ⛔ Each quest's content comes from section 2.
 - [ ] **New NPCs:** the magic component seller (rarer components only) and the blacksmith's apprentice (weapon enchanting, unlocked through his own quest line). There is no baker: the Shop Keeper sells the healing sweets and the common components.
@@ -153,13 +130,13 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Difficulty flavour text** - the placeholder lines in `GetDifficultyDescription` are for you to reword.
 
 ### Bosses
-- [ ] **Librarian-Monk:** how much the shield reduces per hit (flat or %); the shield's HP and what it scales with (level, difficulty, both); whether the cooldown starts on break or on raise; whether raising it costs his turn; when the AI raises it.
-- [ ] **Centipede:** should "a restack only adds the minimum duration" be the rule for every stacking damage-over-time effect (Burn, Bleed too), or only his poison?
-- [ ] **Cyclops Brothers:** their names (which also sets who is faster); what the enrage boosts, how much, for how long, and whether it stacks; their stats. Confirm: while one is down, his slot is skipped. Later: a combined attack with its own animation.
-- [ ] **Demon Prince:** his unique conditions (names and effects); which existing ones join the pool (Poisoned, Burn, Bleed, Grappled, Pinned); what happens when he lands a condition the target already has (stack, refresh or reroll); how much lower his attack is; what sets each condition's strength and duration.
-- [ ] **Slime Dragon:** does beating the main dragon end the fight, or must every dragling be cleared? How many draglings per hit, and is there a cap? How many his end-of-round turn spawns. Confirm: exactly 3 alive = no extra turn (it only happens with 0-2 alive), and the count is taken when the round ends (my defaults).
-- [ ] **Captain (Risk as a boss):** crit multiplier and crit chance per difficulty; why and when Risk leaves the party; what happens to his gear.
-- [ ] **Princess:** her action weights and how they shift with her health; the exact second-turn slowdown per difficulty and level; the castle guards' stats.
+- [ ] **Librarian-Monk:** his real name, title and description (the code has placeholders: "Librarian-Monk", "Keeper of the Library"), and where he is fought. Confirm the shield's level-1 health - 20 is my default (`LibrarianMonkMechanic.ShieldHealthAtLevel1`), which makes it 102 on Hard at level 8, about a third of his 306 HP. Confirm: a lost turn doesn't count toward his cooldown (my default). (The shield rules were decided 2026-11-11 - see `done.md`.)
+- [ ] **Centipede:** should "a restack only adds the minimum duration" be the rule for every stacking damage-over-time effect (Burn, Bleed too), or only his poison? (Built for his poison only, 2026-11-11 - any effect can now set its own restack rule through `AbilityEffect.OnReapplied`.) Also his real name, title and description (placeholders in the code: "Giant House Centipede", "the Many-Legged"), and where he is fought. Confirm my defaults: stacks multiply the poison's damage (2 stacks = twice the damage each turn), and the 3-4x target lean is 3.5x (weights 7 to 2).
+- [ ] **Cyclops Brothers:** their real names and text (placeholders since 2026-11-11: "Fast", the faster one, and "Slow"). What the enrage boosts, how much, for how long, and whether it stacks - my default is the existing Rage effect at his level (level 16: +43% damage, -21% defense, 3 turns; a second rage refreshes it, no stacking), and it keeps running after his brother is back up. Confirm: while one is down, his slot is skipped (the engine does this). Confirm: the fight pays both brothers' XP and gold (each rolls its own, like any two enemies) but counts as one boss beaten. Later: a combined attack with its own animation.
+- [ ] **Demon Prince:** his unique conditions (names and effects) - the user is still thinking about them (2026-11-11). Built for now with the 5 existing conditions (Poisoned, Burning, Bleeding, Grappled, Pinned), so confirm or change these defaults of mine: landing a condition the target already has follows that condition's normal rule (damage over time stacks, slows refresh); strength from his level - poison uses the poison formula, burn and bleed do the middle of it each turn for 3 turns (10 at level 21), grapple and pin take 4 + 1 per 10 levels of speed for 2 turns. Also his real title and description (placeholders: "Prince of Chaos"), and where he is fought.
+- [ ] **Slime Dragon:** built 2026-11-11 with my defaults (agreed for now) - 1 dragling per hit, at most 6 alive, the end-of-round turn tops them back up to 3 (exactly 3 alive = no bonus turn; counted when the round ends). Draglings fight at the party's level (his level - 5) with my stats (level 21: 120 HP, 8-17 damage, speed 21). Retune after testing. Also his real title and description (placeholders: "the Ever-Dripping"), and where he is fought.
+- [ ] **Captain (Risk as a boss):** built 2026-11-11 with my defaults (agreed for now) - crit chance Normal 50%, Hard 55%, Difficult 60%, Unfair 65%, at 2.5x on every difficulty. Still open: when exactly Risk leaves the party (the why is decided - 🤫 see `done.md`); what happens to his gear.
+- [ ] **Princess:** built 2026-11-11 with my defaults - confirm or change: action weights attack 50 / skip 25 / guards 25, shifting to 40 / 40 / 20 at half health or below; second-turn slowdown Normal 6-8, Hard 4-6, Difficult 2-4, Unfair 1-2 (the same at every level); a skip only goes to someone who isn't already losing a turn (otherwise she attacks); castle guards at the party's level (level 40: 260 HP, 15-31 damage, speed 20). Also her real name, title and description (placeholders: "The Princess", "Heir to the Throne").
 
 ### Companions
 - [ ] **Starting gear for each companion** - should it match the story (Boon's crossbow, Risk's Royal Guard armor)? Is it better for a late recruit? Can the player swap companions' gear, and can Chance wear any at all?
@@ -306,6 +283,69 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
   - Each level adds 10 + level/5 HP, the same as the companions (it was +1-6).
   - The player's and every weapon-using companion's hits are doubled (weapon roll + level bonus, ×2 - `DamageCalculator.PartyDamageScale`), unarmed too. Chance's cat-form hit (his level to 100) is not.
   - Test changed: `CalculatePlayerAttackDamage_DamageRange_WithinExpectedBounds` now expects the ×2 range.
+- [ ] **#7 Slime Dragon - spawns draglings** (built 2026-11-11). Boss #7 in `BossDefinitions` (`SlimeDragonMechanic`), plus a new regular enemy, `Dragling`. Check:
+  - Every attack that lands on him brings in a dragling (from the next round), up to 6 alive.
+  - When a round ends with 0-2 draglings alive, he takes a bonus turn and spawns enough to make 3. With 3 or more alive, no bonus turn.
+  - The fight never goes over 8 enemies.
+  - Beating him stops the spawning, and the fight goes on until every dragling is down.
+  - Draglings are at the party's level (his - 5), fast and weak; after 10 in one fight, each one's XP and gold drop by 20% (compounding).
+  - New tests: `SlimeDragonAndCaptainTests`. No existing test changed.
+- [ ] **#9 Princess - the final boss** (built 2026-11-11, standalone for now). 🤫 Last in `BossDefinitions` (`FinalBossMechanic`), plus a new regular enemy, `CastleGuard`. Every boss now exists. Check:
+  - Two opponent slots a round; her second is slower by the difficulty's gap (my default: Normal 6-8 ... Unfair 1-2). With only one party member standing, her second turn is skipped (`TurnSkipped`).
+  - Each turn: attack a random target, force a skip (the target loses their next turn - `SkipTurnEffect`), or call two castle guards (only when none of hers are alive; uses her turn). At half health or below she leans on skips.
+  - Her two actions in a round never go to the same person.
+  - A lost turn does nothing at all; a Defend still ends on time (the engine's lost-turn rules).
+  - Castle guards are at the party's level, with normal rewards.
+  - Her quest (the final quest) only appears once she is the next boss, and nothing before that names her.
+  - The final-battle path (`ChallengeFinalBoss`) starts her fight.
+  - New tests: `FinalBossTests`. No existing test changed.
+- [ ] **Only the next boss is shown** (decided and built 2026-11-11). Fixes both spoilers (the final quest and "Defeat Risk" showing at game start). Check:
+  - A new game shows only Skarn's boss quest. Every later boss quest, and the final quest, is hidden (`NotDiscovered`) - not even the boss's name shows anywhere.
+  - Beating a boss (the tutorial fight, or any boss fight) shows the next boss's quest (`QuestManager.UpdateBossQuestVisibility`, also run after loading a save).
+  - The final quest only appears once the final boss is the next boss.
+  - A save from before this rule: later boss quests that were shown but never accepted are hidden again; an accepted one is kept.
+  - The boss list (`BossManager.GetBossList()`, for the Godot screen): the next boss shows its name, title, description and mechanic; every boss after it is just "Locked" (all its fields are empty); beaten bosses show their name and title (my default - they've been met).
+  - Godot screens must never list `NotDiscovered` quests.
+  - Removed: `BossDefinitions.GetBossListSummary()` (commented out - it listed every boss by name; nothing used it).
+  - New tests: `BossVisibilityTests`. No existing test changed.
+- [ ] **#8 Captain of the Royal Guard - Risk as a boss** (built 2026-11-11, standalone for now). Boss #8 in `BossDefinitions` as "Risk, Captain of the Royal Guard" (`CaptainMechanic`). Check:
+  - His crit chance is 50% / 55% / 60% / 65% (Normal / Hard / Difficult / Unfair), set when the fight starts, and every crit is 2.5x.
+  - He is the fastest boss so far (speed 24 at level 32) with low base damage (21-37 at level 32, Hard) - his average hit is about 1.8x that with the crits.
+  - Nothing in his fight text says why he left the party.
+  - His quest stays hidden until he is the next boss (see "Only the next boss is shown").
+  - New tests: in `SlimeDragonAndCaptainTests`.
+- [ ] **#6 Demon Prince - a random condition on every hit** (built 2026-11-11, existing conditions only). He is boss #6 in `BossDefinitions` (`DemonPrinceMechanic`). Check:
+  - Every one of his turns is an attack, and every hit puts one of Poisoned, Burning, Bleeding, Grappled or Pinned on the target, each about 1 in 5. Nothing on a miss.
+  - A hit that does 0 damage still lands its condition (new `CombatAction.EffectEvenWithoutDamage`). Every other attack still needs to do damage for its effect to land.
+  - Several conditions can sit on one target at once; a repeat stacks (damage over time) or refreshes (slows).
+  - Strength from his level: at 21, poison 7-14 a turn, burn and bleed 10 a turn for 3 turns, grapple and pin -6 speed for 2 turns.
+  - His low damage (4-8 at level 1 - the sheet) feels balanced against the conditions.
+  - He gets a normal boss quest (only the final boss, last in the list, gets the final quest).
+  - New tests: `DemonPrinceTests`. No existing test changed.
+- [ ] **#4/#5 Cyclops Brothers - always attack together** (built 2026-11-11). One entry in `BossDefinitions`: "Fast" (placeholder name, speed 9) is the boss, "Slow" (speed 7) is his `PartnerBoss`, and `BossEncounter.StartBossEncounter` brings in both. Each has a `CyclopsBrotherMechanic`. Check:
+  - Only the two of them in the fight. Fast always acts before Slow.
+  - Whenever one attacks on his own turn, the other attacks the same target straight after (`AttackJoined`). Defend and abilities aren't joined. Joining doesn't end his Defend or use up his own turn.
+  - When one falls, the other enrages (Rage effect at his level - my default) and, in a bonus turn at the end of the round, brings his brother back at 25% health (`Revived`). No limit on revives.
+  - Both down in the same round wins the fight. It counts as one boss beaten (`DefeatBoss` only for Fast - the partner isn't in the boss list), and pays both brothers' XP and gold.
+  - New tests: `CyclopsBrothersTests`. No existing test changed.
+- [ ] **#3 Giant House Centipede - poison bite** (built 2026-11-11). He is boss #3 in `BossDefinitions` (`GiantCentipedeMechanic`, `CentipedePoisonEffect`). Check:
+  - Every one of his turns is a bite. The poison chance is rolled fresh each bite from the band - Normal 25-35%, Hard 35-45%, Difficult 45-55%, Unfair 55-65% - and only lands if the bite hits.
+  - The poison lasts a rolled 2-3 / 3-4 / 3-5 / 4-6 turns (Normal / Hard / Difficult / Unfair), and its damage per turn comes from his level (the existing poison formula - 5-10 at level 12).
+  - A second bite on someone he's already poisoned adds a stack and only the band's minimum turns (Hard: +3), not a full new roll. Each stack adds the damage again (2 stacks = 10-20 at level 12).
+  - He goes for party members who aren't poisoned about 3.5x as often, but still bites the poisoned ones sometimes.
+  - Other poisons (`PoisonedEffect`) and every other effect keep the old restack rule (a stack, back to full time) - the rule moved into `AbilityEffect.OnReapplied` without changing it.
+  - New tests: `GiantCentipedeTests`. No existing test changed.
+- [ ] **#2 Librarian-Monk - shield** (built 2026-11-11). He is boss #2 in `BossDefinitions` (`LibrarianMonkMechanic`, `ShieldEffect`). Check:
+  - The fight starts with his shield up (log line and `EffectApplied "Shield"` before round 1 - the pre-fight cutscene shows him raising it).
+  - Every hit on him while it's up is halved, rounded down; the shield takes the rest from its own health (`ShieldBlocked` event) and shatters at 0 (`EffectRemoved "Shield"`). A hit bigger than what the shield has left only has that much blocked. Poison and other damage over time aren't blocked.
+  - Shield health: 20 at level 1, grown like boss health, then the difficulty (Hard at level 8: 102; Normal 77, Unfair 204). Every raise is a full shield.
+  - Cooldown: 3 turns from a raise. The pre-fight raise counts as his turn 1, so turn 4 is his first chance to raise it again. When the cooldown is over and the shield is down, he raises it 40% / 50% / 60% / 70% of the time (Normal / Hard / Difficult / Unfair), which uses his turn; otherwise he attacks.
+  - New tests: `LibrarianMonkTests`. No existing test changed.
+- [ ] **Hand-set boss stats** (approved 2026-11-10, built 2026-11-11). Every boss's level-1 stats are in `BossStatSheet` (`boss_stat_sheet.cs`), keyed by boss id - all 9, though only Skarn exists in `BossDefinitions` so far; the others pick up their row when they are built. `BossEnemy.InitializeStats` grows them to the fight level with `DifficultyScaler.BossHealthAtLevel`/`BossDamageAtLevel`/`BossStatAtLevel` (health x(1 + 10% a level) x3, damage x(1 + 8% a level) x1.5, defense and speed + growth a level), and the difficulty is applied once on top. A boss with no row falls back to the old shared formula. Check:
+  - Skarn in the tutorial on Hard: 231 HP, 15-28 damage, defense 1, speed 12, 72% accuracy. Does the fight last about 5 rounds, and does his stoop (2.5x, 38-70) make Defend worth learning?
+  - The same fight on Normal (174 HP) and Unfair (462 HP, 30-56 damage).
+  - Losing and retrying doesn't make him stronger.
+  - New tests: `BossStatsTests` (growth formulas, the sheet, Skarn's numbers, difficulty applied once). No existing test changed.
 - [ ] **Boss level follows the party** (2026-11-10). When a boss fight starts, the boss is rebuilt at the fighting party's plain average level (rounded up) + 5, capped at 45 (`LevelCaps.MaxBossLevel`); Skarn keeps his fixed level (`HasFixedLevel`). Difficulty is applied on top. Check:
   - A level-10 player with companions at 8 and 9 faces a level-14 boss (average 9, rounded up, + 5); benched companions don't count.
   - A max-level party faces a level-45 boss, never higher.

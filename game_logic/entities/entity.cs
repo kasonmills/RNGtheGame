@@ -99,18 +99,9 @@ namespace GameLogic.Entities
 
             if (existingEffect != null)
             {
-                // Effect already exists
-                if (effect.CanStack)
-                {
-                    // Stack the effect
-                    existingEffect.AddStack();
-                    existingEffect.RefreshDuration();
-                }
-                else
-                {
-                    // Just refresh duration
-                    existingEffect.RefreshDuration();
-                }
+                // Effect already exists - it decides: by default a stacking effect gains a
+                // stack, and the duration goes back to full (AbilityEffect.OnReapplied)
+                existingEffect.OnReapplied(effect, this);
             }
             else
             {

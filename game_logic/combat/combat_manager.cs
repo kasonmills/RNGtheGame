@@ -350,6 +350,20 @@ namespace GameLogic.Combat
 
             Raise(CombatEventType.CombatStarted);
 
+            // Bosses that do something before round 1 (the Librarian-Monk raises his shield -
+            // shown in the pre-fight cutscene). Reported like any other change.
+            foreach (var startBoss in _enemies.OfType<BossEnemy>().ToList())
+            {
+                if (startBoss.Mechanic is IFightStartMechanic startMechanic)
+                {
+                    RunAndReport(() =>
+                    {
+                        string startMessage = startMechanic.OnFightStarting(startBoss, _difficultyScaler);
+                        if (startMessage != null) Log(startMessage);
+                    });
+                }
+            }
+
             if (CheckForCombatEnd()) return;
 
             BeginRound();
@@ -1472,6 +1486,12 @@ namespace GameLogic.Combat
                 return CombatAction.None(enemy);
             }
 
+            // A boss that picks its own targets (the Centipede favours the unpoisoned)
+            if (enemy is BossEnemy targetingBoss && targetingBoss.Mechanic is ITargetingMechanic targeting)
+            {
+                target = targeting.ChooseTarget(targetingBoss, GetLivingParty(), _rngManager) ?? target;
+            }
+
             // A boss's own unique mechanic (if any) gets first say - falls back to the
             // generic Behavior-based logic below if it returns null.
             if (enemy is BossEnemy boss && boss.Mechanic != null)
@@ -1789,6 +1809,32 @@ namespace GameLogic.Combat
                     : $"Armor blocked {result.DamageReduced} damage!");
             }
 
+            // A raised shield (the Librarian-Monk) halves the hit, rounded down, and takes the
+            // rest out of its own health - it breaks at 0. After defense, Defend and multipliers.
+            var shield = target.GetEffect<ShieldEffect>();
+            if (shield != null && result.FinalDamage > 0)
+            {
+                int blocked = shield.Absorb(result.FinalDamage);
+                if (blocked > 0)
+                {
+                    result.FinalDamage -= blocked;
+                    Log($"{target.Name}'s shield blocked {blocked} damage!");
+                    Raise(new CombatEvent
+                    {
+                        Type = CombatEventType.ShieldBlocked,
+                        Actor = attacker,
+                        Target = target,
+                        Amount = blocked
+                    });
+                }
+
+                if (shield.IsBroken)
+                {
+                    target.ActiveEffects.Remove(shield);
+                    Log($"{target.Name}'s shield shatters!");
+                }
+            }
+
             Raise(new CombatEvent
             {
                 Type = CombatEventType.AttackLanded,
@@ -1808,6 +1854,11 @@ namespace GameLogic.Combat
                 {
                     target.AddEffect(action.AppliesEffect);
                 }
+            }
+            else if (action.AppliesEffect != null && action.EffectEvenWithoutDamage)
+            {
+                // A hit that did no damage still lands its effect for some attackers (the Demon Prince)
+                target.AddEffect(action.AppliesEffect);
             }
         }
 
@@ -2443,8 +2494,10 @@ namespace GameLogic.Combat
                     allLootItems.AddRange(loot.Items);
                     result.DefeatedEnemies.Add(enemy);
 
-                    // Handle boss defeats
-                    if (enemy is BossEnemy defeatedBoss && _bossManager != null)
+                    // Handle boss defeats - only bosses in the boss list; a partner (the second
+                    // Cyclops brother) counts as part of the boss he came with
+                    if (enemy is BossEnemy defeatedBoss && _bossManager != null
+                        && _bossManager.GetBoss(defeatedBoss.BossId) != null)
                     {
                         _bossManager.DefeatBoss(defeatedBoss.BossId);
                     }

@@ -33,7 +33,15 @@ namespace GameLogic.Abilities.EnemyAbilities
         /// </summary>
         private (int damageBonus, int defenseReduction, int duration) GetRageStats()
         {
-            int level = Math.Min(_enemyLevel, GameLogic.Items.LevelCaps.MaxBossLevel);
+            return GetRageStatsForLevel(_enemyLevel);
+        }
+
+        /// <summary>
+        /// The one rage formula, for any enemy level (also used by the Cyclops Brothers' enrage).
+        /// </summary>
+        public static (int damageBonus, int defenseReduction, int duration) GetRageStatsForLevel(int enemyLevel)
+        {
+            int level = Math.Clamp(enemyLevel, 1, GameLogic.Items.LevelCaps.MaxBossLevel);
             int steps = GameLogic.Items.LevelCaps.MaxLevel - 1;
             return (20 + ((level - 1) * 60 / steps),    // 20 to 80
                     10 + ((level - 1) * 30 / steps),    // 10 to 40

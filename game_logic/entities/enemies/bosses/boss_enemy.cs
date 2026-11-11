@@ -1,11 +1,13 @@
 using System;
 using GameLogic.Entities.Enemies;
+using GameLogic.Systems;
 
 namespace GameLogic.Entities.Enemies.Bosses
 {
     /// <summary>
     /// Boss enemy class - powerful unique enemies with their own combat mechanics.
-    /// Boss strength scales based on number of bosses defeated (15% per boss)
+    /// Each boss grows from its hand-set level-1 stats (BossStatSheet) to the level it is fought
+    /// at - the party's average level + 5, or its own fixed level (Skarn).
     /// </summary>
     public class BossEnemy : EnemyBase
     {
@@ -24,6 +26,23 @@ namespace GameLogic.Entities.Enemies.Bosses
         /// (decided 2026-11-10).
         /// </summary>
         public bool HasFixedLevel { get; set; }
+
+        /// <summary>
+        /// A second boss that is always fought together with this one, as one boss (the Cyclops
+        /// Brothers: Fast is in the boss list, Slow is his partner). The partner isn't registered
+        /// in BossManager - beating the pair counts as beating this boss, once. Null for most bosses.
+        /// </summary>
+        public BossEnemy PartnerBoss { get; set; }
+
+        /// <summary>
+        /// Everyone who comes into this boss's fight: the boss, and its partner if it has one.
+        /// </summary>
+        public System.Collections.Generic.List<EnemyBase> GetFightEnemies()
+        {
+            var enemies = new System.Collections.Generic.List<EnemyBase> { this };
+            if (PartnerBoss != null) enemies.Add(PartnerBoss);
+            return enemies;
+        }
         public int TimesDefeated { get; set; }          // How many times this specific boss has been defeated
 
         // Unique Combat Mechanics
@@ -70,9 +89,7 @@ namespace GameLogic.Entities.Enemies.Bosses
             // Set unique ability description based on mechanic type
             UniqueAbilityDescription = GetMechanicDescription(mechanicType);
 
-            // Stopgap so bosses have real stats (they were all 0 before - nothing called this).
-            // Uses the generic formula at the boss's fixed level until each boss gets hand-set
-            // level-1 stats and party-level scaling (Bucket A #11).
+            // Real stats from the start (CombatManager rebuilds them at the fight's level anyway).
             InitializeStats(level);
         }
 
@@ -85,28 +102,45 @@ namespace GameLogic.Entities.Enemies.Bosses
             Level = level;
             DifficultyApplied = false; // Fresh stats - the difficulty is applied again at the next fight
 
-            // Boss base stats (much stronger than regular enemies)
-            _baseHealth = 100 + (level * 30);      // Bosses have 3x health of regular enemies
-            _baseMaxHealth = _baseHealth;
-            _baseMinDamage = 10 + (level * 3);     // Higher base damage
-            _baseMaxDamage = 20 + (level * 5);
-            _baseDefense = 5 + (level / 2);        // Good defense
+            var sheet = BossStatSheet.Get(BossId);
+            if (sheet != null)
+            {
+                // Hand-set level-1 stats grown to this level, boss multipliers included
+                // (health x3, damage x1.5) - decided 2026-11-10. No difficulty yet.
+                _baseHealth = DifficultyScaler.BossHealthAtLevel(sheet.Health, level);
+                _baseMinDamage = DifficultyScaler.BossDamageAtLevel(sheet.MinDamage, level);
+                _baseMaxDamage = Math.Max(_baseMinDamage, DifficultyScaler.BossDamageAtLevel(sheet.MaxDamage, level));
+                _baseDefense = DifficultyScaler.BossStatAtLevel(sheet.Defense, sheet.DefensePerLevel, level);
 
-            // Apply base stats
+                Accuracy = sheet.Accuracy;
+                CritChance = sheet.CritChance;
+                CritMultiplier = sheet.CritMultiplier;
+                Speed = DifficultyScaler.BossStatAtLevel(sheet.Speed, sheet.SpeedPerLevel, level);
+            }
+            else
+            {
+                // Fallback for a boss with no row in BossStatSheet - the old shared stopgap formula
+                _baseHealth = 100 + (level * 30);
+                _baseMinDamage = 10 + (level * 3);
+                _baseMaxDamage = 20 + (level * 5);
+                _baseDefense = 5 + (level / 2);
+
+                Accuracy = 75 + (level / 2);
+                CritChance = 10 + (level / 5);
+                Speed = 15 + (level / 3);
+            }
+            _baseMaxHealth = _baseHealth;
+
             Health = _baseHealth;
             MaxHealth = _baseMaxHealth;
             MinDamage = _baseMinDamage;
             MaxDamage = _baseMaxDamage;
             Defense = _baseDefense;
 
-            // Boss combat stats
-            Accuracy = 75 + (level / 2);           // High accuracy
-            CritChance = 10 + (level / 5);         // Decent crit chance
-            Speed = 15 + (level / 3);              // Faster than regular enemies
-
-            // Boss rewards
-            GoldValue = 100 + (level * 25);        // Generous gold
-            XPValue = 200 + (level * 50);          // Massive XP
+            // Boss rewards - not used by fight rewards yet (fight XP is rolled from the level and
+            // gold comes from the loot table). Left for the XP rework.
+            GoldValue = 100 + (level * 25);
+            XPValue = 200 + (level * 50);
         }
 
         /// <summary>

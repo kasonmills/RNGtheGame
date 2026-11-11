@@ -308,6 +308,7 @@ namespace GameLogic.Core
                 if (result.Outcome == CombatOutcome.Won)
                 {
                     _tutorialCompleted = true;
+                    _questManager?.UpdateBossQuestVisibility(_bossManager); // The next boss's quest shows now
                 }
 
                 ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
@@ -1146,7 +1147,15 @@ namespace GameLogic.Core
 
             ChangeState(GameState.Combat);
 
-            WatchFightEnd(result => ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing));
+            WatchFightEnd(result =>
+            {
+                if (result.Outcome == CombatOutcome.Won)
+                {
+                    // Only the next boss's information is ever shown - reveal the new next boss's quest
+                    _questManager?.UpdateBossQuestVisibility(_bossManager);
+                }
+                ChangeState(result.Outcome == CombatOutcome.Lost ? GameState.GameOver : GameState.Playing);
+            });
 
             World.BossEncounter.StartBossEncounter(
                 _player,

@@ -272,6 +272,51 @@ namespace GameLogic.Systems
 
         #region Boss Scaling
 
+        // The boss multipliers on top of a boss's hand-set level-1 stats (decided 2026-11-10)
+        public const double BossHealthMultiplier = 3.0;
+        public const double BossDamageMultiplier = 1.5;
+
+        /// <summary>
+        /// A boss's health at a level, from its level-1 health: x(1 + 10% per level above 1) x3.
+        /// No difficulty here - CombatManager applies it once, afterwards (ApplyDifficultyToEnemy).
+        /// </summary>
+        public static int BossHealthAtLevel(int level1Health, int level)
+        {
+            return GrowForBoss(level1Health, level, HEALTH_SCALING_PER_LEVEL, BossHealthMultiplier);
+        }
+
+        /// <summary>
+        /// A boss's damage (min or max) at a level, from its level-1 damage:
+        /// x(1 + 8% per level above 1) x1.5. No difficulty here, as above.
+        /// </summary>
+        public static int BossDamageAtLevel(int level1Damage, int level)
+        {
+            return GrowForBoss(level1Damage, level, DAMAGE_SCALING_PER_LEVEL, BossDamageMultiplier);
+        }
+
+        /// <summary>
+        /// A flat-growth boss stat (defense, speed) at a level: the level-1 value + growth per
+        /// level above 1, rounded to the nearest whole number.
+        /// </summary>
+        public static int BossStatAtLevel(int level1Value, double growthPerLevel, int level)
+        {
+            int levelsAbove = Math.Max(0, level - 1);
+            return (int)Math.Round(level1Value + growthPerLevel * levelsAbove, MidpointRounding.AwayFromZero);
+        }
+
+        private static int GrowForBoss(int level1Value, int level, float perLevel, double bossMultiplier)
+        {
+            if (level1Value <= 0) return level1Value;
+            int levelsAbove = Math.Max(0, level - 1);
+            double grown = level1Value * (1.0 + levelsAbove * (double)(decimal)perLevel) * bossMultiplier;
+            // Rounded to 6 places first so floating-point noise (77.00000001) doesn't round up a whole point
+            return Math.Max(1, (int)Math.Ceiling(Math.Round(grown, 6)));
+        }
+
+        // The methods below scale a single number by party level AND difficulty together. Boss
+        // fights don't use them (bosses grow from their level-1 stats above, and the difficulty is
+        // applied once by CombatManager); kept for other callers and tests.
+
         /// <summary>
         /// Scale boss health (bosses get more health than regular enemies)
         /// Use CalculatePartyLevel() to get the effective party level first

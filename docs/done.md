@@ -14,6 +14,31 @@ What is finished. The other half of `to_do_list.md`: that file is what is still 
 
 ## Decisions resolved
 
+### Only the next boss's information is shown (boss list and boss quests)
+- **Moved here**: 2026-11-11
+- ✅ **Decided 2026-11-11**: the boss list and boss quests show information only for the next boss the player has yet to defeat. A boss that comes later in the game shows no information at all - just that it is locked or inaccessible for now. This also settles the old spoiler worry about the final quest showing at game start.
+- **Follow-up still in `to_do_list.md`**: built the same day, testing in section 3.
+
+### Captain of the Royal Guard - why Risk leaves the party (section 2, Bosses) 🤫
+- **Moved here**: 2026-11-11
+- ✅ **Decided 2026-11-11**: Risk was told to keep an eye on the party for the princess. He only joined the party to keep her informed of what they were doing. 🤫 This ties into the hidden final-boss twist - design docs only, never game text or foreshadowing.
+- **Follow-up still in `to_do_list.md`**: when exactly he leaves, his gear, his crit numbers (section 2); the build (section 1).
+
+### Slime Dragon - does beating him end the fight? (section 2, Bosses)
+- **Moved here**: 2026-11-11
+- ✅ **Decided 2026-11-11**: beating the dragon means he stops spawning draglings, but the fight doesn't officially end until every enemy is defeated - the draglings left still have to be beaten.
+- **Follow-up still in `to_do_list.md`**: the dragling numbers (section 2); the build (section 1).
+
+### Cyclops Brothers - who is faster (section 2, Bosses)
+- **Moved here**: 2026-11-11
+- ✅ **Decided 2026-11-11**: their real names aren't picked yet, so they use placeholder names; one is "Fast", and he is the faster brother.
+- **Follow-up still in `to_do_list.md`**: the real names, the enrage details and the rewards question (section 2); testing (section 3).
+
+### Librarian-Monk's shield rules (section 2, Bosses)
+- **Moved here**: 2026-11-11
+- ✅ **Decided 2026-11-11**: the shield cuts each hit in half, rounded down. Its health is a set amount at level 1 that scales with level and difficulty. The 3-turn cooldown starts when it is raised. Raising it costs his turn. He starts every fight with it raised (shown in the pre-fight cutscene), and that starts the cooldown on his turn 1. Whenever his turn comes and it isn't up (and the cooldown is over), he has a chance to raise it: Normal 40%, Hard 50%, Difficult 60%, Unfair 70% - he's a bit of a weakling.
+- **Follow-up still in `to_do_list.md`**: built 2026-11-11, testing in section 3; his name and text, and the shield's level-1 health number, in section 2.
+
 ### Bucket A #1. Gender selection
 - **Moved here**: 2026-10-15
 - ✅ **Resolved (2026-10-05)** Character-creation Gender selection has no stat/mechanical difference between genders - purely cosmetic/narrative.

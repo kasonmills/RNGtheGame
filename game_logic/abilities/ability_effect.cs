@@ -102,6 +102,22 @@ namespace GameLogic.Abilities
         }
 
         /// <summary>
+        /// Called by Entity.AddEffect when an effect of this same type lands on a target that
+        /// already has this one (`incoming` is the new copy, which is not added). The default is
+        /// the long-standing rule: a stacking effect gains a stack, and either way the duration
+        /// goes back to full. An effect with its own rule overrides this (the Centipede's poison
+        /// only adds a little time).
+        /// </summary>
+        public virtual void OnReapplied(AbilityEffect incoming, Entity target)
+        {
+            if (CanStack)
+            {
+                AddStack();
+            }
+            RefreshDuration();
+        }
+
+        /// <summary>
         /// Add a stack to this effect
         /// </summary>
         public void AddStack()

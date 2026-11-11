@@ -30,12 +30,15 @@ RNGtheGame/
 │   │   │   ├── enemy_types/
 │   │   │   │   ├── goblin.cs
 │   │   │   │   ├── bandit.cs
-│   │   │   │   └── dragon.cs
+│   │   │   │   ├── castle_guard.cs      # Called in by the final boss
+│   │   │   │   ├── dragon.cs
+│   │   │   │   └── dragling.cs          # The Slime Dragon's spawn
 │   │   │   └── bosses/
 │   │   │       ├── boss_definitions.cs  # Boss roster
 │   │   │       ├── boss_enemy.cs        # One shared boss class
 │   │   │       ├── boss_manager.cs      # Boss order and defeat tracking
-│   │   │       └── boss_mechanic.cs     # Per-boss unique combat mechanics
+│   │   │       ├── boss_mechanic.cs     # Per-boss unique combat mechanics
+│   │   │       └── boss_stat_sheet.cs   # Every boss's hand-set level-1 stats
 │   │   │
 │   │   └── NPCs/
 │   │       ├── NPC_base.cs              # Base NPC
@@ -69,6 +72,7 @@ RNGtheGame/
 │   │   ├── leadership_ability.cs        # Disabled for the MVP
 │   │   ├── precision_training_ability.cs
 │   │   ├── rallying_cry_ability.cs
+│   │   ├── shield_effect.cs             # A shield with its own health (the Librarian-Monk)
 │   │   ├── skip_turn_effect.cs          # "Skip your next turn" (lost turns)
 │   │   ├── swift_tactics_ability.cs
 │   │   ├── player_abilities/
@@ -79,6 +83,7 @@ RNGtheGame/
 │   │   ├── weapon_masteries/            # One file per weapon type (axe, bow, crossbow, dagger,
 │   │   │                                # mace, spear, staff, sword, wand)
 │   │   └── enemy_abilities/
+│   │       ├── centipede_poison_effect.cs  # The Centipede's stacking poison
 │   │       ├── grapple.cs
 │   │       ├── poison_attack.cs
 │   │       └── rage.cs
@@ -169,19 +174,28 @@ RNGtheGame/
 │   └── assets/                          # (empty) sprites/, tiles/, maps/, ui/, fonts/, audio/
 │
 ├── tests/                               # Unit tests (xUnit)
-│   ├── GameLogicTests.csproj            # Lists the test files currently switched off
+│   ├── GameLogicTests.csproj            # QuestManagerTests is switched off until the quest changes are built
 │   ├── xunit.runner.json
 │   ├── RNGManagerTests.cs
 │   ├── LevelingSystemTests.cs
 │   ├── DifficultyScalerTests.cs
 │   ├── GameSettingsTests.cs
 │   ├── StatisticsTrackerTests.cs
-│   ├── CombatManagerTests.cs            # Needs rewriting for the current combat engine
-│   ├── DamageCalculatorTests.cs         # Switched off - no longer compiles
-│   ├── PlayerTests.cs                   # Switched off - no longer compiles
-│   ├── QuestManagerTests.cs             # Switched off - no longer compiles
-│   ├── SaveManagerTests.cs              # Switched off - no longer compiles
-│   └── TurnManagerTests.cs              # Switched off - no longer compiles
+│   ├── BossStatsTests.cs
+│   ├── BossVisibilityTests.cs
+│   ├── CyclopsBrothersTests.cs
+│   ├── DemonPrinceTests.cs
+│   ├── FinalBossTests.cs
+│   ├── GiantCentipedeTests.cs
+│   ├── LibrarianMonkTests.cs
+│   ├── SlimeDragonAndCaptainTests.cs
+│   ├── LootGeneratorTests.cs
+│   ├── CombatManagerTests.cs
+│   ├── DamageCalculatorTests.cs
+│   ├── PlayerTests.cs
+│   ├── QuestManagerTests.cs             # Switched off (see the .csproj)
+│   ├── SaveManagerTests.cs
+│   └── TurnManagerTests.cs
 │
 ├── docs/
 │   ├── to_do_list.md                    # What is still to do: build / decide / test / other
@@ -190,7 +204,7 @@ RNGtheGame/
 │   ├── godot_frontend_plan.md           # Planned folder/file structure of the Godot frontend
 │   ├── abilities.md
 │   ├── boss_ideas_archive.md
-│   ├── boss_stats_draft.md              # Draft level-1 stats for every boss (not in the code yet)
+│   ├── boss_stats_draft.md              # The reasoning behind every boss's level-1 stats
 │   └── player_class_system.md
 │
 ├── tools/

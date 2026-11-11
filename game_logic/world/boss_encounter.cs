@@ -85,7 +85,8 @@ namespace GameLogic.World
 
             GameLog.Write("\n⚔️  THE BATTLE BEGINS! ⚔️");
 
-            combatManager.StartCombat(player, new List<Entities.Enemies.EnemyBase> { boss }, companions, bossManager);
+            // The boss and its partner, if it has one (the Cyclops Brothers)
+            combatManager.StartCombat(player, boss.GetFightEnemies(), companions, bossManager);
             return true;
         }
 

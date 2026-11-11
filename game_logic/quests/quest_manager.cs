@@ -301,6 +301,41 @@ namespace GameLogic.Quests
         }
 
         /// <summary>
+        /// Show only the next boss's quest (decided 2026-11-11): the quest for the next boss the
+        /// player hasn't beaten (BossManager.GetNextBoss) is discovered; quests for every boss
+        /// after it stay hidden (NotDiscovered), so nothing about a later boss - not even its
+        /// name - shows before it is the next one. Quests for bosses already beaten are left as
+        /// they are. Also hides a later boss's quest that was shown but never accepted (saves
+        /// from before this rule). Call at a new game, after loading, and after a boss is beaten.
+        /// </summary>
+        public void UpdateBossQuestVisibility(Entities.Enemies.Bosses.BossManager bossManager)
+        {
+            if (bossManager == null) return;
+
+            string nextBossId = bossManager.GetNextBoss()?.BossId;
+
+            foreach (var quest in _allQuests.Values)
+            {
+                string bossId = quest switch
+                {
+                    BossDefeatQuest bossQuest => bossQuest.BossId,
+                    FinalBossQuest finalQuest => finalQuest.FinalBossId,
+                    _ => null
+                };
+                if (bossId == null || bossManager.IsBossDefeated(bossId)) continue;
+
+                if (bossId == nextBossId)
+                {
+                    quest.Discover();
+                }
+                else if (quest.State == QuestState.Available)
+                {
+                    quest.State = QuestState.NotDiscovered; // A later boss - hidden until it is next
+                }
+            }
+        }
+
+        /// <summary>
         /// Reset all quests (for new game)
         /// </summary>
         public void Reset()

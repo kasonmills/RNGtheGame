@@ -25,6 +25,8 @@ namespace GameLogic.Combat
         AttackMissed,       // Actor missed Target
         AttackEvaded,       // Target dodged (Evasion ability)
         AttackBlocked,      // Attack landed but did no damage (Risk's armor); status effects still apply
+        ShieldBlocked,      // Target's shield (ShieldEffect) took Amount of Actor's hit - read the effect for
+                            // what is left; a broken shield is EffectRemoved "Shield"
         AttackJoined,       // Actor joins another enemy's attack on Target (the Cyclops Brothers) - the
                             // joined attack's own AttackLanded/AttackMissed follows
         AbilityUsed,        // Actor used Ability on Target

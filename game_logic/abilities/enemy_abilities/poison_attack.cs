@@ -58,7 +58,16 @@ namespace GameLogic.Abilities.EnemyAbilities
         /// </summary>
         private (int min, int max, int duration) GetPoisonStats()
         {
-            int level = Math.Min(_enemyLevel, GameLogic.Items.LevelCaps.MaxBossLevel);
+            return GetPoisonStatsForLevel(_enemyLevel);
+        }
+
+        /// <summary>
+        /// Poison damage per turn (min, max) and duration for an enemy level - the one poison
+        /// formula (also used by the Giant House Centipede's bite, which uses its own durations).
+        /// </summary>
+        public static (int min, int max, int duration) GetPoisonStatsForLevel(int enemyLevel)
+        {
+            int level = Math.Clamp(enemyLevel, 1, GameLogic.Items.LevelCaps.MaxBossLevel);
             return (2 + (level / 4),     // 2 to 12
                     4 + (level / 2),     // 4 to 24
                     3 + (level / 20));   // 3 to 5 turns
@@ -84,6 +93,10 @@ namespace GameLogic.Abilities.EnemyAbilities
     {
         private readonly int _minDamage;
         private readonly int _maxDamage;
+
+        /// <summary>Poison damage per turn (per stack, for poisons that count stacks).</summary>
+        public int MinDamage => _minDamage;
+        public int MaxDamage => _maxDamage;
 
         public PoisonedEffect(int duration, int minDamage, int maxDamage)
             : base(duration, (minDamage + maxDamage) / 2) // Potency = average damage

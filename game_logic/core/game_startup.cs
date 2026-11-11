@@ -170,6 +170,7 @@ namespace GameLogic.Core
             {
                 // Reconstruct quests with their original RNG values from save
                 QuestSerializationHelper.ReconstructQuests(questManager, saveData.Quests, bossManager);
+                questManager.UpdateBossQuestVisibility(bossManager); // Only the next boss's quest shows
                 if (!string.IsNullOrEmpty(saveData.ActiveQuestId))
                 {
                     questManager.SetActiveQuestId(saveData.ActiveQuestId);
@@ -255,27 +256,24 @@ namespace GameLogic.Core
                 if (!bossManager.IsFinalBoss(boss.BossId))
                 {
                     // Boss quests: 100 gold + 50 XP per quest (no RNG - these are fixed)
+                    // Hidden until this boss is the next one (UpdateBossQuestVisibility below)
                     var bossQuest = new BossDefeatQuest(boss.BossId, boss.Name, 100, 50);
-                    bossQuest.Discover(); // Make available immediately
                     questManager.RegisterQuest(bossQuest);
                 }
             }
 
-            // Create final boss quest (no RNG - this is fixed)
-            // SPOILER RISK (see project_boss_terminology_and_roster memory): once the final
-            // boss is the Princess (Tier 2), calling Discover() here immediately - at game
-            // start, long before she's actually reachable - will expose "Defeat [her name]"
-            // as a visible quest, spoiling the late-game twist that she's the final boss.
-            // Revisit this Discover() call before Tier 2 lands the real final boss - the
-            // final quest should likely only Discover() once bossManager.IsBossUnlocked()
-            // is true for her, not unconditionally at game start like the other bosses.
+            // Create final boss quest (no RNG - this is fixed). Hidden until she is the next
+            // boss, like every boss quest - fixes the spoiler of showing "Defeat [her name]" at
+            // game start (decided 2026-11-11: only the next boss's information is ever shown).
             var finalBoss = bossManager.GetFinalBoss();
             if (finalBoss != null)
             {
                 var finalQuest = new FinalBossQuest(finalBoss.BossId, finalBoss.Name);
-                finalQuest.Discover(); // Make available immediately
                 questManager.RegisterQuest(finalQuest);
             }
+
+            // Only the next boss's quest is shown (Skarn's, at a new game)
+            questManager.UpdateBossQuestVisibility(bossManager);
 
             // MVP (decided 2026-11-03): the old job-board side quests (level milestones, kill
             // counts, gold targets, weapon upgrades, equipment, challenges - 19 in all) are
