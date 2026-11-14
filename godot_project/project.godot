@@ -12,6 +12,12 @@ config_version=5
 
 config/name="RNGtheGame"
 config/features=PackedStringArray("4.7", "C#")
+run/main_scene="res://scenes/boot/boot.tscn"
+
+[autoload]
+
+Game="*res://autoload/Game.cs"
+SceneRouter="*res://autoload/SceneRouter.cs"
 
 [display]
 

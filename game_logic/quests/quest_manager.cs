@@ -336,6 +336,26 @@ namespace GameLogic.Quests
         }
 
         /// <summary>
+        /// Update every boss-related quest's progress when a boss is defeated. Call this
+        /// (alongside UpdateBossQuestVisibility) right after a boss fight is won.
+        /// </summary>
+        public void NotifyBossDefeated(string bossId)
+        {
+            foreach (var quest in _allQuests.Values)
+            {
+                switch (quest)
+                {
+                    case BossDefeatQuest bossQuest:
+                        bossQuest.OnBossDefeated(bossId);
+                        break;
+                    case FinalBossQuest finalQuest when finalQuest.FinalBossId == bossId:
+                        finalQuest.OnFinalBossDefeated();
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
         /// Reset all quests (for new game)
         /// </summary>
         public void Reset()

@@ -88,6 +88,10 @@ What is finished. The other half of `to_do_list.md`: that file is what is still 
 
 ## GUI & Game Engine
 
+### Combat scene - the dead Attack button
+- **Moved here**: 2026-11-14
+- ✅ **Confirmed fixed by the user 2026-11-14**: the combat scene's Attack button now works. The likely cause (logged in `code_review_notes.md`) was `CombatManager.ShowCombatIntro()` calling `Console.Clear()`, which throws with no real console window - true inside Godot - stopping the fight before it started. Knox's "no console output" work (2026-11-10) removed every `Console.Clear()`/`Console.ReadKey()` call from `game_logic/`, and the user has now tested it directly in Godot and confirmed Attack responds correctly.
+
 ### 3. Get Godot
 - **Moved here**: 2026-10-13
 - **Status**: ✅ Done (installed, Godot 4.7.2 mono build)

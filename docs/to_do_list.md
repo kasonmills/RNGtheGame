@@ -67,8 +67,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] Delete the 15 leftover "champion boss key" quest items in `item_database.cs`.
 
 ### Quests
-- [ ] 🔴 **Give quest rewards to the player** (gold, XP, items). Today claiming does nothing.
-- [ ] 🔴 **Wire quest progress into play** - for the boss quests and the new NPC quests only.
+- [ ] **Wire quest progress for the new NPC unlock quests**, once those exist (section 1 Quests, "NPC unlock quests" below) - boss quests are done (section 3).
 - [ ] **Main quests unlock in story order**, with a new "locked" quest state that is saved. (Boss quests already follow the boss order since 2026-11-11 - only the next boss's quest is shown, later ones stay `NotDiscovered`, worked out from the boss progress so nothing new is saved. This item is for the other main/story quests.)
 - [ ] **Save quest item rewards** (only gold and XP are saved today).
 - [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. ⛔ Each quest's content comes from section 2.
@@ -102,9 +101,6 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] Decide `event_system.cs`: delete it, or make it the one central non-combat event handler (needs an in-depth review first).
 
 ### Godot frontend
-- [ ] 🔴 **A shared game object (autoload)** that creates `GameManager` and keeps it alive between scenes.
-- [ ] 🔴 **A scene switcher** that picks the scene from `GameManager.CurrentState`, including at start-up and after a load.
-- [ ] 🔴 **Combat scene: find out why Attack does nothing** - check Godot's Output panel (`Console.Clear()` was removed, so look for a `GetNode` null error).
 - [ ] **Combat scene receives its fight from `GameManager`** instead of building its own, and goes through the tutorial check during the tutorial.
 - [ ] **Combat scene shows:** names (enemy name + type), damage numbers, "Critical", "Miss"/evade, health bars that move on each hit, whose turn it is, turn order and round (8 slots, skipped ones shown), all 5 action buttons (greyed when unusable), target and item picking, defend markers, status effects with time left, the companion control toggle, downed/revived combatants, an end screen per outcome with rewards, the boss name/title and attack warnings, the text log. Also every ability (`GetAbilities()` for Felicity), Boon's bolt picker (`GetBoltCounts()`), and Risk's blocked hits (`AttackBlocked`).
 - [ ] **Screens:** party menu (player, inventory and companions in one, with an equip action that moves items in and out of the bag, plus use, drop and the control toggle), shop, blacksmith, quest giver, quest log, settings, statistics, main menu/new game/load, character creation, pause, save, loot pop-up, Game Over (offer a new game when there's no save), ending and credits.
@@ -380,6 +376,13 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **99 cap** - a pickup that would take any stack (components, bolts, potions) over 99 adds nothing and shows the "You can only carry 99..." message.
 - [ ] **Chests** - opening one adds gold and items with no console output; with a full bag the extras come back in `ItemsLeftBehind`.
 
+### Quests
+- [ ] **Boss quest progress and reward claiming** (built 2026-11-14 - `QuestManager.NotifyBossDefeated`, `GameManager.ClaimQuestReward`). Check in a real run:
+  - Winning the tutorial Skarn fight, a regular boss fight (`ChallengeBoss`), or the final fight (`ChallengeFinalBoss`) completes that boss's quest (`BossDefeatQuest`/`FinalBossQuest`) - the final quest also needs `Accept()` first, since it requires acceptance.
+  - Claiming a completed boss quest (`GameManager.ClaimQuestReward(questId)`) adds its gold and XP to the player, and any reward items to the bag (no live quest grants items today, so that path is covered by test only, not by play).
+  - Claiming before the boss is beaten, claiming twice, or claiming an unknown quest id all return false and give nothing.
+  - New tests: `GameManagerTests`. No existing test changed.
+
 ### Game flow and saving
 - [ ] **New game wipes the old one** - start a game, recruit, fight, then start a new game: no companions until Chance joins, clean statistics, no leftover enemies, Back/Pause doesn't return to the old game. The same after loading another slot. Quitting mid-fight then starting a new game: the old fight's end does nothing. A failed load keeps the current game. Volume and text speed survive a new game.
 - [ ] **Tutorial and saving** - saving during the intro or the Skarn fight fails with the message; after winning it works; a loaded game can save straight away.
@@ -392,6 +395,14 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Godot access** - `CurrentState`, `Player`, `Party`, `Map`, `Quests`, `Settings` etc. are readable; `LoadGame` returns true/false.
 - [ ] **Quests** - a new game's quest log shows only the boss quests.
 - [ ] **Console program** - `dotnet run` in the repo root does nothing and exits (its two lines are commented out too, 2026-11-10).
+
+### Godot frontend
+- [ ] **The `Game` and `SceneRouter` autoloads** (built 2026-11-14, against `docs/godot_frontend_plan.md` sections 2/3 - compiles, not yet run in the actual editor). `Game.cs` creates the one `GameManager` on `_Ready()` and exposes it plus shortcuts (`Game.Player`, `Game.Party`, etc. - section 3's list). `SceneRouter.cs` has the GameState -> scene table from the plan's first draft, reacts to `GameManager.StateChanged`, and `boot.tscn` (new main scene, replaces nothing since there wasn't one) holds the `ScreenLayer`/`OverlayLayer` it hands over on `_Ready()`. Check in the editor:
+  - The project boots to `boot.tscn` with no errors in the Output panel, and the console shows `SceneRouter: no scene registered for fixed state MainMenu.` (expected - `main_menu.tscn` doesn't exist yet) rather than a crash.
+  - Pushing/popping overlay states (once any overlay scene exists to test with) adds to `OverlayLayer` and removes on close, while whatever's in `ScreenLayer` stays untouched underneath.
+  - Opening a second overlay on top of a first (e.g. `Paused` → `PartyMenu`), then closing just the top one, correctly reveals the first again instead of closing both or misreading the pop.
+  - A fixed-state change (e.g. once `main_menu.tscn` exists and a "New Game" button calls `StartNewGame`) clears any stray overlays and swaps `ScreenLayer`'s contents.
+  - Not built yet, deliberately: every actual screen scene (the table just logs "no scene yet" for each), the `Tutorial` overlay's scene path (not decided - see section 2), and `Notifier.cs` (still empty, untouched by this).
 
 ---
 

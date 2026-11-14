@@ -308,6 +308,7 @@ namespace GameLogic.Core
                 if (result.Outcome == CombatOutcome.Won)
                 {
                     _tutorialCompleted = true;
+                    _questManager?.NotifyBossDefeated(eagleBear.BossId);
                     _questManager?.UpdateBossQuestVisibility(_bossManager); // The next boss's quest shows now
                 }
 
@@ -908,6 +909,32 @@ namespace GameLogic.Core
 
         public bool CloseQuestGiver() => CloseOverlay(GameState.QuestGiver);
 
+        /// <summary>
+        /// Claim a completed quest's reward and actually give it to the player. QuestManager.
+        /// ClaimQuestRewards only marks the quest claimed and hands back the reward data - it
+        /// has no reference to the player to apply it, so that happens here. Returns false if
+        /// the quest isn't claimable (not completed, already claimed, or doesn't exist).
+        /// TODO-GODOT: call this from the Claim button on the quest giver / quest log screen.
+        /// </summary>
+        public bool ClaimQuestReward(string questId)
+        {
+            var reward = _questManager?.ClaimQuestRewards(questId);
+            if (reward == null)
+            {
+                return false;
+            }
+
+            _player.Gold += reward.Gold;
+            _player.AddExperience(reward.Experience);
+            foreach (var item in reward.Items)
+            {
+                _player.AddToInventory(item);
+            }
+
+            GameLog.Write($"Quest reward claimed: {reward.GetRewardSummary()}");
+            return true;
+        }
+
         // No job board in the MVP (decided 2026-11-03): each shop/NPC hands out its own unlock
         // quest, so there is no board to open.
 
@@ -1151,6 +1178,7 @@ namespace GameLogic.Core
             {
                 if (result.Outcome == CombatOutcome.Won)
                 {
+                    _questManager?.NotifyBossDefeated(boss.BossId);
                     // Only the next boss's information is ever shown - reveal the new next boss's quest
                     _questManager?.UpdateBossQuestVisibility(_bossManager);
                 }
@@ -1203,6 +1231,7 @@ namespace GameLogic.Core
                 if (result.Outcome == CombatOutcome.Won)
                 {
                     _gameCompleted = true;
+                    _questManager?.NotifyBossDefeated(_bossManager.GetFinalBoss().BossId);
                     // TODO-GODOT: if this fails, show LastSaveError in a pop-up on the ending screen
                     // The pre-boss auto-save normally set the slot; if it failed and this game
                     // was never saved, use a free slot rather than another playthrough's

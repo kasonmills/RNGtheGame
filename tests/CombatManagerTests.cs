@@ -78,18 +78,13 @@ namespace GameLogic.Tests
             var combatManager = new CombatManager(rng);
             var enemy = CreateTestGoblin(level: 10);
 
-            using (var output = RedirectConsoleOutput())
-            {
-                // Act
-                int xpReward = combatManager.CalculateXPReward(enemy);
+            // Act
+            int xpReward = combatManager.CalculateXPReward(enemy);
 
-                // Assert - XP should be in range: level * 30 to level * 70 (plus potential 50% bonus)
-                int minXP = 10 * 30; // 300
-                int maxXP = (int)((10 * 70) * 1.5); // 1050 (with bonus)
-                Assert.InRange(xpReward, minXP, maxXP);
-            }
-
-            RestoreConsoleOutput();
+            // Assert - XP should be in range: level * 30 to level * 70 (plus potential 50% bonus)
+            int minXP = 10 * 30; // 300
+            int maxXP = (int)((10 * 70) * 1.5); // 1050 (with bonus)
+            Assert.InRange(xpReward, minXP, maxXP);
         }
 
         [Fact]
@@ -101,17 +96,12 @@ namespace GameLogic.Tests
             var lowLevelEnemy = CreateTestGoblin(level: 5);
             var highLevelEnemy = CreateTestGoblin(level: 40); // 40 is the real level cap, not 50/100
 
-            using (var output = RedirectConsoleOutput())
-            {
-                // Act
-                int lowLevelXP = combatManager.CalculateXPReward(lowLevelEnemy);
-                int highLevelXP = combatManager.CalculateXPReward(highLevelEnemy);
+            // Act
+            int lowLevelXP = combatManager.CalculateXPReward(lowLevelEnemy);
+            int highLevelXP = combatManager.CalculateXPReward(highLevelEnemy);
 
-                // Assert - Higher level enemies should give more XP
-                Assert.True(highLevelXP > lowLevelXP);
-            }
-
-            RestoreConsoleOutput();
+            // Assert - Higher level enemies should give more XP
+            Assert.True(highLevelXP > lowLevelXP);
         }
 
         [Fact]
@@ -122,20 +112,15 @@ namespace GameLogic.Tests
             var combatManager = new CombatManager(rng);
             var enemy = CreateTestGoblin(level: 10);
 
-            using (var output = RedirectConsoleOutput())
+            // Act - Calculate XP multiple times
+            var xpResults = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < 20; i++)
             {
-                // Act - Calculate XP multiple times
-                var xpResults = new System.Collections.Generic.HashSet<int>();
-                for (int i = 0; i < 20; i++)
-                {
-                    xpResults.Add(combatManager.CalculateXPReward(enemy));
-                }
-
-                // Assert - Should have variance (not always the same value)
-                Assert.True(xpResults.Count > 1);
+                xpResults.Add(combatManager.CalculateXPReward(enemy));
             }
 
-            RestoreConsoleOutput();
+            // Assert - Should have variance (not always the same value)
+            Assert.True(xpResults.Count > 1);
         }
 
         #endregion
