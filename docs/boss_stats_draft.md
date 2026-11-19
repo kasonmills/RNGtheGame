@@ -51,7 +51,7 @@ Then the difficulty multiplies health and damage: Normal 75%, Hard 100%, Difficu
 
 ### What that becomes in the fight (Hard)
 
-Fight levels are **my assumption**: the per-boss level target is still open (section 2). I spread the bosses evenly to level 40.
+**The per-boss level target was decided 2026-11-19** (see `done.md`): boss levels are now 2 / 10 / 15 / 20 / 25 / 30 / 35 / 40-43. The table below was worked out at my earlier assumed levels (an even spread to 40) and **needs redoing** at the new levels. The level-1 stats above don't change.
 
 The numbers match the code's rounding (health and damage rounded up, defense and speed to the nearest, halves up). The second Cyclops brother is speed 10 at level 16.
 

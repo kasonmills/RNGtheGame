@@ -20,17 +20,24 @@
 Nothing left here - the hand-set boss stats are built (section 3). Boss rewards are with the XP rework ("Enemy XP and gold values become the guaranteed base reward", Combat).
 
 ### Bosses - one by one
-- [ ] **#6 Demon Prince - add his unique conditions.** He is built (2026-11-11, section 3) with the 5 existing conditions; the design is 7+ equally likely conditions, some unique to him. Each new one is one entry in `DemonPrinceMechanic.ConditionPool`. ⛔ Needs his unique conditions designed (section 2).
-- [ ] **Companion → boss plumbing for Risk** - a leave-party trigger, and a way to turn the companion Risk into the Captain boss (built 2026-11-11 as a standalone boss - section 3), with his gear. ⛔ When he leaves and what happens to his gear are in section 2.
+- [ ] **#6 Demon Prince - add his 6 unique conditions** (designed 2026-11-19 - full rules in `done.md`). He is built (2026-11-11, section 3) with the 5 existing conditions. Each new one is one entry in `DemonPrinceMechanic.ConditionPool`, making 11, all equally likely. All of them can be cured.
+  - **Hexed** (-15% hit, 3 turns) and **Weakened** (-25% damage, 3 turns): new stat debuffs.
+  - **Soul Siphon**: damage over time that heals him by what it deals.
+  - **Hellfire**: a burn that blocks all healing on the target while it lasts (needs a "can't be healed" check in every heal path).
+  - **Possessed**: new engine behaviour. The target's next turn is taken over by a normal attack on a random standing ally, never themselves.
+  - **Polymorph**: the target becomes a chicken (Normal 1-2 / Hard 2-3 / Difficult 2-4 / Unfair 3-5 turns). It keeps its HP, but its stats become the chicken's (peck 1-3 + level/4, defense 0, speed 15), and gear does nothing. Only Peck or Defend can be chosen.
+- [ ] **Companion → boss plumbing for Risk** - a leave-party trigger built as a hook a story moment will call (it goes between boss #7 and #8 - decided 2026-11-19), and a way to turn the companion Risk into the Captain boss (built 2026-11-11 as a standalone boss - section 3). On leaving: gear the player equipped on him goes back to the bag; his own Royal Guard armor leaves with him.
 - [ ] **Princess: quest-giver → boss transition.** 🤫 She gives story quests for most of the game, then becomes the final boss (built 2026-11-11 as a standalone boss - section 3). Needs the story quests and the moment she turns. No foreshadowing text anywhere.
 
 ### Companions
 - [ ] **Save the per-companion direct-control toggle** (it is lost on load today).
-- [ ] **Recruitment beyond the tutorial** - a real way to recruit companions. Only Chance can be recruited today.
-- [ ] **One combat decision-maker for everything the computer controls** (enemies and auto companions), returning the same kind of action the player submits. Targeting is part of it. `enemy_ai.cs` is the obvious home. (Patterns to design in section 2.)
-- [ ] **Chance: human form and form switching** - comes after the Demon Prince in the story. ⛔ Details in section 2.
-- [ ] **Fluke: build him** - needs a new party-wide "luck" effect (today's effects are single-target only). ⛔ Design in section 2.
-- [ ] **The Mage: rework `companion_mage.cs`** into the angry wild-magic Mage. ⛔ Design in section 2, and needs the magic system.
+- [ ] **Recruitment beyond the tutorial** - a real way to recruit companions. Only Chance can be recruited today. Order (decided 2026-11-19): Chance (tutorial), Fiery the Mage, Boon, Risk, Felicity, Fluke.
+- [ ] **One combat decision-maker for everything the computer controls** (enemies and auto companions), returning the same kind of action the player submits. Targeting is part of it. `enemy_ai.cs` is the obvious home. Patterns (decided 2026-11-19 - assignments in `done.md`): Random, Most wounded, Weakest defense, Last attacker, Biggest threat. Each follows its pattern about 70% of the time, 30% random.
+- [ ] **Companion gear rules** (decided 2026-11-19): companions join with their signature gear at their join level, with pre-rolled upgrades. Everything can be swapped, but moving a signature item off its owner shows a "may not be as effective" warning. Chance can't wear gear in cat form. Risk's block chance gets +0 / +3 / +6 / +10% from his armor's rarity (still capped at 70%).
+- [ ] **Boon's changes** (decided 2026-11-19): Ice bolt (25% freeze = `SkipTurnEffect`), Acid bolt (defense about -30% for 3 turns). The Shop Keeper sells Piercing and Pinning only; Fire, Ice and Acid come from chests and drops. Drop his unwired +10% accuracy passive, with 95% as his ceiling. His crossbow has Uncommon-level damage and upgrades like any weapon.
+- [ ] **Chance: human form and form switching** - comes after the Demon Prince in the story (decided 2026-11-19): in human form he uses a weapon and gear like the player (gear does nothing while he's a cat). After each attack, a fixed 20% chance flips his form for next time. Save his current form.
+- [ ] **Fluke: build him** (decided 2026-11-19): a passive party aura (placeholder "Lucky Aura") - each party hit, crit and damage roll has about a 10% → 30% chance (with his level) to be rolled twice, keeping the better. Needs a new party-wide effect (today's effects are single-target only). Any weapon, simple auto. He can cast luck spells; any other spell is a 50/50 fizzle (turn and components wasted) or backfire on him.
+- [ ] **Fiery the Mage: rework `companion_mage.cs`** into the angry wild-magic Mage - now a woman named Fiery (decided 2026-11-19 - full rules in `done.md`): a 0-100 anger meter; wild-spell chance = half her anger; above 75 anger, about 1 in 4 wild spells backfires on the party; anger adds up to +50% spell damage; on auto she Defends to calm down above 75. She is the second recruit, so she needs the magic system early. ⛔ Needs the magic system and her spell list.
 
 ### Combat
 - [ ] **Rebalance the regular enemies for the new player** (100 HP, party damage ×2 - 2026-11-10). Goblin, Bandit and Dragon were tuned for the old 24 HP player and will now be pushovers. Do it with the enemy list (section 2), the same way as the boss sheet (`boss_stats_draft.md`).
@@ -43,34 +50,44 @@ Nothing left here - the hand-set boss stats are built (section 3). Boss rewards 
 - [ ] `DamageCalculator.CalculateHealing()`'s passive healing bonus is never applied.
 
 ### XP, levels and abilities
-_⛔ The numbers wait on the per-boss level target (section 2)._
-- [ ] **Rework the player's XP curve** so level 40 lands near the end of the game (today the cap is reached in about 16 fights). Fix enemy XP growth at the same time.
+_The per-boss level target is decided (2026-11-19 - table in `done.md`): party levels 1 / 5 / 10 / 15 / 20 / 25 / 30 at bosses #1-#8, 35-38 at the final boss, about 8-12 regular fights between bosses._
+- [ ] **Rework the player's XP curve** to that target: about 5 levels per boss, and around 35-38 at the final boss for a player who doesn't grind (today the cap is reached in about 16 fights). Fix enemy XP growth at the same time.
 - [ ] **Companions use exactly the player's XP system** - same curve and cap. Replace the separate curve in `companion_base.cs`.
-- [ ] **Ability XP:** passives earn a small amount on every related attack; actives earn more per use. An ability should take about as many fights per level as the player does.
+- [ ] **Ability XP** (rules decided 2026-11-19 - see `done.md`): passives earn a small amount on every related trigger, and an active use is worth 5x a passive trigger. XP per use is flat (drop the +15% repeat climb in `GetCombatScaledExperience`). Every rarity costs the same per level (drop `GetBaseXPByRarity`). Set the numbers so an ability takes about 2 fights a level, like the player. Triggers count every chance: Evasion when attacked, Iron Will every round with a debuff.
+- [ ] **Rallying Cry, Swift Tactics and Precision Training become party-wide**, player included (decided 2026-11-19). They earn XP on every party attack (Rallying Cry, Precision Training) or every party turn (Swift Tactics) while active.
 - [ ] **Weapons and armor gain XP from use** (hits landed for weapons, hits taken for armor). Nothing awards gear XP today.
-- [ ] **Random XP rewards** - every XP reward is a guaranteed base plus a random bonus. (Size and tiers in section 2.)
-- [ ] **Rescale every ability for the level-40 cap** (per-level bonus, rank names, cooldown steps, unlock levels).
-- [ ] **Ability half of XP sharing** - downed and benched companions get 50% ability XP. A late recruit's ability levels match the party. (What "50%" means is in section 2.)
+- [ ] **Random XP rewards** - every player/companion XP reward is a guaranteed base plus a tier roll: most fights +0-10%, about 1 in 5 "Good fight!" +25%, about 1 in 20 "Lucky!" +50% (decided 2026-11-19). It replaces the 10%-chance +50% in `CalculateXPReward`. Ability and gear XP don't get it.
+- [ ] **Rescale every ability for the level-40 cap** (per-level bonus, rank names, cooldown steps, unlock levels). Level 1 starts at about 1/3 of the ability's max power (decided 2026-11-19), and Executioner starts with a small bonus instead of a penalty.
+- [ ] **Build the 5 new abilities** (designed 2026-11-19 - numbers in `done.md`): Gambler's Strike (active, rolled 0x-3x damage), Second Chance (reroll a miss), Lifesteal, Riposte (counter while defending), Bulwark (party-wide damage reduction; with Defend and Defense Boost the total is capped at 75%). Offer them at character creation.
+- [ ] **Ability half of XP sharing** - downed and benched companions' abilities get half of what the player's ability earned that fight (decided 2026-11-19). A late recruit's ability levels match the party.
 - [ ] **Save the XP estimate script in `tools/`** so new numbers can be checked before going into the code.
 
 ### Items, loot and magic
 - [ ] **Loot picks an item of the rolled rarity** instead of relabelling a random item (a "Legendary" Rusty Sword can drop today). Components already work this way.
-- [ ] **Random loot reaches the whole catalog** - `GetAllWeapons()`/`GetAllArmor()` miss most items. ⛔ Do it after the catalog trim (section 2), and build the lists from the item definitions so they can't drift.
-- [ ] **A free, very weak spell for every caster** (player, Mage, Fluke) that needs no components. Its name or description must make clear it is weak because it uses none. (Each spell to design in section 2.)
-- [ ] **Every spell needs components**, all drawn from the one shared pouch.
+- [ ] **Apply the catalog trim** (decided 2026-11-19 - list in `catalog_trim.md`). ⛔ After the keep-list review (section 2). Steps:
+  - mark every item not on the list dormant (no drops, no shop stock)
+  - Robe and Shield go dormant
+  - one speed cost per armor type for everyone (Cloth 0%, Leather -5%, Chainmail -10%, Plate -20%), replacing the class-based `GetArmorSpeedPenalty`
+  - remove the `TODO: was Epic` markers: Evasion, Iron Will, Precision Training and Swift Tactics stay Rare; the Greater Revival Potion becomes Legendary; the 4 promoted armor sets become Legendary
+  - add Royal Guard Mail (new signature Uncommon chainmail, about 30 defense) as Risk's starting armor
+  - raise Boon's Crossbow to Uncommon-level damage
+- [ ] **Random loot reaches the whole catalog** - `GetAllWeapons()`/`GetAllArmor()` miss most items. ⛔ Do it with the catalog trim, and build the lists from the item definitions so they can't drift.
+- [ ] **Mage Blast - the free, very weak spell** (decided 2026-11-19): no components, never misses, low damage (about half a basic weapon hit at the same level), can't crit, no cooldown. Its name or description must make clear it is weak because it uses none. Fiery and Fluke always have it; the player only gets it once the magic component seller is unlocked (their side quest completed).
+- [ ] **Every spell needs components**, all drawn from the one shared pouch. Recipes are mostly by group - one key component plus filler from a group, such as "any 2 berries" (decided 2026-11-19 - recipes in `spell_list.md`).
 - [ ] **Combat Elixir becomes a spell** (with components), not a consumable.
 - [ ] **"Elixir of Vitality" doesn't heal** - it runs the Combat Elixir code.
 - [ ] **Healing potions become candy/sweets**, sold by the Shop Keeper. Replace the Minor/Health/Greater Health Potion line (`ConsumableType.HealthPotion`) in `item_database.cs`. ⛔ Names and numbers in section 2.
 - [ ] **Shop:** pouch components can't be sold yet. (Buying something that won't fit no longer takes the gold - fixed 2026-11-10, see section 3.)
 - [ ] **Chests and the ground keep items the player couldn't carry**, so they can come back for them. ⛔ Needs map objects.
 - [ ] Inventory stacking ignores XP (two copies with different XP merge into one).
+- [ ] **Dropped weapons come with pre-rolled upgrades** (decided 2026-11-19): a weapon created at level N gets N-1 upgrades on random paths. Armor keeps `UpdateStatsForLevel`.
 - [ ] Delete the 15 leftover "champion boss key" quest items in `item_database.cs`.
 
 ### Quests
 - [ ] **Wire quest progress for the new NPC unlock quests**, once those exist (section 1 Quests, "NPC unlock quests" below) - boss quests are done (section 3).
 - [ ] **Main quests unlock in story order**, with a new "locked" quest state that is saved. (Boss quests already follow the boss order since 2026-11-11 - only the next boss's quest is shown, later ones stay `NotDiscovered`, worked out from the boss progress so nothing new is saved. This item is for the other main/story quests.)
 - [ ] **Save quest item rewards** (only gold and XP are saved today).
-- [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. ⛔ Each quest's content comes from section 2.
+- [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. Completing the magic component seller's quest also unlocks Mage Blast for the player (decided 2026-11-19). ⛔ Each quest's content comes from section 2.
 - [ ] **New NPCs:** the magic component seller (rarer components only) and the blacksmith's apprentice (weapon enchanting, unlocked through his own quest line). There is no baker: the Shop Keeper sells the healing sweets and the common components.
 - [ ] **Move quest text into data the Godot screens can show** (the console prints became `GameLog` messages 2026-11-10; quest screens still need the text as data).
 
@@ -93,7 +110,7 @@ _⛔ The numbers wait on the per-boss level target (section 2)._
 - [ ] Delete the duplicate settings/statistics save code in `QuestSerializationHelper` (about 190 lines).
 - [ ] **Keep `turn_manager.cs` and `TurnManagerTests`** (decided 2026-11-05). Combat runs its own turn queue today, but the class may be reworked to fit the new combat engine and the 8-slot rounds instead. Check that when the turn-order code is next touched.
 - [ ] Rename one of the two `CombatAction` types.
-- [ ] Merge the 9 identical weapon-mastery files into one class, and fix the `\\n` typo in their text. (Wait for the masteries-vs-families decision.)
+- [ ] **Merge the 9 weapon-mastery files into 4 family masteries** in one class (decided 2026-11-19): Blades (sword, dagger), Heavy (axe, mace, spear), Ranged (bow, crossbow), Arcane (staff, wand). Fix the `\\n` typo in their text. Old saves with a single-weapon mastery need mapping to its family.
 - [ ] Merge the duplicate effects (Regeneration twice, Bleed/Bleeding).
 - [ ] Remove dead leftovers: `GetAvailableBosses` (`DisplayBossSelectionMenu` is commented out already), `GenerateMapFromSeed`, `ShowCombatStatus`, the enemies' unused `DecideAction()`, `BossEnemy.DecideAction()`, `BossDefinitions.GetBoss()`, `[Obsolete] LevelUp()` on weapon/armor, the unused `NPC_base.AttackTarget()`.
 - [ ] `quest_manager.cs` `SetQuestState()` uses reflection on a public property.
@@ -126,24 +143,19 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] **Difficulty flavour text** - the placeholder lines in `GetDifficultyDescription` are for you to reword.
 
 ### Bosses
-- [ ] **Librarian-Monk:** his real name, title and description (the code has placeholders: "Librarian-Monk", "Keeper of the Library"), and where he is fought. Confirm the shield's level-1 health - 20 is my default (`LibrarianMonkMechanic.ShieldHealthAtLevel1`), which makes it 102 on Hard at level 8, about a third of his 306 HP. Confirm: a lost turn doesn't count toward his cooldown (my default). (The shield rules were decided 2026-11-11 - see `done.md`.)
-- [ ] **Centipede:** should "a restack only adds the minimum duration" be the rule for every stacking damage-over-time effect (Burn, Bleed too), or only his poison? (Built for his poison only, 2026-11-11 - any effect can now set its own restack rule through `AbilityEffect.OnReapplied`.) Also his real name, title and description (placeholders in the code: "Giant House Centipede", "the Many-Legged"), and where he is fought. Confirm my defaults: stacks multiply the poison's damage (2 stacks = twice the damage each turn), and the 3-4x target lean is 3.5x (weights 7 to 2).
-- [ ] **Cyclops Brothers:** their real names and text (placeholders since 2026-11-11: "Fast", the faster one, and "Slow"). What the enrage boosts, how much, for how long, and whether it stacks - my default is the existing Rage effect at his level (level 16: +43% damage, -21% defense, 3 turns; a second rage refreshes it, no stacking), and it keeps running after his brother is back up. Confirm: while one is down, his slot is skipped (the engine does this). Confirm: the fight pays both brothers' XP and gold (each rolls its own, like any two enemies) but counts as one boss beaten. Later: a combined attack with its own animation.
-- [ ] **Demon Prince:** his unique conditions (names and effects) - the user is still thinking about them (2026-11-11). Built for now with the 5 existing conditions (Poisoned, Burning, Bleeding, Grappled, Pinned), so confirm or change these defaults of mine: landing a condition the target already has follows that condition's normal rule (damage over time stacks, slows refresh); strength from his level - poison uses the poison formula, burn and bleed do the middle of it each turn for 3 turns (10 at level 21), grapple and pin take 4 + 1 per 10 levels of speed for 2 turns. Also his real title and description (placeholders: "Prince of Chaos"), and where he is fought.
+_All the boss mechanics and numbers are settled (2026-11-19 - see `done.md`). What's left is names, text and places._
+- [ ] **Librarian-Monk:** his real name, title and description (placeholders: "Librarian-Monk", "Keeper of the Library"), and where he is fought.
+- [ ] **Centipede:** his real name, title and description (placeholders: "Giant House Centipede", "the Many-Legged"), and where he is fought.
+- [ ] **Cyclops Brothers:** their real names and text (placeholders: "Fast", the faster one, and "Slow"), and where they are fought. Later: a combined attack with its own animation.
+- [ ] **Demon Prince:** his real title and description (placeholder: "Prince of Chaos"), and where he is fought. Real names for his new conditions if the placeholders don't stick.
 - [ ] **Slime Dragon:** built 2026-11-11 with my defaults (agreed for now) - 1 dragling per hit, at most 6 alive, the end-of-round turn tops them back up to 3 (exactly 3 alive = no bonus turn; counted when the round ends). Draglings fight at the party's level (his level - 5) with my stats (level 21: 120 HP, 8-17 damage, speed 21). Retune after testing. Also his real title and description (placeholders: "the Ever-Dripping"), and where he is fought.
-- [ ] **Captain (Risk as a boss):** built 2026-11-11 with my defaults (agreed for now) - crit chance Normal 50%, Hard 55%, Difficult 60%, Unfair 65%, at 2.5x on every difficulty. Still open: when exactly Risk leaves the party (the why is decided - 🤫 see `done.md`); what happens to his gear.
-- [ ] **Princess:** built 2026-11-11 with my defaults - confirm or change: action weights attack 50 / skip 25 / guards 25, shifting to 40 / 40 / 20 at half health or below; second-turn slowdown Normal 6-8, Hard 4-6, Difficult 2-4, Unfair 1-2 (the same at every level); a skip only goes to someone who isn't already losing a turn (otherwise she attacks); castle guards at the party's level (level 40: 260 HP, 15-31 damage, speed 20). Also her real name, title and description (placeholders: "The Princess", "Heir to the Throne").
+- [ ] **Captain (Risk as a boss):** built 2026-11-11 with my defaults (agreed for now) - crit chance Normal 50%, Hard 55%, Difficult 60%, Unfair 65%, at 2.5x on every difficulty. Still open: write the story moment (cutscene or quest step) between boss #7 and #8 where he leaves (the why, the timing and his gear are decided - 🤫 see `done.md`).
+- [ ] **Princess:** her real name, title and description (placeholders: "The Princess", "Heir to the Throne"). Her mechanics are settled (see `done.md`).
 
 ### Companions
-- [ ] **Starting gear for each companion** - should it match the story (Boon's crossbow, Risk's Royal Guard armor)? Is it better for a late recruit? Can the player swap companions' gear, and can Chance wear any at all?
-- [ ] **Recruitment order** (Chance first, in the tutorial - the rest?).
-- [ ] **Chance:** tune the placeholder numbers (85% accuracy, 5% crit, 80 HP + 8/level, speed 14, Aggressive AI). Will a 1-100 hitter end the Skarn fight too fast? Block the cat from gear? Human form: what does he fight with, and can he wear gear? The switch threshold - fixed, or changed by level or luck - and is it rolled before or after the attack?
-- [ ] **Risk:** rename "Royal Guard's Armor"? Should better or heavier armor raise the chance?
-- [ ] **Boon:** what Ice and Acid bolts do; tune the numbers (95% floor, pin -5 speed for 2 rounds, axe 75%, Fire burn, auto rules, bolt prices 6-10g); where bolts are sold or found; his combat barks; his +10% accuracy passive (wire it or drop it); his crossbow's damage, whether it can be upgraded, and whether it can be taken off him; should Precision Training push him above 95%?
-- [ ] **Felicity:** confirm the defaults (Healing Circle 60% and 4-turn cooldown, the "2+ below 50%" rule, the names, debuff removal + regeneration on Divine Light). Should her healing also raise speed?
-- [ ] **Fluke:** his ability; what "luck" changes in combat (hit, crit, damage rolls, enemy rolls?); his weapon; how he plays on auto; when he joins.
-- [ ] **The Mage:** his name; what makes him angry, and whether it's on/off or a meter; how often a different spell comes out (does it grow with anger?); which spells can come out, and can they backfire on the party; does anger do anything else (like Rage)?; on auto, does he try to calm down?
-- [ ] **Targeting patterns** for each enemy type and auto companion (most wounded, weakest defense, last attacker, spread out...).
+_All the companion mechanics are settled (2026-11-19 - see `done.md`). What's left:_
+- [ ] **Fiery's spells** - the draft in `spell_list.md` has her wild magic pick any other spell from the list. Settled when the spell list is reviewed (Items and magic).
+- [ ] **Names and text for the writing pass:** Boon's combat barks; a new name for "Royal Guard's Armor" 🤫; a real name for Fluke's "Lucky Aura".
 
 ### Combat
 - [ ] **Enemy accuracy per difficulty** - the bonus per level and a ceiling (e.g. never above 95%).
@@ -157,22 +169,9 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 - [ ] 🔴 **Make the harder difficulties much harder** - the wiring is built (section 3) with the old placeholder numbers: enemy health and damage 75% / 100% / 150% / 200%, XP 80% / 100% / 125% / 150%, gold 100% / 100% / 120% / 140%, party hit chance -0 / -7 / -14 / -21. The harder difficulties should be much harder and a lot more punishing - Unfair shows how punishing RNG can be when it isn't on your side (decided 2026-11-10). Set the real numbers (and whether defense, speed or crit should scale too).
 - [ ] **Starting stats per difficulty** (higher on easy, lower on hard): which stats; on top of enemy scaling or instead of it; whether the gap shrinks with levels. Check it against the per-boss level target.
 
-### XP, levels and abilities
-- [ ] 🔴 **The per-boss level target** - what level the player should be at each boss. All the XP numbers are built backwards from this, after the group sizes.
-- [ ] **Random XP bonus:** how big (e.g. 0-50% of the base), a flat roll or tiers (small/normal/lucky), keep today's 10% chance of +50%, and whether gear and abilities get it too.
-- [ ] **XP earned past a cap** - lost, or held for a future upgrade?
-- [ ] **Ability XP:** the actual numbers for passives and actives. Triggers for the passives that aren't "the player attacks": Evasion, Iron Will, Precision Training, Rallying Cry, Swift Tactics. What "50% ability XP" means for benched and downed companions.
-- [ ] **Weapon masteries:** merge the 9 into weapon families (the leaning)? If yes, which families (where do spear and staff go?), and which new abilities fill the freed slots.
-- [ ] **Abilities at level 1** must be worth using (today Attack Boost is +1% and Executioner is a penalty).
-- [ ] **One ability per player, for good** - does that still fit?
-- [ ] **Rallying Cry, Swift Tactics, Precision Training** only help companions. What do they become?
-- [ ] **Confirm the defaults:** cooldown reductions at 1/4 and 3/4 of an ability's cap; old Epic loot chances merged into Rare. Should rarity still slow levelling?
-- [ ] **Weapon level and stats:** a weapon's level doesn't change its stats, but an armor's does. Which way should it work?
-
 ### Items and magic
-- [ ] 🔴 **Catalog trim** to about 50-60 weapons and 20-25 armor sets: how many weapon and armor types stay, the split across rarities, which items stay (cut items stay dormant), and what armor types mean without classes. Blocks the loot fixes.
-- [ ] **Former Epic items and abilities** (all Rare for now, marked `TODO: was Epic`) - decide each one: Rare, Legendary or cut. That's 27 weapons, 30 armor sets, Combat Elixir, Greater Revival Potion, and the abilities Evasion, Iron Will, Swift Tactics, Precision Training and the Rogue's. There is no Legendary armor yet, so some may fill that gap.
-- [ ] **Spells** - the spells themselves; each caster's free weak spell (strength, cooldown?); which spells need rare components.
+- [ ] **Review the catalog keep-list** in `catalog_trim.md` (drafted 2026-11-19 - the shape is decided, see `done.md`). Swap any items you want, then mark it final. Blocks applying the trim and the loot fixes.
+- [ ] **Spells** - review the draft list in `spell_list.md` (10 spells with recipes - the structure is decided, see `done.md`), then decide **how spells are learned** (a starting list, scrolls, levels...). Fiery is the second recruit, so the magic system is needed early.
 - [ ] **Spell components** - rarity, description, price and buyable flag for each of the 37 (all placeholders now); loot weights and amounts; how they're grouped; area-based drops (mushrooms in forests...); the Negativity Crystal being given by an NPC or cursed onto the player.
 - [ ] **Names for the other potions** (revival, antidote and so on), now that healing potions are becoming candy/sweets.
 
