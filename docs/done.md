@@ -14,6 +14,48 @@ What is finished. The other half of `to_do_list.md`: that file is what is still 
 
 ## Decisions resolved
 
+### Spell rules - cooldowns, scaling, durations, Fiery's starting spells (section 2, Companions and Combat)
+- **Moved here**: 2026-11-20
+- ✅ **Decided 2026-11-20**:
+  - **Cooldowns on the big spells only.** Normal spells can be cast every turn if the components are there. Doom and Chain Lightning get a cooldown (placeholders: Doom 4 turns, Chain Lightning 2).
+  - **Spells scale with the caster's level.** Damage and heals are measured against "a basic hit for the caster's level". Spells don't level up themselves.
+  - **Durations:** spell buffs and debuffs last 3 turns, and Doom lasts 2. This depends on the effect-timer fix, so a buff isn't gone before it's used.
+  - **Fiery starts with the damage spells:** Fireball, Frost Lance, Chain Lightning and Poison Cloud, plus Mage Blast. Her wild magic can pull any spell on the list.
+  - **On auto, a 4th-slot ("any bug") pick spends whichever component in the group the party has most of.**
+  - **Spells aimed at enemies roll to hit with the caster's accuracy**, like a weapon attack. A miss still spends the components. Heals and buffs on allies always land. Spells that hit several enemies roll for each one. Mage Blast still never misses.
+  - **Damage spells can crit** with the caster's crit chance. Mage Blast still can't.
+  - **No components, no spell:** it's greyed out in the menu, which shows what's missing.
+  - **Scroll prices rise with each spell the player already knows** (placeholder: 100 gold, plus 100 for each spell known).
+- **Removed from `to_do_list.md` section 2**: "Fiery's spells" (Companions) and "How long spells and buffs last" (Combat).
+
+### Permanent stat potions from the magic component seller (new idea)
+- **Moved here**: 2026-11-20
+- ✅ **Decided 2026-11-20**:
+  - **The magic component seller makes potions that give a small permanent stat boost** (e.g. +1 Speed for good). She doesn't stock them. The player brings her the potion's **4 components** and pays a fee for her crafting, and she makes it. Her shop itself only sells components.
+  - **Potion recipes can share components with spells.**
+  - **Stats they can raise:** Max HP, Speed, damage, defense, crit and accuracy. Max HP and Speed already exist on every character. The other four need a new permanent-bonus stat on each character, added on top of gear.
+  - **Cap per stat:** each character can gain at most a set amount per stat from potions, so gold can't buy unlimited power.
+  - **Anyone in the party can drink them.** The boost stays with that character, so it leaves with Risk if he had any.
+- **Follow-up**: the build is in `to_do_list.md` (section 1, Items, loot and magic). The amounts, caps and crafting fees are in section 2. The recipes are drafted in `spell_list.md`.
+
+### Spell recipes - 3 unique components per spell (section 2, Items and magic)
+- **Moved here**: 2026-11-20
+- ✅ **Decided 2026-11-20**: every spell needs **3 unique components**, none shared with another spell. This replaces "one key component plus group filler" from 2026-11-19. With 10 spells that uses 30 of the 40 components.
+  - **Some spells need a 4th component, chosen by the player** from a group the spell names (e.g. "any bug"). It's only a flexible cost and doesn't change what the spell does. Any component in the group counts, including ones other recipes use.
+- **Follow-up**: the drafted matches are in `spell_list.md` for the user's review.
+
+### How spells are learned (section 2, Items and magic)
+- **Moved here**: 2026-11-20
+- ✅ **Decided 2026-11-20**:
+  - **Spells are learned from scrolls.** Some are bought, some are given by NPCs.
+  - **One spell NPC per town.** Each offers up to 3 spells, picked from the spells **the player doesn't know yet**. The player can get only **one** of them from that NPC, and **which one is random**.
+  - **There's always a new spell to get.** When fewer than 3 unknown spells are left, the NPC offers only the ones that remain.
+  - **The random pick is rolled once per save**, so reloading can't change it.
+  - **The player can read every offered spell's description beforehand**, but can't choose which one they get.
+  - **Scrolls teach the player only.** Fiery has her own starting set of spells, and Fluke knows the luck spells from the start. Fiery's wild magic can still pull any spell on the list.
+  - **Missed spells aren't lost.** A spell not picked stays unknown, so a later NPC can offer it again.
+- **Follow-up**: the build is in `to_do_list.md` (section 1, Items, loot and magic). Still open in section 2: Fiery's starting spells and the spell list review.
+
 ### Spells - who casts and how recipes work (section 2, Items and magic)
 - **Moved here**: 2026-11-19
 - ✅ **Decided 2026-11-19**:

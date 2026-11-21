@@ -37,7 +37,7 @@ Nothing left here - the hand-set boss stats are built (section 3). Boss rewards 
 - [ ] **Boon's changes** (decided 2026-11-19): Ice bolt (25% freeze = `SkipTurnEffect`), Acid bolt (defense about -30% for 3 turns). The Shop Keeper sells Piercing and Pinning only; Fire, Ice and Acid come from chests and drops. Drop his unwired +10% accuracy passive, with 95% as his ceiling. His crossbow has Uncommon-level damage and upgrades like any weapon.
 - [ ] **Chance: human form and form switching** - comes after the Demon Prince in the story (decided 2026-11-19): in human form he uses a weapon and gear like the player (gear does nothing while he's a cat). After each attack, a fixed 20% chance flips his form for next time. Save his current form.
 - [ ] **Fluke: build him** (decided 2026-11-19): a passive party aura (placeholder "Lucky Aura") - each party hit, crit and damage roll has about a 10% → 30% chance (with his level) to be rolled twice, keeping the better. Needs a new party-wide effect (today's effects are single-target only). Any weapon, simple auto. He can cast luck spells; any other spell is a 50/50 fizzle (turn and components wasted) or backfire on him.
-- [ ] **Fiery the Mage: rework `companion_mage.cs`** into the angry wild-magic Mage - now a woman named Fiery (decided 2026-11-19 - full rules in `done.md`): a 0-100 anger meter; wild-spell chance = half her anger; above 75 anger, about 1 in 4 wild spells backfires on the party; anger adds up to +50% spell damage; on auto she Defends to calm down above 75. She is the second recruit, so she needs the magic system early. ⛔ Needs the magic system and her spell list.
+- [ ] **Fiery the Mage: rework `companion_mage.cs`** into the angry wild-magic Mage - now a woman named Fiery (decided 2026-11-19 - full rules in `done.md`): a 0-100 anger meter; wild-spell chance = half her anger; above 75 anger, about 1 in 4 wild spells backfires on the party; anger adds up to +50% spell damage; on auto she Defends to calm down above 75. She starts with Fireball, Frost Lance, Chain Lightning, Poison Cloud and Mage Blast (decided 2026-11-20). She is the second recruit, so she needs the magic system early. ⛔ Needs the magic system.
 
 ### Combat
 - [ ] **Rebalance the regular enemies for the new player** (100 HP, party damage ×2 - 2026-11-10). Goblin, Bandit and Dragon were tuned for the old 24 HP player and will now be pushovers. Do it with the enemy list (section 2), the same way as the boss sheet (`boss_stats_draft.md`).
@@ -46,7 +46,7 @@ Nothing left here - the hand-set boss stats are built (section 3). Boss rewards 
 - [ ] **Enemy XP and gold values become the guaranteed base reward**, with a random extra on top. Do this together with XP rework item "Random XP rewards" below. Bosses too: today a boss's fight XP is rolled from its level and its gold from the loot table, so `BossEnemy.XPValue`/`GoldValue` and the scaler's boss reward multipliers (XP x5, gold x3-5) aren't used yet - wire them in here (decided 2026-11-10, left out of the boss stat build 2026-11-11).
 - [ ] **Reposition action** - a 5th combat button. Swap places with a party member. It costs the turn of whoever chose it; the partner doesn't lose a turn. Front positions are attacked more often; back positions are harder to hit. Add it to the tutorial's "try each action" list. ⛔ Needs the position layout (section 2).
 - [ ] **Random names for regular enemies**, picked fresh each fight, with no repeats in one fight. Bosses keep their own names. (Name list in section 2.)
-- [ ] **Fix the buff/cooldown timing** - effect timers tick at the end of the round they were applied in, so 1-turn buffs vanish before they're used. Settle it with the magic system's spell durations.
+- [ ] **Fix the buff/cooldown timing** - effect timers tick at the end of the round they were applied in, so 1-turn buffs vanish before they're used. Spell buffs and debuffs last 3 turns, and Doom 2 (decided 2026-11-20), so they must last that many of the target's turns.
 - [ ] `DamageCalculator.CalculateHealing()`'s passive healing bonus is never applied.
 
 ### XP, levels and abilities
@@ -73,8 +73,10 @@ _The per-boss level target is decided (2026-11-19 - table in `done.md`): party l
   - raise Boon's Crossbow to Uncommon-level damage
 - [ ] **Random loot reaches the whole catalog** - `GetAllWeapons()`/`GetAllArmor()` miss most items. ⛔ Do it with the catalog trim, and build the lists from the item definitions so they can't drift.
 - [ ] **Mage Blast - the free, very weak spell** (decided 2026-11-19): no components, never misses, low damage (about half a basic weapon hit at the same level), can't crit, no cooldown. Its name or description must make clear it is weak because it uses none. Fiery and Fluke always have it; the player only gets it once the magic component seller is unlocked (their side quest completed).
-- [ ] **Every spell needs components**, all drawn from the one shared pouch. Recipes are mostly by group - one key component plus filler from a group, such as "any 2 berries" (decided 2026-11-19 - recipes in `spell_list.md`).
+- [ ] **Every spell needs components**, all drawn from the one shared pouch. Each spell needs 3 unique components, none shared with another spell (decided 2026-11-20 - recipes in `spell_list.md`). Some spells also need a 4th from a named group ("any bug"), and the player picks which one is spent (a pick prompt handed back for Godot; on auto, spend whichever one the party has most of). The 4th doesn't change the effect. Spells scale with the caster's level and don't level up themselves. Only the big spells have cooldowns (placeholders: Doom 4 turns, Chain Lightning 2). Spells aimed at enemies roll to hit with the caster's accuracy (one roll per enemy, components spent even on a miss); heals and buffs on allies always land. Damage spells can crit with the caster's crit chance. A spell without its components is greyed out, and the menu lists what's missing. All decided 2026-11-20.
+- [ ] **Permanent stat potions** (decided 2026-11-20 - see `done.md`): crafted by the magic component seller. The player brings the potion's 4 components and pays her a crafting fee, and she makes it. They're never shop stock. Each one gives the player or a companion a small permanent boost to Max HP, Speed, damage, defense, crit or accuracy, with a cap per stat per character. Build: a crafting option at her shop (check the components and gold, take them, give the potion), a permanent-bonus stat on each character for damage, defense, crit and accuracy (added on top of gear, saved), a count of potions drunk per stat (saved, for the cap), the potion items, and a "this character has reached the cap" message handed back for Godot. Recipes are in `spell_list.md`. Boosts stay with the character, so they leave with Risk. ⛔ Amounts, caps and prices come from section 2.
 - [ ] **Combat Elixir becomes a spell** (with components), not a consumable.
+- [ ] **Spell scrolls and town spell NPCs** (decided 2026-11-20 - see `done.md`): the player learns spells from scrolls, either bought or given by an NPC. Each town has one spell NPC. It offers up to 3 spells picked from the ones the player doesn't know yet, or only the ones that remain if fewer than 3 are left, so there's always a new spell to get. The player gets one of them at random, and can read every offered description first. The offer and the pick are rolled once per save, so reloading can't change them. Scrolls teach the player only. A bought scroll costs more for each spell the player already knows (placeholder: 100 gold, plus 100 per spell known - decided 2026-11-20). Build: a known-spells list on the player (saved), a scroll item that teaches a spell, and the NPC offer and roll (saved per NPC). Whether each NPC sells the scroll or gives it is set per NPC with the fixed map.
 - [ ] **"Elixir of Vitality" doesn't heal** - it runs the Combat Elixir code.
 - [ ] **Healing potions become candy/sweets**, sold by the Shop Keeper. Replace the Minor/Health/Greater Health Potion line (`ConsumableType.HealthPotion`) in `item_database.cs`. ⛔ Names and numbers in section 2.
 - [ ] **Shop:** pouch components can't be sold yet. (Buying something that won't fit no longer takes the gold - fixed 2026-11-10, see section 3.)
@@ -88,7 +90,7 @@ _The per-boss level target is decided (2026-11-19 - table in `done.md`): party l
 - [ ] **Main quests unlock in story order**, with a new "locked" quest state that is saved. (Boss quests already follow the boss order since 2026-11-11 - only the next boss's quest is shown, later ones stay `NotDiscovered`, worked out from the boss progress so nothing new is saved. This item is for the other main/story quests.)
 - [ ] **Save quest item rewards** (only gold and XP are saved today).
 - [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. Completing the magic component seller's quest also unlocks Mage Blast for the player (decided 2026-11-19). ⛔ Each quest's content comes from section 2.
-- [ ] **New NPCs:** the magic component seller (rarer components only) and the blacksmith's apprentice (weapon enchanting, unlocked through his own quest line). There is no baker: the Shop Keeper sells the healing sweets and the common components.
+- [ ] **New NPCs:** the magic component seller (rarer components only, and she crafts the permanent stat potions for a fee - see Items, loot and magic) and the blacksmith's apprentice (weapon enchanting, unlocked through his own quest line). There is no baker: the Shop Keeper sells the healing sweets and the common components.
 - [ ] **Move quest text into data the Godot screens can show** (the console prints became `GameLog` messages 2026-11-10; quest screens still need the text as data).
 
 ### Game systems
@@ -153,8 +155,7 @@ _All the boss mechanics and numbers are settled (2026-11-19 - see `done.md`). Wh
 - [ ] **Princess:** her real name, title and description (placeholders: "The Princess", "Heir to the Throne"). Her mechanics are settled (see `done.md`).
 
 ### Companions
-_All the companion mechanics are settled (2026-11-19 - see `done.md`). What's left:_
-- [ ] **Fiery's spells** - the draft in `spell_list.md` has her wild magic pick any other spell from the list. Settled when the spell list is reviewed (Items and magic).
+_All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery's starting spells too (2026-11-20). What's left:_
 - [ ] **Names and text for the writing pass:** Boon's combat barks; a new name for "Royal Guard's Armor" 🤫; a real name for Fluke's "Lucky Aura".
 
 ### Combat
@@ -162,7 +163,6 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`). What's le
 - [ ] **Positions** - how many (front/back rows or a line of four), how much more often front positions are attacked, how much harder back positions are to hit, whether position affects the party's own attacks, the starting formation, ranged-weapon penalties per position, which weapons count as ranged, and melee rules.
 - [ ] **Confirm the combat defaults:** speed ties broken at random; the player gets up at 1 HP if the party wins while they're down; an enemy that flees drops each loot item with a 50% chance.
 - [ ] **Small numbers:** percentage bonuses round down to nothing on small hits. Use the fraction as a chance to round up, raise all the base numbers, or both? (Partly eased 2026-11-10: the player's health is 100 and the party's damage ×2, so party hits are bigger. Enemy hits are still small until the enemies are rebalanced.)
-- [ ] **How long spells and buffs last** (with the magic system).
 - [ ] **Combat screen timing:** queue the events and play them back, or have combat advance one turn at a time?
 
 ### Difficulty
@@ -171,14 +171,15 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`). What's le
 
 ### Items and magic
 - [ ] **Review the catalog keep-list** in `catalog_trim.md` (drafted 2026-11-19 - the shape is decided, see `done.md`). Swap any items you want, then mark it final. Blocks applying the trim and the loot fixes.
-- [ ] **Spells** - review the draft list in `spell_list.md` (10 spells with recipes - the structure is decided, see `done.md`), then decide **how spells are learned** (a starting list, scrolls, levels...). Fiery is the second recruit, so the magic system is needed early.
-- [ ] **Spell components** - rarity, description, price and buyable flag for each of the 37 (all placeholders now); loot weights and amounts; how they're grouped; area-based drops (mushrooms in forests...); the Negativity Crystal being given by an NPC or cursed onto the player.
+- [ ] **Spells** - review the draft list in `spell_list.md` (10 spells with recipes - the structure and how spells are learned are decided, see `done.md`). With the fixed map, decide whether each town's spell NPC sells the scroll or gives it. Their offers are random, so they need no list. Fiery is the second recruit, so the magic system is needed early.
+- [ ] **Permanent stat potions** - review the 4-component recipes drafted in `spell_list.md`, then decide how much each one gives (e.g. +1 Speed, +5 Max HP, +1% crit), the cap per stat per character, her crafting fee, and their names (decided so far: see `done.md`).
+- [ ] **Spell components** - rarity, description, price and buyable flag for each of the 40 (all placeholders now); loot weights and amounts; how they're grouped; area-based drops (mushrooms in forests...); the Negativity Crystal being given by an NPC or cursed onto the player.
 - [ ] **Names for the other potions** (revival, antidote and so on), now that healing potions are becoming candy/sweets.
 
 ### Quests
 - [ ] **Each NPC's unlock quest** - blacksmith, shopkeeper, magic component seller (more later?): what it asks and who gives it. Is unlocking the whole reward, or is there gold/XP too?
 - [ ] **The Shop Keeper's candy/sweets** - their names, whether they are new items or the renamed potions, how strong each is, and what they cost.
-- [ ] **The magic component seller's stock** - which of the 37 components count as "rare enough" to be exclusive to them rather than sold by the general Shop Keeper.
+- [ ] **The magic component seller's stock** - which of the 40 components count as "rare enough" to be exclusive to them rather than sold by the general Shop Keeper.
 - [ ] **The blacksmith's apprentice's side quest line** - not a single unlock quest like the other NPCs, an actual questline. What it involves, how long it is, what unlocks enchanting at the end.
 - [ ] **Weapon enchantment effects** - what the apprentice can actually grant (extra power, elemental/status effects, etc.), how many, and whether they're tied to rarity or the questline's progress.
 - [ ] **Does the boss-quest giver ("Veteran Ranger") stay** as its own screen?
