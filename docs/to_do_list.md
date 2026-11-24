@@ -40,14 +40,53 @@ Nothing left here - the hand-set boss stats are built (section 3). Boss rewards 
 - [ ] **Fiery the Mage: rework `companion_mage.cs`** into the angry wild-magic Mage - now a woman named Fiery (decided 2026-11-19 - full rules in `done.md`): a 0-100 anger meter; wild-spell chance = half her anger; above 75 anger, about 1 in 4 wild spells backfires on the party; anger adds up to +50% spell damage; on auto she Defends to calm down above 75. She starts with Fireball, Frost Lance, Chain Lightning, Poison Cloud and Mage Blast (decided 2026-11-20). She is the second recruit, so she needs the magic system early. ⛔ Needs the magic system.
 
 ### Combat
-- [ ] **Rebalance the regular enemies for the new player** (100 HP, party damage ×2 - 2026-11-10). Goblin, Bandit and Dragon were tuned for the old 24 HP player and will now be pushovers. Do it with the enemy list (section 2), the same way as the boss sheet (`boss_stats_draft.md`).
+- [ ] **Rebalance the regular enemies for the new player** (100 HP, party damage ×2 - 2026-11-10). Goblin, Bandit and Dragon were tuned for the old 24 HP player and will now be pushovers. Do it with the enemy list (section 2), the same way as the boss sheet (`boss_stats_draft.md`). The stats are drafted in `enemy_roster.md` (2026-11-23): every enemy is a standard enemy times its multipliers, and building it means adding the 10 new enemy classes (Wolf, Slime, Big Slime, Spider, Giant Beetle, Fungusoar, Imp, Deserter/Army Soldier, Kingdom B Soldier, Kingdom B Archer) and retuning the 5 existing ones. The roster was reviewed and approved 2026-11-24: stats (as placeholders), level bands, specials, flee rules, AI patterns, day/night lean and name lists. **Tests to update:** `DifficultyScalerTests.ApplyDifficultyToEnemy_Unfair_DoublesHealthAndDamage_OnlyOnce` and `..._Normal_LowersStats_RoundingUp` hard-code the old level-1 Goblin (15 HP, 2-5); the new one is 18 HP, 2-5. The other tests that use a Goblin only use it as a stand-in.
 - [ ] **Weapon screens show the un-doubled damage.** The party's weapon damage is ×2 in the damage calculation (`DamageCalculator.PartyDamageScale`), but `Weapon.GetInfo()`/`GetDisplayName()` still show the weapon's own range. Show the real range, or fold the ×2 into the item numbers once the scale is settled.
-- [ ] **Enemy accuracy bonus per difficulty** - none on Normal, rising through Hard and Difficult to Unfair. (Numbers in section 2.)
+- [ ] 🔴 **Difficulty numbers** (decided 2026-11-23 - replaces the old placeholders in `DifficultyScaler`, `LevelingSystem.GetDifficultyMultiplier` and `GameSettings.GetPartyAccuracyPenalty`). Hard stays the 1x baseline.
+
+  | | Normal | Hard | Difficult | Unfair |
+  |---|---|---|---|---|
+  | Enemy HP | 75% | 100% | 175% | 275% |
+  | Enemy damage | 75% | 100% | 150% | 225% |
+  | Enemy accuracy | +0 | +5 | +10 | +15 (never above 95%) |
+  | Enemy crit | +0 | +0 | +5% | +10% |
+  | Enemy speed | +0 | +0 | +2 | +4 |
+  | Enemy defense | +0 | +0 | +20% | +40% |
+  | Party hit chance | -0 | -5 | -10 | -15 |
+  | Party Max HP | 120% | 100% | 90% | 80% |
+  | XP | 80% | 100% | 130% | 160% |
+  | Gold | 100% | 100% | 125% | 150% |
+  | Loot quality | 0.8x | 1x | 1.3x | 1.6x (unchanged) |
+
+  - HP and damage are split today (one `_difficultyMultiplier` for both), so they need their own multipliers. Accuracy, crit, speed and defense are new, and are applied once per enemy like HP and damage (bosses and mid-fight joiners too).
+  - **Party Max HP** applies to the player and every companion, on top of the enemy scaling. It's a %, so the gap lasts at every level. It has to apply on a new game, on level-up, on recruit and on load, and come out in the right place against the Risk max-health bonus and the Vigor Draughts.
+  - **Unfair bad luck:** about 1 in 4 of the party's hit, crit and damage rolls are rolled twice and the worse is kept. It's Fluke's Lucky Aura in reverse, and the two can share one roll helper.
+  - **The tutorial is capped at Hard:** the Skarn fight uses Normal numbers on Normal and Hard numbers on Difficult and Unfair.
+  - Update the difficulty-select text to match.
+  - **Tests to update** (they check the old numbers): `DifficultyScalerTests`, `LevelingSystemTests`, `GameSettingsTests`, `BossStatsTests` (Skarn on Normal/Unfair), and any boss tests that check per-difficulty health, e.g. `LibrarianMonkTests` shield health.
 - [ ] **Enemy XP and gold values become the guaranteed base reward**, with a random extra on top. Do this together with XP rework item "Random XP rewards" below. Bosses too: today a boss's fight XP is rolled from its level and its gold from the loot table, so `BossEnemy.XPValue`/`GoldValue` and the scaler's boss reward multipliers (XP x5, gold x3-5) aren't used yet - wire them in here (decided 2026-11-10, left out of the boss stat build 2026-11-11).
-- [ ] **Reposition action** - a 5th combat button. Swap places with a party member. It costs the turn of whoever chose it; the partner doesn't lose a turn. Front positions are attacked more often; back positions are harder to hit. Add it to the tutorial's "try each action" list. ⛔ Needs the position layout (section 2).
-- [ ] **Random names for regular enemies**, picked fresh each fight, with no repeats in one fight. Bosses keep their own names. (Name list in section 2.)
+- [ ] **Formation and rows** (decided 2026-11-23 - see `done.md`, "Positions"):
+  - **Party layout:** 2 front, 2 back. The formation is set in the party menu and saved. Every fight starts with it. A new recruit fills the first empty slot, ranged users at the back first.
+  - **Enemy targeting:** enemies pick front-row members twice as often as back-row ones. If the front row is empty, the back row counts as the front.
+  - **Enemy AI:** when an enemy follows its pattern (about 70%), it picks by its pattern and ignores rows. The 2:1 weighting applies to the random 30% and to "Random" enemies.
+  - **Back-row hit penalty:** every attack on the back row (either side) gets -10 hit chance.
+  - **Ranged and melee:** ranged weapons are bow, crossbow, staff and wand. Melee weapons are sword, dagger, axe, mace, spear, unarmed and cat-form Chance. A melee attack from the back row does -30% damage (spear -10%, for its reach). Ranged attacks have no penalty in either row.
+  - **What ignores rows:** spells, heals and items (no penalty and no -10).
+  - **Enemy rows:** each enemy type has a set row. Archers and imps go at the back, and everyone else at the front (`enemy_roster.md`). An enemy row can hold any number. Bosses ignore rows.
+  - **Saving:** the formation and each member's slot are saved.
+- [ ] **Reposition action** - a 5th combat button. Swap places with any party member (a downed one too - the body moves), or move into an empty slot (decided 2026-11-23). It costs the turn of whoever chose it; the partner doesn't lose a turn. Add it to the tutorial's "try each action" list. ⛔ Needs "Formation and rows" above.
+- [ ] **Random names for regular enemies**, picked fresh each fight, with no repeats in one fight. Bosses keep their own names. Each family has its own list, shown as "Name the Type" (decided 2026-11-23 - lists drafted in `enemy_roster.md`).
 - [ ] **Fix the buff/cooldown timing** - effect timers tick at the end of the round they were applied in, so 1-turn buffs vanish before they're used. Spell buffs and debuffs last 3 turns, and Doom 2 (decided 2026-11-20), so they must last that many of the target's turns.
 - [ ] `DamageCalculator.CalculateHealing()`'s passive healing bonus is never applied.
+- [ ] **Armor is % reduction, not flat** (decided 2026-11-24). A party member's worn armor cuts each hit by defense / (defense + 100): defense 25 = 20%, 30 = 23%, 103 = 51%. It replaces the flat `adjustedDamage - GetArmorDefense(target)` in `DamageCalculator`, so armor never makes anyone immune. Together with Defend, Defense Boost and Bulwark, the total reduction is capped at 75% (the Bulwark cap). A hit still does at least 1. **Enemy defense stays flat** - the enemy roster's numbers are sized for that. The Iron Draught's +2 defense adds to the armor's number before the %. **Tests to update:** `DamageCalculatorTests.CalculateEnemyAttackDamage_PlayerWithArmor_ReducesDamage` expects a flat 10 reduced; `..._ArmorNeverReducesDamageBelow1` should still pass.
+- [ ] **Everyone down at a win gets up at 1 HP** (decided 2026-11-23): when the party wins, every party member who is down gets up at 1 HP, companions included. Today only the player does, and downed companions stay down. They still get half XP for being down at the end.
+- [ ] **Fractions round up by chance** (decided 2026-11-23): wherever a percentage is applied to damage, defense or healing, the leftover fraction is the chance to round up (5.5 → 5 or 6, 50/50) instead of always rounding down.
+- [ ] **Nothing flees in a boss fight** (decided 2026-11-23): bosses never flee, and neither does any enemy in a boss fight (draglings, castle guards, the Cyclops partner). Enemies in a boss fight never choose Flee, and a Flee from one is refused. The party's flee is already refused.
+- [ ] **Wild draglings** (decided 2026-11-23): draglings are also a regular overworld enemy, and wild ones use their normal flee chance. Today `Dragling` is `Aggressive`, so it never tries to flee. Give wild ones a behaviour that can flee, and keep the boss's spawns from fleeing (item above). Goes with the per-area spawn lists.
+
+### Tutorial
+- [ ] **Chance revives the player once** (decided 2026-11-23): the first time the player goes down in the Skarn fight, Chance revives them (with a short line) and the fight goes on. A second fall loses, and the tutorial is replayed (today any loss goes to Game Over).
+- [ ] **The potion step comes after Skarn's first hit on the player** (decided 2026-11-23), so using the potion has a visible effect.
 
 ### XP, levels and abilities
 _The per-boss level target is decided (2026-11-19 - table in `done.md`): party levels 1 / 5 / 10 / 15 / 20 / 25 / 30 at bosses #1-#8, 35-38 at the final boss, about 8-12 regular fights between bosses._
@@ -64,21 +103,30 @@ _The per-boss level target is decided (2026-11-19 - table in `done.md`): party l
 
 ### Items, loot and magic
 - [ ] **Loot picks an item of the rolled rarity** instead of relabelling a random item (a "Legendary" Rusty Sword can drop today). Components already work this way.
-- [ ] **Apply the catalog trim** (decided 2026-11-19 - list in `catalog_trim.md`). ⛔ After the keep-list review (section 2). Steps:
+- [ ] **Apply the catalog trim** (decided 2026-11-19 - list in `catalog_trim.md`, reviewed and final 2026-11-24). Steps:
   - mark every item not on the list dormant (no drops, no shop stock)
   - Robe and Shield go dormant
   - one speed cost per armor type for everyone (Cloth 0%, Leather -5%, Chainmail -10%, Plate -20%), replacing the class-based `GetArmorSpeedPenalty`
   - remove the `TODO: was Epic` markers: Evasion, Iron Will, Precision Training and Swift Tactics stay Rare; the Greater Revival Potion becomes Legendary; the 4 promoted armor sets become Legendary
   - add Royal Guard Mail (new signature Uncommon chainmail, about 30 defense) as Risk's starting armor
-  - raise Boon's Crossbow to Uncommon-level damage
+  - raise Boon's Crossbow to Uncommon-level damage: 10-20, keeping its 95% accuracy and 5% crit (decided 2026-11-24)
 - [ ] **Random loot reaches the whole catalog** - `GetAllWeapons()`/`GetAllArmor()` miss most items. ⛔ Do it with the catalog trim, and build the lists from the item definitions so they can't drift.
 - [ ] **Mage Blast - the free, very weak spell** (decided 2026-11-19): no components, never misses, low damage (about half a basic weapon hit at the same level), can't crit, no cooldown. Its name or description must make clear it is weak because it uses none. Fiery and Fluke always have it; the player only gets it once the magic component seller is unlocked (their side quest completed).
-- [ ] **Every spell needs components**, all drawn from the one shared pouch. Each spell needs 3 unique components, none shared with another spell (decided 2026-11-20 - recipes in `spell_list.md`). Some spells also need a 4th from a named group ("any bug"), and the player picks which one is spent (a pick prompt handed back for Godot; on auto, spend whichever one the party has most of). The 4th doesn't change the effect. Spells scale with the caster's level and don't level up themselves. Only the big spells have cooldowns (placeholders: Doom 4 turns, Chain Lightning 2). Spells aimed at enemies roll to hit with the caster's accuracy (one roll per enemy, components spent even on a miss); heals and buffs on allies always land. Damage spells can crit with the caster's crit chance. A spell without its components is greyed out, and the menu lists what's missing. All decided 2026-11-20.
-- [ ] **Permanent stat potions** (decided 2026-11-20 - see `done.md`): crafted by the magic component seller. The player brings the potion's 4 components and pays her a crafting fee, and she makes it. They're never shop stock. Each one gives the player or a companion a small permanent boost to Max HP, Speed, damage, defense, crit or accuracy, with a cap per stat per character. Build: a crafting option at her shop (check the components and gold, take them, give the potion), a permanent-bonus stat on each character for damage, defense, crit and accuracy (added on top of gear, saved), a count of potions drunk per stat (saved, for the cap), the potion items, and a "this character has reached the cap" message handed back for Godot. Recipes are in `spell_list.md`. Boosts stay with the character, so they leave with Risk. ⛔ Amounts, caps and prices come from section 2.
+- [ ] **Every spell needs components**, all drawn from the one shared pouch. Each spell needs 3 unique components, none shared with another spell (decided 2026-11-20 - recipes in `spell_list.md`). Some spells also need a 4th from a named group ("any bug"), and the player picks which one is spent (a pick prompt handed back for Godot; on auto, spend whichever one the party has most of). The 4th doesn't change the effect. Spells scale with the caster's level and don't level up themselves. Only the big spells have cooldowns (placeholders: Doom 4 turns, Rekindle 5, Chain Lightning 2, Poison Cloud 2 - updated 2026-11-24). **Rekindle** (added 2026-11-24) revives a fallen ally at 25% max HP with the revival potion's speed penalty - reuse the revive path from `UseRevivePotion`. The spell list is final (2026-11-24): 11 spells plus Mage Blast. Spells aimed at enemies roll to hit with the caster's accuracy (one roll per enemy, components spent even on a miss); heals and buffs on allies always land. Damage spells can crit with the caster's crit chance. A spell without its components is greyed out, and the menu lists what's missing. All decided 2026-11-20.
+- [ ] **Permanent stat potions** (decided 2026-11-20 - see `done.md`): crafted by the magic component seller. The player brings the potion's 4 components and pays her a crafting fee, and she makes it. They're never shop stock. Each one gives the player or a companion a small permanent boost to Max HP, Speed, damage, defense, crit or accuracy, with a cap per stat per character. Build: a crafting option at her shop (check the components and gold, take them, give the potion), a permanent-bonus stat on each character for damage, defense, crit and accuracy (added on top of gear, saved), a count of potions drunk per stat (saved, for the cap), the potion items, and a "this character has reached the cap" message handed back for Godot. Recipes are in `spell_list.md`. Boosts stay with the character, so they leave with Risk. **Numbers (decided 2026-11-23):** per potion +10 Max HP, +1 Speed, +2% damage, +2 defense, +1% crit, +1% accuracy; cap 10 potions per stat per character, Speed 5 (accuracy still never above 95%). Fee: 100 gold + 50 for each potion of that stat the character has already drunk (the fee depends on who will drink it, so the craft needs a target). Names: Vigor / Swiftness / Might / Iron / Keen / Eagle-Eye Draught.
 - [ ] **Combat Elixir becomes a spell** (with components), not a consumable.
 - [ ] **Spell scrolls and town spell NPCs** (decided 2026-11-20 - see `done.md`): the player learns spells from scrolls, either bought or given by an NPC. Each town has one spell NPC. It offers up to 3 spells picked from the ones the player doesn't know yet, or only the ones that remain if fewer than 3 are left, so there's always a new spell to get. The player gets one of them at random, and can read every offered description first. The offer and the pick are rolled once per save, so reloading can't change them. Scrolls teach the player only. A bought scroll costs more for each spell the player already knows (placeholder: 100 gold, plus 100 per spell known - decided 2026-11-20). Build: a known-spells list on the player (saved), a scroll item that teaches a spell, and the NPC offer and roll (saved per NPC). Whether each NPC sells the scroll or gives it is set per NPC with the fixed map.
-- [ ] **"Elixir of Vitality" doesn't heal** - it runs the Combat Elixir code.
-- [ ] **Healing potions become candy/sweets**, sold by the Shop Keeper. Replace the Minor/Health/Greater Health Potion line (`ConsumableType.HealthPotion`) in `item_database.cs`. ⛔ Names and numbers in section 2.
+- [ ] **Healing potions become candy/sweets**, sold by the Shop Keeper (decided 2026-11-23). Rename the Minor/Health/Greater Health Potion line (`ConsumableType.HealthPotion`) in `item_database.cs`, and heal a % of the target's max HP instead of a flat amount:
+  - **Honey Drop** - 20%, 15 gold
+  - **Sugar Plum** - 40%, 40 gold
+  - **Rock Candy** - 75%, 100 gold
+  - **Golden Toffee** - 100%, Rare, never sold (drops only), sells back for 125. It replaces the **Elixir of Vitality**, which also fixes its bug (it runs the Combat Elixir code and doesn't heal).
+  - **Bread and Cooked Meat go dormant** (no drops, no stock).
+  - The tutorial's Minor Health Potion becomes a Honey Drop.
+  - The revival potions and the Antidote keep their names.
+- [ ] **Component data** (decided 2026-11-23) in `spell_component.cs`: mushrooms, berries and herbs stay Common, buyable, 5 gold - sold by the Shop Keeper. Bugs, lucky and unlucky charms stay Uncommon at 20 gold, sold only by the magic component seller (today they're not buyable at all, so the flag needs to say which trader). The Negativity Crystal stays Rare and is never sold. Add the **Phoenix Ember** (41st component, Rare, drops only, never sold - Rekindle's key component, added 2026-11-24); a rolled Rare component drop picks between the crystal and the ember. Everything can still drop. Keep the 7 groups (crystal, lucky, unlucky, mushrooms, berries, bugs, herbs) - the "any bug" slots use them.
+- [ ] **Component drops** (decided 2026-11-23): a component drop gives 1-3 of a Common or 1 of an Uncommon. Each map area favours one or two groups (2x drop weight, e.g. mushrooms in forests). ⛔ The area favour needs the fixed map; the amounts can be done now.
+- [ ] **The first Negativity Crystal is given by an NPC** as a story or quest reward (decided 2026-11-23), so Doom isn't locked behind luck. After that it stays a Rare drop. ⛔ Which NPC comes with the fixed map.
 - [ ] **Shop:** pouch components can't be sold yet. (Buying something that won't fit no longer takes the gold - fixed 2026-11-10, see section 3.)
 - [ ] **Chests and the ground keep items the player couldn't carry**, so they can come back for them. ⛔ Needs map objects.
 - [ ] Inventory stacking ignores XP (two copies with different XP merge into one).
@@ -89,24 +137,89 @@ _The per-boss level target is decided (2026-11-19 - table in `done.md`): party l
 - [ ] **Wire quest progress for the new NPC unlock quests**, once those exist (section 1 Quests, "NPC unlock quests" below) - boss quests are done (section 3).
 - [ ] **Main quests unlock in story order**, with a new "locked" quest state that is saved. (Boss quests already follow the boss order since 2026-11-11 - only the next boss's quest is shown, later ones stay `NotDiscovered`, worked out from the boss progress so nothing new is saved. This item is for the other main/story quests.)
 - [ ] **Save quest item rewards** (only gold and XP are saved today).
-- [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. Completing the magic component seller's quest also unlocks Mage Blast for the player (decided 2026-11-19). ⛔ Each quest's content comes from section 2.
+- [ ] **NPC unlock quests** - one side quest per NPC, done in any order. The NPC is fully locked (no buying, selling or upgrading) until it's done. Build: an "unlock this NPC" quest type, a saved unlocked flag per NPC, and `OpenShop`/`OpenBlacksmith` etc. refusing a locked NPC. Completing the magic component seller's quest also unlocks Mage Blast for the player (decided 2026-11-19). Each NPC gives their own quest. **Content (decided 2026-11-24):**
+  - **Shop Keeper:** goblins keep raiding his supply cart. Win 3 goblin fights near town. Thank-you: 3 Honey Drops.
+  - **Blacksmith:** bandits stole his hammer. Beat a bandit group with a named leader (a regular Bandit with a set name, not a boss). Thank-you: the first weapon or armor upgrade is free.
+  - **Magic component seller:** bring her samples - 1 mushroom, 1 bug and 1 lucky charm (any from each group; they are handed over). It teaches the player what components are. Thank-you: Mage Blast.
+  - Each also pays normal side-quest XP and gold.
+  - All three are early-game quests, so the shops open quickly.
+- [ ] **The blacksmith's apprentice - a 4-step questline** (decided 2026-11-24). One step opens after each of bosses #2, #4, #6 and #7, so it runs alongside the story:
+  1. Find a rare ore in a cave (a fight).
+  2. Bring components for a test enchant.
+  3. Escort him to an old forge (a fight on the route).
+  4. Retrieve his master's lost notes from a dangerous area.
+
+  Each finished step unlocks a tier of enchanting (next item). Locations come with the fixed map.
+- [ ] **Weapon enchanting at the apprentice** (decided 2026-11-24):
+  - **One enchant per weapon.** Re-enchanting replaces it.
+  - **Cost:** gold (rising with the weapon's rarity) plus 2-3 fitting components (e.g. Flame takes Kellycones and Rubeetles).
+  - **Enchants:**
+    - Flame: 15% chance to burn
+    - Frost: 15% chance to slow
+    - Venom: 15% chance to poison
+    - Storm: 10% chance to also hit a 2nd enemy
+    - Keen: +5% crit
+    - True: +5% accuracy
+    - Vampiric: heals 10% of the damage dealt
+  - **Tiers by questline step:**
+    - Step 1: Flame and Keen
+    - Step 2: Frost and True
+    - Step 3: Venom and Storm
+    - Step 4: Vampiric, and every enchant gets stronger (e.g. 15% → 25%). Weapons already enchanted upgrade for free.
+  - **Saving:** the enchant is saved on the weapon.
+  - Vampiric overlaps the new Lifesteal ability - if both are on, they add up (my default, to retune).
+  - Component recipes per enchant and the gold prices are placeholders, to set with the build.
+- [ ] **Fold the Veteran Ranger into the quest log** (decided 2026-11-24): boss quests appear on their own when the next boss is revealed (already the rule), and are claimed from the quest log, with no giver to visit. The Ranger can stay as a dialogue-only NPC for lore. Retire the boss-quest part of `quest_giver.cs` (comment it out, as with the other console menus).
+- [ ] **Main and side quests** (decided 2026-11-24): one `QuestManager` with a Main/Side category on each quest. Main = boss quests and the Princess's story quests, unlocked in story order. Side = NPC unlock quests, the apprentice line and everything else. The unused `progression/quest_system.cs` goes dormant (kept, like the other parked code).
 - [ ] **New NPCs:** the magic component seller (rarer components only, and she crafts the permanent stat potions for a fee - see Items, loot and magic) and the blacksmith's apprentice (weapon enchanting, unlocked through his own quest line). There is no baker: the Shop Keeper sells the healing sweets and the common components.
 - [ ] **Move quest text into data the Godot screens can show** (the console prints became `GameLog` messages 2026-11-10; quest screens still need the text as data).
 
 ### Game systems
 - [ ] 🔴 **Statistics are recorded as things happen** - have systems raise events and the tracker listen. The same events feed quests.
-- [ ] **Settings:** remove `ColoredText` and `UseEmojis` (code, save, tests). Hide the RNG-algorithm and auto-save settings in the MVP. Add a "setting changed" signal. Wire each kept setting.
+- [ ] **Settings:** remove `ColoredText` and `UseEmojis` (code, save, tests). Hide the RNG-algorithm and auto-save settings in the MVP. Add a "setting changed" signal. Wire each kept setting. **Split global and per-save** (decided 2026-11-24):
+  - **Global** (in their own settings file next to the saves, also used on the title screen): audio volume, text speed, display options (turn order, combat log, damage numbers, enemy stats) and confirmations.
+  - **Per save:** difficulty (locked at creation) and any gameplay setting.
+  - An old save's settings seed the global file the first time it's loaded, if the global file doesn't exist yet. Check `GameSettingsTests` and the save tests when this changes.
 - [ ] **Player class system out of the MVP** - no class choice and no class bonuses or armor penalties. Keep the code (`player_class.cs`, the save field) dormant.
-- [ ] **Day/night state** - saved, with a "switch day/night" option at campfires, inns and rest spots, plus a random auto-flip timer that a manual switch resets. The spawn system reads it. (Timer unit and night effects in section 2.)
-- [ ] **`Rest()` becomes an inn-based mechanic** (possibly the same menu as the day/night switch).
+- [ ] **Day/night** (designed by the user 2026-11-23 - see `done.md`):
+  - **The countdown:** a real-time countdown of **10 minutes per phase**. A new game starts at day.
+  - **Pauses that roll:** battles, dialogue and cutscenes pause it. When one ends, **roll -60 to +60 seconds** (every whole number possible) and add it to what's left before the timer resumes.
+  - **Pauses that don't roll:** menus, shops, inventory and the pause screen also pause it, but with no roll, so the clock can't be rerolled by opening the bag.
+  - **Reaching zero:** if a roll takes the countdown to 0 or below, the phase flips as soon as play resumes.
+  - **Manual switch:** at inns and save campsites, in the same rest menu as `Rest()`. It flips the phase and starts a full new countdown.
+  - **Saving:** the phase and the time left are saved.
+  - **At night:**
+    - each area uses its night spawn list
+    - night enemies get +10% HP and damage and one step more aggression, and pay +20% XP and gold
+    - town shops and the blacksmith are closed (`OpenShop`/`OpenBlacksmith` refuse with a "closed for the night" message handed back for Godot); inns stay open
+    - a darker map tint in Godot
+  - The spawn system and the shop/blacksmith checks read the phase.
+- [ ] **`Rest()` becomes an inn-based mechanic** - the same rest menu as the day/night switch (decided 2026-11-23). Inns heal fully; save campsites switch day/night and save, but don't heal.
 - [ ] **Save points:** only inns and marked campsites allow saving. Add the check in `SaveGame` only, so the boss auto-save still works. ⛔ Needs the map.
 - [ ] **Gender selection at character creation** - cosmetic only.
 - [ ] **Equipment levelling, connected:** gear XP (above), a placed Blacksmith, and the three-way weapon upgrade choice wired in (today `CompleteUpgrade()` always takes "Balanced"). (The typed Y/N and the one-second pause are out of `UpgradeWeapon`/`UpgradeArmor` - 2026-11-10.)
 - [ ] **Place shops, the blacksmith and NPCs in towns** - `city.cs` becomes the home for in-town places. ⛔ Needs the fixed map.
 - [ ] **Elder of the Elven Village** (NPC). ⛔ Needs the fixed map.
-- [ ] **Army camp + endless "test your strength" mode** - soldiers to talk to, and a commander who starts back-to-back fights with no healing between them, until you fall. Reward on exit. (Rewards and "what losing means" in section 2.) The loop can be built before the camp.
-- [ ] **Per-area enemy spawn lists**, replacing the fixed 70% Goblin / 25% Bandit / 5% Dragon roll. ⛔ Needs the enemy list and the map.
-- [ ] **Encounter-size roll** (max 8 enemies per fight), set by enemy type, player level and difficulty. ⛔ Needs the enemy list.
+- [ ] **Army camp + endless "test your strength" mode** - soldiers to talk to, and a commander who starts back-to-back fights with no healing between them. The loop can be built before the camp. Rules (decided 2026-11-23):
+  - **Waves:** wave 1 is 1 Army Soldier at the party's level. Each wave adds a soldier (max 8) and +1 level every 3 waves.
+  - **The pot:** each wave beaten adds the XP and gold of a normal fight that size to a pot, plus a prize item every 5th wave (its rarity rises with the wave).
+  - **Leaving** (clarified by the user 2026-11-23): leaving between waves - after one is beaten, before the next starts - keeps the whole pot. Leaving while enemies are still standing keeps only half, the same as losing.
+    - **Mid-wave leaving is its own "Surrender" action** (placeholder - "Retire" is the other option for the writing pass), decided by the user 2026-11-23. In the camp it replaces the Flee button.
+    - It doesn't use the flee code at all: no roll, no flee chance. It ends the attempt straight away and keeps half the pot.
+    - Normal Flee is refused for the whole attempt, so the camp never has to deal with the flee rules.
+  - **Losing:** falling is never a Game Over. The party keeps half the pot.
+  - **Fixed lineup** (added by the user 2026-11-23): before starting, the player picks the 4 who fight (the player plus 3 from the roster). There is no swapping with benched companions during the attempt.
+  - **No items** in the waves: the item action is refused for the whole attempt.
+  - **Fallen stays fallen:** a member who falls is out for the rest of the attempt. The "everyone down gets up at 1 HP on a win" rule (section 1, Combat) is switched off between waves. The attempt ends when the whole lineup is down.
+  - **Full heal after:** when the challenge ends (leaving or losing), every participant is fully healed and revived.
+  - **Best wave:** saved per save file, for the statistics and bragging.
+  - **Rewards:** Army Soldiers drop no normal loot here; only the pot pays.
+  - **Free spells in the waves** (added by the user 2026-11-23): casting spells doesn't spend components, so the player can test any mix of party members against the army.
+    - Every caster can still only cast the spells they already know (the player's known spells, Fiery's set, Fluke's luck spells).
+    - Cooldowns, the to-hit roll and Fiery's wild magic still work as normal.
+    - Combat needs a "components are free" flag for the fight, and the "greyed out without components" check must respect it.
+- [ ] **Per-area enemy spawn lists**, replacing the fixed 70% Goblin / 25% Bandit / 5% Dragon roll. The Dragon only appears in one or two mountain areas; loyal army soldiers are never random encounters (only deserters are). ⛔ Needs the map (the roster is final in `enemy_roster.md`, with a day/night lean per family).
+- [ ] **Encounter-size roll** (max 8 enemies per fight, decided 2026-11-23): each enemy has a group range (in `enemy_roster.md`, e.g. wolves 2-5, Dragon always 1). The maximum goes up by 1 every 10 player levels, and by +1 on Difficult / +2 on Unfair. The touched enemy's family fills the group, and about 1 in 4 fights adds one or two others from the area's spawn list. The group ranges are final (roster reviewed 2026-11-24). ⛔ The mixing needs the spawn lists.
 
 ### Code cleanup
 - [ ] Delete the duplicate settings/statistics save code in `QuestSerializationHelper` (about 190 lines).
@@ -121,8 +234,12 @@ _The per-boss level target is decided (2026-11-19 - table in `done.md`): party l
 
 ### Godot frontend
 - [ ] **Combat scene receives its fight from `GameManager`** instead of building its own, and goes through the tutorial check during the tutorial.
-- [ ] **Combat scene shows:** names (enemy name + type), damage numbers, "Critical", "Miss"/evade, health bars that move on each hit, whose turn it is, turn order and round (8 slots, skipped ones shown), all 5 action buttons (greyed when unusable), target and item picking, defend markers, status effects with time left, the companion control toggle, downed/revived combatants, an end screen per outcome with rewards, the boss name/title and attack warnings, the text log. Also every ability (`GetAbilities()` for Felicity), Boon's bolt picker (`GetBoltCounts()`), and Risk's blocked hits (`AttackBlocked`).
+- [ ] **Combat scene plays the events back in order** (decided 2026-11-23): the backend runs every computer-controlled turn in one go, and the screen queues the events and animates them one after another. It only shows the player's turn once the queue is empty.
+- [ ] **Combat scene shows:** names (enemy name + type), damage numbers, "Critical", "Miss"/evade, health bars that move on each hit, whose turn it is, turn order and round (8 slots, skipped ones shown), all 5 action buttons (greyed when unusable; in the army camp waves the Flee button becomes Surrender), target and item picking, defend markers, status effects with time left, the companion control toggle, downed/revived combatants, an end screen per outcome with rewards, the boss name/title and attack warnings, the text log. Also every ability (`GetAbilities()` for Felicity), Boon's bolt picker (`GetBoltCounts()`), and Risk's blocked hits (`AttackBlocked`).
 - [ ] **Screens:** party menu (player, inventory and companions in one, with an equip action that moves items in and out of the bag, plus use, drop and the control toggle), shop, blacksmith, quest giver, quest log, settings, statistics, main menu/new game/load, character creation, pause, save, loot pop-up, Game Over (offer a new game when there's no save), ending and credits.
+- [ ] **World map overview** (decided 2026-11-24): a view-only screen in the pause menu showing the route/town graph. Visited places are named, unvisited ones show "???". No fast travel in the MVP. Needs the backend to track visited map nodes (saved). ⛔ Needs the fixed map.
+- [ ] **Completed saves get a "Completed" marker** on the load screen, plus a statistics summary (decided 2026-11-24 - `IsGameCompleted` already exists). Nothing else unlocks in the MVP.
+- [ ] **Pixel-art project settings** (decided 2026-11-24): a low base resolution (e.g. 640x360), scaled up in whole steps, with nearest-neighbour filtering, set in `project.godot`.
 - [ ] Set the project's main scene once a main menu exists.
 - [ ] Rewrite `MapController.cs` for the touch-to-fight overworld spawns.
 - [ ] The combat log treats `[...]` as formatting. Fix it when combat text moves to events.
@@ -140,7 +257,9 @@ _The backend tests were reworked against the current code on 2026-11-04, and the
 
 ### Story and world
 - [ ] 🔴 **The fixed map** - routes and towns (a route/town graph with bounded areas). Town and route names, where each boss lives, which campsites are save points, and where each NPC lives. This blocks placing anything in the world.
-- [ ] **Ending and credits** - the story content and credits text. Does a completed save unlock anything (e.g. a marker on the load screen)?
+  - **Waiting on the user's drawing** (decided 2026-11-24). Rules already set: a main path with optional side areas branching off. Bosses live in their own locations, not in towns. Every visited area stays reachable on foot (no one-way cut-offs), and new areas open as bosses fall. The size and each boss's spot come with the drawing.
+  - **The drawing should mark:** town and route names; how they connect; each boss's location; the side areas (including the one or two Dragon mountains); the campsites that are save points; where the army camp, the royal palace and the Elven Village are; and, if known, which town has which shops, spell NPC and quest NPCs. The spawn lists, component favour per area and day/night lists can be drafted from it afterwards.
+- [ ] **Ending and credits** - the story content and credits text. (A completed save only gets a load-screen marker - decided 2026-11-24.)
 - [ ] **Dialogue lines** for NPCs and companions.
 - [ ] **Difficulty flavour text** - the placeholder lines in `GetDifficultyDescription` are for you to reword.
 
@@ -158,48 +277,21 @@ _All the boss mechanics and numbers are settled (2026-11-19 - see `done.md`). Wh
 _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery's starting spells too (2026-11-20). What's left:_
 - [ ] **Names and text for the writing pass:** Boon's combat barks; a new name for "Royal Guard's Armor" 🤫; a real name for Fluke's "Lucky Aura".
 
-### Combat
-- [ ] **Enemy accuracy per difficulty** - the bonus per level and a ceiling (e.g. never above 95%).
-- [ ] **Positions** - how many (front/back rows or a line of four), how much more often front positions are attacked, how much harder back positions are to hit, whether position affects the party's own attacks, the starting formation, ranged-weapon penalties per position, which weapons count as ranged, and melee rules.
-- [ ] **Confirm the combat defaults:** speed ties broken at random; the player gets up at 1 HP if the party wins while they're down; an enemy that flees drops each loot item with a 50% chance.
-- [ ] **Small numbers:** percentage bonuses round down to nothing on small hits. Use the fraction as a chance to round up, raise all the base numbers, or both? (Partly eased 2026-11-10: the player's health is 100 and the party's damage ×2, so party hits are bigger. Enemy hits are still small until the enemies are rebalanced.)
-- [ ] **Combat screen timing:** queue the events and play them back, or have combat advance one turn at a time?
-
-### Difficulty
-- [ ] 🔴 **Make the harder difficulties much harder** - the wiring is built (section 3) with the old placeholder numbers: enemy health and damage 75% / 100% / 150% / 200%, XP 80% / 100% / 125% / 150%, gold 100% / 100% / 120% / 140%, party hit chance -0 / -7 / -14 / -21. The harder difficulties should be much harder and a lot more punishing - Unfair shows how punishing RNG can be when it isn't on your side (decided 2026-11-10). Set the real numbers (and whether defense, speed or crit should scale too).
-- [ ] **Starting stats per difficulty** (higher on easy, lower on hard): which stats; on top of enemy scaling or instead of it; whether the gap shrinks with levels. Check it against the per-boss level target.
-
 ### Items and magic
-- [ ] **Review the catalog keep-list** in `catalog_trim.md` (drafted 2026-11-19 - the shape is decided, see `done.md`). Swap any items you want, then mark it final. Blocks applying the trim and the loot fixes.
-- [ ] **Spells** - review the draft list in `spell_list.md` (10 spells with recipes - the structure and how spells are learned are decided, see `done.md`). With the fixed map, decide whether each town's spell NPC sells the scroll or gives it. Their offers are random, so they need no list. Fiery is the second recruit, so the magic system is needed early.
-- [ ] **Permanent stat potions** - review the 4-component recipes drafted in `spell_list.md`, then decide how much each one gives (e.g. +1 Speed, +5 Max HP, +1% crit), the cap per stat per character, her crafting fee, and their names (decided so far: see `done.md`).
-- [ ] **Spell components** - rarity, description, price and buyable flag for each of the 40 (all placeholders now); loot weights and amounts; how they're grouped; area-based drops (mushrooms in forests...); the Negativity Crystal being given by an NPC or cursed onto the player.
-- [ ] **Names for the other potions** (revival, antidote and so on), now that healing potions are becoming candy/sweets.
+- [ ] **Item names for the writing pass:** give the kept Legendaries (and any other working names) original names that fit this world - Excalibur, Gae Bolg, Failnaught, Ragnarok's Edge, Reality Warp Wand, Ballista Prime, Cosmos Staff, The Peacemaker and so on. The keep-list itself is final (2026-11-24).
+- [ ] **Spell NPCs: sell or give?** With the fixed map, decide whether each town's spell NPC sells the scroll or gives it. Their offers are random, so they need no list. (The spell list and all recipes are final - 2026-11-24.)
+- [ ] **Component descriptions** for the writing pass - all 41 (with the new Phoenix Ember) need one - today they say only "A mushroom.", "A bug." and so on. (Rarity, price, who sells them, groups and drops are decided 2026-11-23 - see `done.md`.)
 
 ### Quests
-- [ ] **Each NPC's unlock quest** - blacksmith, shopkeeper, magic component seller (more later?): what it asks and who gives it. Is unlocking the whole reward, or is there gold/XP too?
-- [ ] **The Shop Keeper's candy/sweets** - their names, whether they are new items or the renamed potions, how strong each is, and what they cost.
-- [ ] **The magic component seller's stock** - which of the 40 components count as "rare enough" to be exclusive to them rather than sold by the general Shop Keeper.
-- [ ] **The blacksmith's apprentice's side quest line** - not a single unlock quest like the other NPCs, an actual questline. What it involves, how long it is, what unlocks enchanting at the end.
-- [ ] **Weapon enchantment effects** - what the apprentice can actually grant (extra power, elemental/status effects, etc.), how many, and whether they're tied to rarity or the questline's progress.
-- [ ] **Does the boss-quest giver ("Veteran Ranger") stay** as its own screen?
-- [ ] **Main vs. side quests** - rework the unused `progression/quest_system.cs` into the main quest tracker? What is a main quest here?
+- [ ] **Names for the writing pass:** the bandit leader in the Blacksmith's quest, the apprentice, his master, and the quest titles.
 - [ ] **Rewrite the quest text** for the current story (drop the "greatest warrior in the realm" framing).
 
 ### World and systems
-- [ ] **Day/night:** what drives the timer (playtime, or a count of in-game actions such as steps or fights); the random interval range; what changes at night (enemies, numbers, aggression, shops, NPCs, the look); the starting phase; which places are switch points.
-- [ ] **Enemy types:** army soldiers, palace guards, Kingdom B soldiers and wolves so far - more? Stats, behaviour, areas and group sizes for each. Do Goblin, Bandit and Dragon stay?
-- [ ] **Random enemy names** - one list or per type, and how they're shown (e.g. "Tom the Goblin").
-- [ ] **Army camp:** the exit reward (gold and/or a prize, by time lasted or enemies beaten) and what losing there means (not a normal Game Over).
-- [ ] **Settings:** should some be global rather than per save (e.g. volume on the title screen)?
-
-### Tutorial
-- [ ] **Can the tutorial be lost?** An earlier decision says it must not be (e.g. Chance revives you once). The current code sends a loss to Game Over and you replay it. Which one?
-- [ ] **The tutorial potion** does nothing visible if the player is at full health at the Item step. Should Skarn land a hit first?
+- [ ] **A name for "Kingdom B"** (the enemy kingdom). Its soldiers and archers show as "Name the Kingdom B Soldier" until then (`enemy_roster.md`).
 
 ### Godot
 - [ ] **Combat scene layout** and a coordinate grid (x/y) for placing things on screen.
-- [ ] **The 5 open questions** in section 6 of `godot_frontend_plan.md`.
+- [ ] **One scene per area, or one per area type filled from data?** (the last open question in section 6 of `godot_frontend_plan.md` - the others were decided 2026-11-24). Decide it with the fixed map.
 
 ---
 
@@ -226,14 +318,14 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - Other enemies share the slots that are left (boss with 2 turns + 3 others: the 2 slowest others share a slot).
   - With too few slots, the extra turns are dropped so every other enemy still gets a slot.
   - `ShouldTakeExtraTurn` returning false skips the turn with a `TurnSkipped` event.
-  - A poison on the boss ticks once per round, not once per turn (my default, to confirm).
+  - A poison on the boss ticks once per round, not once per turn (confirmed 2026-11-23).
   - A Defend from its first turn ends when its second turn comes.
 - [ ] **Bosses reacting to events** (written 2026-11-10, for the Cyclops revive and the Slime Dragon). A boss whose mechanic implements `IReactiveMechanic` is told about each event from an action or effect tick once it has been resolved. No boss uses it yet, so test it with a small test mechanic. Check:
   - It hears an `AttackLanded`/`Damaged` when it is hit, and a `Defeated` when an ally falls.
   - Poison ticks and end-of-round effect expiry are heard too.
   - Changes a reaction makes (e.g. healing itself) show up as normal events, and can be reacted to.
   - Two reactions that set each other off stop after 10 passes.
-  - A boss that is down or fled doesn't react (my default, to confirm).
+  - A boss that is down doesn't react (confirmed 2026-11-23 - bosses never flee).
   - A reaction doesn't end the boss's Defend or use up its turn.
   - A fight without a reacting boss plays exactly as before.
 - [ ] **Lost turns - "skip your next turn"** (written 2026-11-10, for the Princess). A general `SkipTurnEffect`, put on a target by a boss with `CombatAction.Inflict(boss, target, new SkipTurnEffect())`. No boss uses it yet, so test it with a small test mechanic. Check:
@@ -241,38 +333,38 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - The lost turn does nothing (nothing is started, not even a Defend), and the log and a `TurnSkipped` event with Message "Turn lost" show it.
   - A Defend from their previous turn still ends when the lost turn comes.
   - It doesn't wear off at the end of the round, only when used up. Putting a second one on doesn't add a second lost turn.
-  - Their poison/burn still ticks at the end of the lost turn (my default, to confirm).
-  - A boss's end-of-round bonus turn doesn't use it up (my default, to confirm).
+  - Their poison/burn still ticks at the end of the lost turn (confirmed 2026-11-23).
+  - A boss's end-of-round bonus turn doesn't use it up (confirmed 2026-11-23).
   - An antidote or Iron Will removes it (it counts as crowd control).
   - It never carries over to the overworld or the next fight.
   - The player can't submit an Inflict or Summon action (refused with "Only enemies can do that.").
 - [ ] **Enemies joining a fight in progress** (written 2026-11-10, for the draglings and the castle guards). A boss calls them with `CombatAction.Summon(boss, enemies)` on its turn, or `context.Summon(enemy)` from a reaction or a bonus turn. Test with a small test mechanic. Check:
   - The new enemy shows in `Enemies`, the log, and an `EnemyJoined` event.
-  - It doesn't act in the round it joined, and is in the turn slots from the next round (my default, to confirm). With more than 4 enemies, the slots are shared as normal.
+  - It doesn't act in the round it joined, and is in the turn slots from the next round (confirmed 2026-11-23). With more than 4 enemies, the slots are shared as normal.
   - It gives normal rewards when the fight is won (draglings get diminishing rewards - see below).
-  - No more than 8 enemies can be in the fight at once (my reading of the encounter cap, to confirm). A refused summon logs "No one answers...".
+  - No more than 8 enemies can be in the fight at once (confirmed 2026-11-23). A refused summon logs "No one answers...".
   - The list GameManager passed into `StartCombat` is not changed.
 - [ ] **End-of-round bonus turns** (written 2026-11-10, for the Cyclops revive and the Slime Dragon). A boss whose mechanic implements `IEndOfRoundTurnMechanic` is asked once each round, after every slot has been played, whether it wants a bonus turn. Test with a small test mechanic. Check:
   - If not, nothing is added - not shown in `TurnOrder`, not skipped.
   - If yes, a slot with `IsEndOfRoundTurn` is added after the filled slots, an `EndOfRoundTurnAdded` event is raised, and the boss acts before the round ends (before effect countdowns, cooldowns and next round's speeds).
   - It can revive a fallen ally through `context.FallenAllies` (setting Health) - a `Revived` event shows it, and the revived enemy is back in the slots next round.
   - It can summon, or return an action (e.g. an attack) that resolves normally. An attack on a bonus turn isn't joined.
-  - It doesn't end the boss's Defend, doesn't tick its effects, and doesn't change its speed for next round (my default, to confirm). `IsEndOfRoundTurn` is true during it.
+  - It doesn't end the boss's Defend, doesn't tick its effects, and doesn't change its speed for next round (confirmed 2026-11-23). `IsEndOfRoundTurn` is true during it.
   - If the fight is already over when the round ends, no bonus turn happens (e.g. both brothers down in the same round = win).
 - [ ] **Diminishing rewards** (written 2026-11-10, for farming draglings). Enemies with the same `DiminishingRewardsGroup` pay less XP and gold the more of them are beaten in one fight. Test with a fight of 15+ enemies sharing a group. Check:
   - The first 10 pay full XP and gold; the 11th pays 80%, the 12th 64%, the 13th about 51% (each 80% of the one before), and the log says so.
   - Item drops are not reduced.
   - Enemies with no group, and other groups, are not affected. The count starts again in every fight.
-  - A fled one also takes the next place in line, then gets its usual half (my default, to confirm).
+  - A fled one also takes the next place in line, then gets its usual half (confirmed 2026-11-23).
 - [ ] **Joined attacks** (written 2026-11-10, for the Cyclops Brothers). A boss whose mechanic implements `IAttackPartnerMechanic` is asked after every enemy attack whether it joins in. Test with two bosses whose test mechanic joins each other. Check:
   - When one attacks on his own turn, the other attacks the same target straight after (an `AttackJoined` event, then the attack's own hit/miss events).
   - Abilities, Defend and other actions aren't joined. Party attacks never are.
   - The joiner's Defend stays up, his own slot still comes up this round, and his speed next round isn't changed by the joined attack.
-  - If the first attack took the target down, the joiner doesn't attack (my default, to confirm).
+  - If the first attack took the target down, the joiner doesn't attack (confirmed 2026-11-23).
 - [ ] **Actions are checked** - a bad action (wrong turn, dead target, ability on cooldown, missing item, boss flee) is refused with an `ActionRejected` event.
 - [ ] **Direct control** - combat waits for you on a directly controlled companion's turn.
 - [ ] **Items in combat** - anyone can use an item on any standing party member. A revive works on a fallen companion or the fallen player, the revived member is slower the next round, and a revive can't target someone standing.
-- [ ] **The fight goes on** while anyone in the party stands; if the party wins while the player is down, the player gets up at 1 HP.
+- [ ] **The fight goes on** while anyone in the party stands; if the party wins while the player is down, the player gets up at 1 HP. (Extended to downed companions 2026-11-23 - see section 1, Combat.)
 - [ ] **Bosses** have stats (Skarn about 160 HP, 16-30 damage - probably too strong, note it); the old 15%/50% multipliers are off; a beaten boss can't be challenged again; boss fights include the party.
 - [ ] **Stronger player and party** (2026-11-10, first pass - to be tested and adjusted). Check:
   - A new player starts at 100 HP and speed 10, with no class bonus (the Warrior +20% that made 24 is commented out - classes are out of the MVP).
@@ -287,7 +379,7 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - Draglings are at the party's level (his - 5), fast and weak; after 10 in one fight, each one's XP and gold drop by 20% (compounding).
   - New tests: `SlimeDragonAndCaptainTests`. No existing test changed.
 - [ ] **#9 Princess - the final boss** (built 2026-11-11, standalone for now). 🤫 Last in `BossDefinitions` (`FinalBossMechanic`), plus a new regular enemy, `CastleGuard`. Every boss now exists. Check:
-  - Two opponent slots a round; her second is slower by the difficulty's gap (my default: Normal 6-8 ... Unfair 1-2). With only one party member standing, her second turn is skipped (`TurnSkipped`).
+  - Two opponent slots a round; her second is slower by the difficulty's gap (confirmed 2026-11-23: Normal 6-8 ... Unfair 1-2). With only one party member standing, her second turn is skipped (`TurnSkipped`).
   - Each turn: attack a random target, force a skip (the target loses their next turn - `SkipTurnEffect`), or call two castle guards (only when none of hers are alive; uses her turn). At half health or below she leans on skips.
   - Her two actions in a round never go to the same person.
   - A lost turn does nothing at all; a Defend still ends on time (the engine's lost-turn rules).
@@ -300,7 +392,7 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - Beating a boss (the tutorial fight, or any boss fight) shows the next boss's quest (`QuestManager.UpdateBossQuestVisibility`, also run after loading a save).
   - The final quest only appears once the final boss is the next boss.
   - A save from before this rule: later boss quests that were shown but never accepted are hidden again; an accepted one is kept.
-  - The boss list (`BossManager.GetBossList()`, for the Godot screen): the next boss shows its name, title, description and mechanic; every boss after it is just "Locked" (all its fields are empty); beaten bosses show their name and title (my default - they've been met).
+  - The boss list (`BossManager.GetBossList()`, for the Godot screen): the next boss shows its name, title, description and mechanic; every boss after it is just "Locked" (all its fields are empty); beaten bosses show their name and title (confirmed 2026-11-23 - they've been met).
   - Godot screens must never list `NotDiscovered` quests.
   - Removed: `BossDefinitions.GetBossListSummary()` (commented out - it listed every boss by name; nothing used it).
   - New tests: `BossVisibilityTests`. No existing test changed.
@@ -321,7 +413,7 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
 - [ ] **#4/#5 Cyclops Brothers - always attack together** (built 2026-11-11). One entry in `BossDefinitions`: "Fast" (placeholder name, speed 9) is the boss, "Slow" (speed 7) is his `PartnerBoss`, and `BossEncounter.StartBossEncounter` brings in both. Each has a `CyclopsBrotherMechanic`. Check:
   - Only the two of them in the fight. Fast always acts before Slow.
   - Whenever one attacks on his own turn, the other attacks the same target straight after (`AttackJoined`). Defend and abilities aren't joined. Joining doesn't end his Defend or use up his own turn.
-  - When one falls, the other enrages (Rage effect at his level - my default) and, in a bonus turn at the end of the round, brings his brother back at 25% health (`Revived`). No limit on revives.
+  - When one falls, the other enrages (Rage effect at his level - confirmed 2026-11-23) and, in a bonus turn at the end of the round, brings his brother back at 25% health (`Revived`). No limit on revives.
   - Both down in the same round wins the fight. It counts as one boss beaten (`DefeatBoss` only for Fast - the partner isn't in the boss list), and pays both brothers' XP and gold.
   - New tests: `CyclopsBrothersTests`. No existing test changed.
 - [ ] **#3 Giant House Centipede - poison bite** (built 2026-11-11). He is boss #3 in `BossDefinitions` (`GiantCentipedeMechanic`, `CentipedePoisonEffect`). Check:
@@ -357,14 +449,14 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - Buying an item that doesn't fit (full bag, or a stack over 99) is refused and takes no gold.
   - The combat log doesn't repeat damage or healing lines (`Player.Heal`/`TakeDamage` messages are commented out).
   - `CombatManagerTests.CalculateXPReward_BonusOccursAtExpectedRate` now counts "Bonus XP!" from `CombatMessage` instead of capturing the console (the console-capture helpers were removed).
-- [ ] **Difficulty changes the game** (wired 2026-11-10). `CombatManager` builds a `DifficultyScaler` whenever its `Difficulty` is set (GameManager sets it on a new game and on load); `GameManager.Difficulty` exposes it. Check:
+- [ ] **Difficulty changes the game** (wired 2026-11-10 - the numbers below are the old placeholders; the real ones are in "Difficulty numbers", section 1). `CombatManager` builds a `DifficultyScaler` whenever its `Difficulty` is set (GameManager sets it on a new game and on load); `GameManager.Difficulty` exposes it. Check:
   - Every enemy's health and damage is multiplied for the difficulty when a fight starts (Normal 75%, Hard 100%, Difficult 150%, Unfair 200%) - including bosses, the tutorial's Skarn, and enemies who join mid-fight.
   - A boss fought again after a loss is not made stronger again (applied once per enemy).
   - The fight's XP and gold get the difficulty multiplier (shown in the log), and companions share the multiplied XP.
   - The difficulty-select text now also states the enemy strength and the XP/gold numbers.
   - Tests: the 4 `GameSettingsTests` for the removed `GetDifficultyMultiplier`/`GetRewardMultiplier` are gone; 2 new `DifficultyScalerTests` cover applying difficulty to an enemy.
 - [ ] **Old boss multipliers and rematches fully off** (finished 2026-11-10, code kept commented with notes on bringing it back). Check: it builds; a boss's name and info screen show no "Strength: x..." label; a new save has no boss repeat counts, and an older save that has them still loads.
-- [ ] **Party accuracy by difficulty** - on Hard, an 85% weapon hits about 78% of the time; enemies are unaffected; a load keeps the penalty.
+- [ ] **Party accuracy by difficulty** - on Hard, an 85% weapon hits about 78% of the time; enemies are unaffected; a load keeps the penalty. (The penalty changes to -0 / -5 / -10 / -15 with "Difficulty numbers" in section 1 - test with those once built.)
 - [ ] **Combat text** (items, abilities, effects, companion level-ups) shows in the combat log.
 - [ ] **Tutorial** - only the player's own actions count toward "try each action"; a refused action doesn't count; the player gets a Minor Health Potion.
 

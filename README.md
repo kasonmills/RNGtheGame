@@ -205,8 +205,9 @@ RNGtheGame/
 │   ├── abilities.md
 │   ├── boss_ideas_archive.md
 │   ├── boss_stats_draft.md              # The reasoning behind every boss's level-1 stats
-│   ├── catalog_trim.md                  # Keep-list of weapons and armor after the catalog trim (draft for review)
-│   ├── spell_list.md                    # The MVP spells, their recipes and effects (draft for review)
+│   ├── catalog_trim.md                  # Keep-list of weapons and armor after the catalog trim (final)
+│   ├── enemy_roster.md                  # The MVP regular enemies: stats, groups, behaviour and names (final)
+│   ├── spell_list.md                    # The MVP spells, their recipes and effects, and the stat potion recipes (final)
 │   └── player_class_system.md
 │
 ├── tools/

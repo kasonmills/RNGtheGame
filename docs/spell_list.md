@@ -1,14 +1,14 @@
-# Spell list (draft for review)
+# Spell list
 
-**Status: draft, 2026-11-19 - for the user to review and edit.** The structure is decided (see `done.md`, "Spells - who casts and how recipes work"). The spells, recipes and numbers below are my suggestions. All numbers are placeholders, to retune after playtesting.
+**Status: final, reviewed 2026-11-24** (drafted 2026-11-19). The spells, effects and recipes below (and the stat potion recipes) are approved. The numbers are still placeholders, to retune after playtesting. Changed in the review: Poison Cloud gets a 2-turn cooldown, and an 11th spell, **Rekindle** (a revive), is added with a new Rare component, the **Phoenix Ember**.
 
 **Decided so far**
-- About 10 spells in the MVP, plus the free **Mage Blast** (no components - see `done.md`).
+- **11 spells in the MVP** (10, plus Rekindle added 2026-11-24), plus the free **Mage Blast** (no components - see `done.md`).
 - **Casters:** Fiery, the player (once the magic component seller is unlocked) and Fluke. **Fluke can only cast luck spells** - any other spell fails or backfires on him.
 - **Recipes: 3 unique components per spell** (decided 2026-11-20 - replaces the earlier "one key component plus group filler"). No component is used by two spells, so 30 of the 40 are used and 10 stay free (see Notes). Rare components only for the big spells.
 - **Some spells need a 4th component, chosen by the player** from a group the spell names ("any bug"). It's only a cost and doesn't change the effect. Any component in the group counts, even one another recipe uses.
 - **On auto**, the 4th-slot pick spends whichever component in the group the party has most of.
-- **Cooldowns on the big spells only:** Doom (placeholder 4 turns) and Chain Lightning (placeholder 2). The rest can be cast every turn if the components are there.
+- **Cooldowns on the big spells only:** Doom (placeholder 4 turns), Rekindle (5), Chain Lightning (2) and Poison Cloud (2 - added 2026-11-24, since its poison stacks on every enemy). The rest can be cast every turn if the components are there.
 - **Spells scale with the caster's level** ("a basic hit for the caster's level"). They don't level up themselves.
 - **Durations:** buffs and debuffs last 3 turns, and Doom 2.
 - **Hitting:** spells aimed at enemies roll to hit with the caster's accuracy (one roll per enemy). A miss still spends the components. Heals and buffs on allies always land. Mage Blast never misses.
@@ -30,7 +30,7 @@
 | **Fireball** | Rubeetles + Kellycones + Roseberries | One enemy, about 1.5x a basic hit. 30% chance to burn. |
 | **Frost Lance** | Sapphider + Min + Blueberries | One enemy, about 1.2x a basic hit. Slows it (-4 speed for 3 turns). |
 | **Chain Lightning** | Amberbees + Crystacricket + Draviteflies + *any bug* | Up to 3 enemies, about 0.7x a basic hit each. |
-| **Poison Cloud** | Poisonshroom + Berylflies + Spotshroom + *any mushroom* | Poisons every enemy (the poison formula at the caster's level). |
+| **Poison Cloud** | Poisonshroom + Berylflies + Spotshroom + *any mushroom* | Poisons every enemy (the poison formula at the caster's level). 2-turn cooldown. |
 
 ## Support
 
@@ -39,6 +39,7 @@
 | **Mend** | Haleshroom + Honeyberries + Appleberries | Heals one ally about 25% of their max HP. |
 | **Combat Elixir** | Strengthshroom + Shieldshroom + Laurel Scales | One ally: +20% damage and +20% defense. Replaces the Combat Elixir consumable (to-do, section 1). |
 | **Purify** | Fairyshroom + Lavenjade + Mossmary | Removes every negative effect from one ally, including the Demon Prince's chicken. |
+| **Rekindle** (rare) | Phoenix Ember + Melonberries + Forest Fern | Revives one fallen ally at 25% of their max HP. 5-turn cooldown. The revived ally is slower next round, like with a revival potion. Added 2026-11-24 - the only revive besides the revival potions. |
 
 ## Luck (Fluke can cast these)
 
@@ -52,16 +53,18 @@
 
 ## Permanent stat potions (crafted by the magic component seller)
 
-The player brings the 4 components and pays her crafting fee. She doesn't sell these as shop stock. Components can be shared with spells. The amounts and caps are placeholders, as are the names.
+The player brings the 4 components and pays her crafting fee. She doesn't sell these as shop stock. Components can be shared with spells. **The amounts, caps, fee and names are decided (2026-11-23).** The recipes are still a draft, for review.
 
-| Potion (placeholder) | Recipe | Boost (placeholder) |
-|---|---|---|
-| **Vigor Draught** - Max HP | Haleshroom + Honeyberries + Melonberries + Forest Fern | +5 Max HP |
-| **Swiftness Draught** - Speed | Berylflies + Nanaberries + Kombuthyme + Fish | +1 Speed |
-| **Might Draught** - damage | Strengthshroom + Rubeetles + Roseberries + Acorns | +1% damage |
-| **Iron Draught** - defense | Shieldshroom + Flatshroom + Laurel Scales + Jade | +1 defense |
-| **Keen Draught** - crit | Ladybug + Crystacricket + Emerald Fronds + Bamboo | +1% crit |
-| **Eagle-Eye Draught** - accuracy | Sapphider + Myrtle Needles + Blueberries + Spotshroom | +1% accuracy |
+**Fee:** 100 gold, plus 50 for each potion of that stat the character has already drunk (the 10th costs 550).
+
+| Potion | Recipe (draft) | Boost | Cap per character |
+|---|---|---|---|
+| **Vigor Draught** - Max HP | Haleshroom + Honeyberries + Melonberries + Forest Fern | +10 Max HP | 10 (+100) |
+| **Swiftness Draught** - Speed | Berylflies + Nanaberries + Kombuthyme + Fish | +1 Speed | 5 (+5) |
+| **Might Draught** - damage | Strengthshroom + Rubeetles + Roseberries + Acorns | +2% damage | 10 (+20%) |
+| **Iron Draught** - defense | Shieldshroom + Flatshroom + Laurel Scales + Jade | +2 defense | 10 (+20) |
+| **Keen Draught** - crit | Ladybug + Crystacricket + Emerald Fronds + Bamboo | +1% crit | 10 (+10%) |
+| **Eagle-Eye Draught** - accuracy | Sapphider + Myrtle Needles + Blueberries + Spotshroom | +1% accuracy | 10 (+10%, never above 95%) |
 
 Why: healing mushroom and sweet fruit for health; fish are quick; oak (acorns) and strength for damage; jade is a guardian stone and the flat mushroom a shield; ladybug luck and a sharp crystal bug for crits; needles for precision and blueberries for eyesight for accuracy.
 
@@ -71,7 +74,8 @@ The potions use all 10 components no spell uses (Acorns, Fish, Jade, Flatshroom,
 
 ## Notes
 
-- **There are 40 components** (`spell_component.cs`): 1 crystal, 6 lucky, 3 unlucky, 7 mushrooms, 7 berries, 7 bugs and 9 herbs.
+- **There are 41 components** (`spell_component.cs`): 1 crystal, 6 lucky, 3 unlucky, 7 mushrooms, 7 berries, 7 bugs and 9 herbs, plus the new **Phoenix Ember** (added 2026-11-24 for Rekindle - Rare, drops only, never sold; its group is "rare" alongside the crystal). Rekindle also uses Melonberries and Forest Fern, which the Vigor Draught uses too - sharing with potions is allowed.
+- **Rekindle** is on the scroll list like any other spell (the player learns it from a town NPC). Fiery doesn't start with it, but her wild magic can pull it. Fluke can't cast it. On auto, a caster who knows it uses it as soon as an ally is down and the components are there.
 - **Why these matches** (my picks, change freely):
   - Fireball: ruby-red bug, pine cones burn, red berries.
   - Frost Lance: sapphire-blue spider, mint is cold, blue berries.

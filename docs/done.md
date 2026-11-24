@@ -14,6 +14,187 @@ What is finished. The other half of `to_do_list.md`: that file is what is still 
 
 ## Decisions resolved
 
+### Fixed map - who draws it, shape and backtracking (section 2, Story and world)
+- **Moved here**: 2026-11-24
+- ✅ **Decided 2026-11-24**:
+  - **The user draws the map**, and it gets built from the drawing (not a drafted text graph).
+  - **Shape:** a main path with optional side areas branching off.
+  - **Bosses aren't found in towns.** Each boss's location is marked on the drawing. The size comes with the drawing too.
+  - **Backtracking:** every visited area stays reachable on foot, and new areas open as bosses fall. No one-way cut-offs, so `ConnectToOneWay` stays unused for now.
+- **Still open**: the map itself (section 2, Story and world - 🔴, waiting on the drawing).
+
+### Enemy roster reviewed (section 2, World and systems)
+- **Moved here**: 2026-11-24
+- ✅ **Decided 2026-11-24**: `enemy_roster.md` is final as drafted:
+  - the standard enemy (HP 20 + 6 per level, damage (2 + level/2) to (5 + level), defense level/4, speed 10 + level/4, 75% accuracy, 5% crit)
+  - the 15 enemies' multipliers and level bands (as placeholders, to retune after playtesting)
+  - flee rules, AI patterns and specials, including the Big Slime's split, the Fungusoar's Spore Roar and the imps' conditions
+  - the day/night lean per family
+  - the name lists per family.
+- **Still open**: a name for "Kingdom B" (section 2, World and systems).
+- **Follow-up**: the build is "Rebalance the regular enemies" (section 1, Combat). It breaks 2 `DifficultyScalerTests` that hard-code the old level-1 Goblin. The encounter-size roll and the spawn lists wait on the map.
+
+### Spell list reviewed - Poison Cloud cooldown, Rekindle added (section 2, Items and magic)
+- **Moved here**: 2026-11-24
+- ✅ **Decided 2026-11-24**:
+  - **The spell list, effects and recipes in `spell_list.md` are final**, along with the 6 stat potion recipes. The numbers stay placeholders for playtesting.
+  - **Poison Cloud gets a 2-turn cooldown** - its poison stacks on every enemy, so casting it every turn would snowball.
+  - **Ill Omen and the Demon Prince's Hexed share one effect** in the code.
+  - **New 11th spell, Rekindle:** revives a fallen ally at 25% HP, with a 5-turn cooldown. The recipe is Phoenix Ember + Melonberries + Forest Fern. It's learned from scrolls like any spell. Fiery's wild magic can pull it, but Fluke can't cast it. Until now the revival potions were the only way to revive (Felicity only heals - I wrongly said she revived during the review).
+  - **New 41st component, the Phoenix Ember** - Rare, drops only, never sold.
+- **Removed from `to_do_list.md` section 2**: the spell list review. Still open: whether each town's spell NPC sells or gives its scroll (with the fixed map).
+- **Follow-up**: the builds are in section 1 (Items, loot and magic: "Every spell needs components", "Component data").
+
+### Catalog keep-list reviewed, armor becomes % reduction (section 2, Items and magic)
+- **Moved here**: 2026-11-24
+- ✅ **Decided 2026-11-24**:
+  - **The keep-list in `catalog_trim.md` is final as drafted** - 54 weapons and 24 armor sets. Swaps can still happen after playtesting.
+  - **Armor defense becomes a % reduction:** defense / (defense + 100), capped at 75% together with Defend, Defense Boost and Bulwark. Found during the review: the flat subtraction would have made the catalog's armor (Common plate 25, Legendary 103) shrug off most enemies. Enemy defense stays flat.
+  - **Boon's Crossbow: 10-20 damage**, 95% accuracy, 5% crit.
+  - **Names stay as working names.** The Legendaries get original names in the writing pass.
+- **Removed from `to_do_list.md` section 2**: "Review the catalog keep-list" (replaced by the writing-pass names item).
+- **Follow-up**: "Apply the catalog trim" and "Random loot reaches the whole catalog" are unblocked (section 1, Items, loot and magic). The armor change is in section 1, Combat.
+
+### Settings, ending unlock, world map, art style (section 2, World and systems, Story and Godot)
+- **Moved here**: 2026-11-24
+- ✅ **Decided 2026-11-24**:
+  - **Settings split:** global (their own file, also used on the title screen) for audio, text speed, display options and confirmations. Per save for difficulty and anything gameplay-related.
+  - **A completed save gets a "Completed" marker** on the load screen and a statistics summary. Nothing else unlocks in the MVP (NG+ stays parked).
+  - **World map overview:** a simple view-only screen in the pause menu - visited places named, unvisited ones "???". No fast travel in the MVP.
+  - **Art style: pixel art** - a low base resolution scaled up in whole steps, nearest-neighbour filtering.
+  - **Godot folder layout:** feature folders, as built on 2026-10-28 (settled).
+- **Removed from `to_do_list.md` section 2**: "Settings: should some be global", the unlock question in "Ending and credits", and questions 1, 2 and 5 from the Godot plan's section 6. Still open: one scene per area or per area type (with the fixed map).
+- **Follow-up**: the builds are in `to_do_list.md` section 1 (Game systems: Settings; Godot frontend: world map overview, Completed marker, pixel-art settings).
+
+### NPC quests, the apprentice and enchanting (section 2, Quests)
+- **Moved here**: 2026-11-24
+- ✅ **Decided 2026-11-24**:
+  - **NPC unlock quests**, each given by the NPC themselves and all early in the game:
+    - **Shop Keeper:** win 3 goblin fights near town (they raid his supply cart).
+    - **Blacksmith:** beat a bandit group with a named leader (they stole his hammer).
+    - **Magic component seller:** bring her 1 mushroom, 1 bug and 1 lucky charm. It doubles as the components tutorial.
+  - **Unlock rewards:** the NPC opens, plus normal side-quest XP and gold, plus a one-off thank-you. The Shop Keeper gives 3 Honey Drops, the Blacksmith's first upgrade is free, and the seller teaches Mage Blast.
+  - **The apprentice's questline has 4 steps**, one after each of bosses #2, #4, #6 and #7: find a rare ore, bring components for a test enchant, escort him to an old forge, retrieve his master's lost notes. Each step unlocks a tier of enchanting.
+  - **Enchanting:**
+    - **Enchants:** elemental (Flame burn, Frost slow, Venom poison, Storm hits a 2nd enemy) and stat runes (Keen +crit, True +accuracy, Vampiric heals on hit).
+    - **Slots and cost:** one enchant per weapon. It costs gold plus 2-3 fitting components.
+    - **Tiers:** step 1 Flame and Keen, step 2 Frost and True, step 3 Venom and Storm, step 4 Vampiric. Step 4 also makes every enchant stronger.
+  - **The Veteran Ranger folds into the quest log** - boss quests appear and are claimed there. The Ranger can stay as a lore NPC.
+  - **Main vs side:** one `QuestManager` with a Main/Side category. Main = boss quests and the Princess's story quests. Side = everything else. `quest_system.cs` goes dormant.
+- **Removed from `to_do_list.md` section 2**: "Each NPC's unlock quest", "The blacksmith's apprentice's side quest line", "Weapon enchantment effects", "Does the boss-quest giver stay", "Main vs. side quests". Still open there: rewriting the quest text, and the names for the writing pass.
+- **Follow-up**: the builds are in `to_do_list.md` section 1 (Quests).
+
+### Day/night and the army camp (section 2, World and systems)
+- **Moved here**: 2026-11-23
+- ✅ **Decided 2026-11-23** (the timer is the user's own design - it replaces the open "playtime or action counter" question from 2026-11-03):
+  - **A real-time countdown, 10 minutes per phase**, starting at day on a new game.
+  - **Battles, dialogue and cutscenes pause the countdown.** When one ends, a roll of **-60 to +60 seconds** (every whole number possible) is added to what's left, and then it resumes. It stays mostly predictable, with some randomness.
+  - **Menus, shops, inventory and the pause screen pause it too, but with no roll**, so it can't be rerolled by opening the bag.
+  - **A roll that takes it to 0 or below flips the phase** as soon as play resumes.
+  - **Manual switch at inns and save campsites**, in the same rest menu as `Rest()`. It flips the phase and starts a full new countdown. The phase and the time left are saved.
+  - **At night:** each area uses its night spawn list; night enemies are tougher (+10% HP and damage, one step more aggression) and pay more (+20% XP and gold); town shops and the blacksmith close (inns stay open); the map is tinted darker.
+  - **Army camp waves:** Army Soldiers only. Wave 1 is one soldier at the party's level, each wave adds one (max 8), and +1 level every 3 waves.
+  - **Army camp rewards:** each wave beaten adds its XP and gold to a pot, with a prize item every 5th wave. Leaving between waves keeps it all. Leaving while enemies are still standing keeps only half, the same as losing (clarified by the user). **Mid-wave leaving is a separate "Surrender" action** (placeholder name, or "Retire"), which replaces the Flee button in the camp. It doesn't use the flee mechanic at all: it always works and ends the attempt with half the pot.
+  - **Losing at the army camp is never a Game Over** - the party keeps half the pot. The best wave is saved.
+  - **Fixed lineup, no items, no revives** (added by the user): the player picks a starting lineup of 4 and sees how far those 4 can go - no swapping with the bench. No items can be used. A member who falls stays down for the rest of the attempt.
+  - **Everyone is fully healed when the challenge ends**, whether the party left or lost.
+  - **Spells are free in the army camp waves** (added by the user): casting doesn't spend components, but each caster can still only cast the spells they already know. It's a place to test any mix of party members against the army.
+- **Removed from `to_do_list.md` section 2**: "Day/night" and "Army camp".
+- **Follow-up**: the builds are in `to_do_list.md` section 1 (Game systems). A draft of which families come out by day or night is in `enemy_roster.md`.
+
+### Positions - formation, rows, melee and ranged (section 2, Combat)
+- **Moved here**: 2026-11-23
+- ✅ **Decided 2026-11-23**:
+  - **Party layout: 2 front, 2 back.** The player sets the formation in the party menu, and it's saved. Every fight starts with it. A new recruit fills the first empty slot, ranged users at the back first.
+  - **Front-row members are targeted twice as often** as back-row ones. If the front row is empty, the back row counts as the front.
+  - **AI patterns win over rows:** when an enemy follows its pattern (about 70%), it ignores rows. The 2:1 weighting applies to its random picks and to "Random" enemies.
+  - **Attacks on the back row get -10 hit chance**, on either side.
+  - **Ranged:** bow, crossbow, staff, wand - no penalty in either row. **Melee:** sword, dagger, axe, mace, spear, unarmed, and cat-form Chance - -30% damage from the back row (spear only -10%, for its reach).
+  - **Spells, heals and items ignore rows** (no penalty, no -10).
+  - **Enemies have rows too, set by type:** archers and imps at the back, everyone else at the front. The same rules apply when the party attacks them. **Bosses ignore rows.**
+  - **Reposition** swaps with any party member (a downed one too) or moves into an empty slot. It costs the chooser's turn only (decided earlier).
+- **Removed from `to_do_list.md` section 2**: "Positions".
+- **Follow-up**: the build is "Formation and rows" and "Reposition action" in `to_do_list.md` section 1 (Combat). The combat screen layout (section 2, Godot) needs to show the two rows.
+
+### Enemy roster - families, groups and names (section 2, World and systems)
+- **Moved here**: 2026-11-23
+- ✅ **Decided 2026-11-23**:
+  - **Goblin, Bandit and Dragon stay.** The Dragon becomes a rare late-game enemy found only in one or two mountain areas.
+  - **Families:** goblins, bandits, wolves, slimes (with wild draglings), bugs/spiders, imps (lesser demons), **Fungusoars** (the user's own idea: mushroom dinosaurs, not humanoid mushroom folk), the player's own army, Kingdom B's army, castle guards and the dragon.
+  - **One enemy per family, two for the big families** (e.g. Slime + Big Slime, Spider + Giant Beetle, Kingdom B Soldier + Archer) - about 15.
+  - **The player's own army:** loyal soldiers are never random encounters. They are sparring opponents at the army camp, and **deserters** roam the routes as hostile enemies.
+  - **Castle Guards are one enemy** - regular in and around the palace, and the Princess's summon.
+  - **Group mix:** the touched enemy's family fills the group. About 1 in 4 fights adds one or two others from the area's spawn list.
+  - **Group sizes:** packs (wolves, slimes, bugs, imps) 2-5; goblins 1-4; bandits, deserters and soldiers 1-3; Fungusoar 1-2; Dragon always 1. The maximum goes up by 1 every 10 player levels, and by +1 on Difficult / +2 on Unfair, never above 8.
+  - **Random names per family**, shown as "Name the Type" ("Grik the Goblin").
+- **Removed from `to_do_list.md` section 2**: "Enemy types" and "Random enemy names", replaced by "Review the enemy roster".
+- **Follow-up**: the stats, specials, AI patterns and name lists are drafted in `enemy_roster.md` for review. The builds are in section 1 (Combat: rebalance and random names; Game systems: spawn lists and encounter size).
+
+### Difficulty numbers (section 2, Difficulty and Combat)
+- **Moved here**: 2026-11-23
+- ✅ **Decided 2026-11-23** - the harder difficulties are much harder, and Unfair bends the dice against the player. Hard stays the 1x baseline:
+
+  | | Normal | Hard | Difficult | Unfair |
+  |---|---|---|---|---|
+  | Enemy HP | 75% | 100% | 175% | 275% |
+  | Enemy damage | 75% | 100% | 150% | 225% |
+  | Enemy accuracy | +0 | +5 | +10 | +15 (never above 95%) |
+  | Enemy crit | +0 | +0 | +5% | +10% |
+  | Enemy speed | +0 | +0 | +2 | +4 |
+  | Enemy defense | +0 | +0 | +20% | +40% |
+  | Party hit chance | -0 | -5 | -10 | -15 (softened from -7 / -14 / -21) |
+  | Party Max HP | 120% | 100% | 90% | 80% |
+  | XP | 80% | 100% | 130% | 160% |
+  | Gold | 100% | 100% | 125% | 150% |
+  | Loot quality | 0.8x | 1x | 1.3x | 1.6x (kept) |
+
+  - **Unfair bad luck:** about 1 in 4 of the party's hit, crit and damage rolls are rolled twice and the worse is kept - Fluke's Lucky Aura in reverse.
+  - **Starting stats per difficulty = Party Max HP** (player and companions), on top of the enemy scaling. It's a %, so the gap lasts at every level.
+  - **The tutorial is capped at Hard**, so a new player isn't walled before learning the controls (Normal stays Normal).
+- **Removed from `to_do_list.md` section 2**: "Make the harder difficulties much harder", "Starting stats per difficulty", "Enemy accuracy per difficulty".
+- **Follow-up**: the build is "Difficulty numbers" in `to_do_list.md` section 1 (Combat), which lists the tests that will need new numbers.
+
+### Potions, sweets and components (section 2, Items and magic and Quests)
+- **Moved here**: 2026-11-23
+- ✅ **Decided 2026-11-23**:
+  - **Permanent stat potions - amounts and caps:** per potion +10 Max HP, +1 Speed, +2% damage, +2 defense, +1% crit, +1% accuracy. Each character can drink at most **10 of each**, but only **5 Speed** potions (so at most +100 HP, +5 Speed, +20% damage, +20 defense, +10% crit, +10% accuracy). Accuracy still never goes above the 95% ceiling.
+  - **Crafting fee rises per potion drunk:** 100 gold, plus 50 for each potion of that stat the character has already drunk (the 10th costs 550).
+  - **Names:** Vigor, Swiftness, Might, Iron, Keen and Eagle-Eye Draught (can still be reworded in the writing pass).
+  - **Healing sweets heal a % of max HP**, so they stay useful at every level: Honey Drop 20% (15 gold), Sugar Plum 40% (40 gold), Rock Candy 75% (100 gold). They are the 3 health potions renamed.
+  - **Golden Toffee** - a rare 4th sweet, 100% heal, drops only (sells back for 125). It replaces the Elixir of Vitality.
+  - **Bread and Cooked Meat go dormant** - the sweets replace them.
+  - **The other potions keep their names** (Minor / Revival / Greater Revival Potion, Antidote) - with the healing ones now candy, "potion" means revive or cure.
+  - **Who sells components:** the Shop Keeper sells mushrooms, berries and herbs (Common, 5 gold). The magic component seller sells bugs, lucky and unlucky charms (Uncommon, 20 gold). The Negativity Crystal is never sold. Everything can still drop.
+  - **The Negativity Crystal:** an NPC gives the first one as a story or quest reward, then it's a Rare drop.
+  - **Groups and drops:** keep the 7 groups (crystal, lucky, unlucky, mushrooms, berries, bugs, herbs). Each map area favours one or two groups (2x drop weight). A drop gives 1-3 of a Common or 1 of an Uncommon.
+- **Removed from `to_do_list.md` section 2**: "Permanent stat potions", "Names for the other potions", "The Shop Keeper's candy/sweets", "The magic component seller's stock". "Spell components" is cut down to its descriptions (writing pass). The stat potion recipes go with the spell list review.
+- **Follow-up**: the build items are in `to_do_list.md` section 1 (Items, loot and magic).
+
+### Combat defaults, rounding, screen timing, tutorial, boss-fight fleeing (section 2 Combat and Tutorial, section 3)
+- **Moved here**: 2026-11-23
+- ✅ **Decided 2026-11-23**:
+  - **The three combat defaults are confirmed:** speed ties are broken at random; if the party wins while anyone in it is down, **everyone who is down gets up at 1 HP** - companions too, not just the player (clarified 2026-11-23; they still get half XP for being down at the end); an enemy that flees drops each of its loot items with a 50% chance (gold and XP are halved exactly).
+  - **Small numbers: fractions become a chance to round up.** +10% on a 5-damage hit is 5.5, so it lands as 5 (50%) or 6 (50%). Applies wherever a percentage is applied to damage, defense or healing. Bigger base numbers aren't the fix (the player's 100 HP and the party's ×2 damage stay as they are).
+  - **Combat screen timing: queue and play back.** The backend keeps running every computer-controlled turn in one go. The Godot screen queues the events and animates them in order, and only shows the player's turn once the queue is empty.
+  - **The tutorial can't be lost the first time.** The first time the player goes down in the Skarn fight, Chance revives them (with a short line) and the fight goes on. A second fall loses, and the player replays the tutorial.
+  - **The tutorial's potion step comes after Skarn has landed a hit on the player**, so using the potion has a visible effect.
+  - **Nothing flees in a boss fight**, party or enemies. Bosses never flee, and neither do the Slime Dragon's draglings, the Princess's castle guards or the Cyclops partner. This is part of the boss mechanics.
+  - **Draglings are also a wild overworld enemy.** Outside the boss fight they use their normal flee chance.
+  - **The engine defaults in section 3 are confirmed as written:**
+    - poison on a two-turn boss ticks once per round
+    - the Princess's second-turn gap depends on difficulty (Normal 6-8 … Unfair 1-2), and it's skipped when only one party member is standing
+    - a downed boss doesn't react (bosses never flee)
+    - poison or burn still ticks at the end of a lost turn
+    - a boss's end-of-round bonus turn doesn't use up a lost turn
+    - an enemy that joins mid-fight acts from the next round
+    - at most 8 enemies at once ("No one answers..." when refused)
+    - a bonus turn doesn't end Defend, tick effects or change speed
+    - a fled enemy still takes its place in the diminishing-rewards line
+    - a joining brother doesn't attack a target that's already down
+    - the surviving Cyclops brother's Rage is at his own level
+    - beaten bosses show their name and title in the boss list
+- **Follow-up**: the build items are in `to_do_list.md` (section 1: Combat, Tutorial, Godot frontend).
+
 ### Spell rules - cooldowns, scaling, durations, Fiery's starting spells (section 2, Companions and Combat)
 - **Moved here**: 2026-11-20
 - ✅ **Decided 2026-11-20**:

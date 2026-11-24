@@ -238,11 +238,11 @@ project starts
 ## 6. Open questions and backend gaps this plan exposes
 
 **Open (decide before or during the build sessions):**
-1. **Folder layout** - feature folders (this plan) or keep the current `scenes/` + `scripts/` + `UI/` split by file type?
-2. **World map overview** - needed for the MVP, or is walking between areas enough?
+1. ✅ **Folder layout - settled 2026-11-24**: feature folders, as this plan has them (the skeleton was built that way on 2026-10-28).
+2. ✅ **World map overview - decided 2026-11-24**: yes, a simple view-only screen in the pause menu (the route/town graph, visited places named, unvisited "???"). No fast travel in the MVP.
 3. **One scene per area, or one scene per area _type_ filled from data?** Hand-built scenes fit the fixed map; it depends on the fixed-map design that is still pending.
 4. ✅ **Tutorial intro - decided 2026-10-28**: its own scene in the `Cutscene` state; the tutorial itself is an overlay state on top of `Combat`.
-5. **Pixel-art vs higher-res art** - decides the viewport/stretch settings in `project.godot` and the asset folder contents.
+5. ✅ **Art style - decided 2026-11-24**: pixel art. A low base resolution (e.g. 640x360), scaled up in whole steps, with nearest-neighbour filtering.
 
 **`game_logic` hook-ups the frontend needs (most already logged in `to_do_list.md`):**
 - 🧪 **Written 2026-10-28, needs testing**: `GameManager.CurrentState`, and read access to `Player`, `Party`, `Map`, `Quests`, `QuestGiver`, `Bosses`, `Settings`, `Statistics`. `LoadGame(slot)` returns true/false and `SaveGame(slot)` takes a slot, neither prints. `SaveManager` is static, so the load screen calls `SaveManager.SaveExists()` / `GetSaveFileInfo()` directly.

@@ -1,6 +1,8 @@
 # Catalog trim - keep-list (draft for review)
 
-**Status: draft, 2026-11-19 - for the user to review and edit.** Once approved, the build is in `to_do_list.md` (section 1, Items, loot and magic). Items not on this list stay in `item_database.cs` but dormant (no drops, no shop stock), so they can come back later.
+**Status: final, reviewed 2026-11-24** (drafted 2026-11-19). The build is in `to_do_list.md` (section 1, Items, loot and magic). The names are working names - the Legendaries get original names in the writing pass.
+
+**Armor defense is a % reduction** (decided 2026-11-24): each hit is cut by defense / (defense + 100), so the defense numbers below stay as they are. Plate 25 = 20%, 30 = 23%, Legendary plate 103 = 51%. The total with Defend, Defense Boost and Bulwark is capped at 75%. Items not on this list stay in `item_database.cs` but dormant (no drops, no shop stock), so they can come back later.
 
 **The shape** (decided 2026-11-19 - see `done.md`, "Catalog trim"):
 - **Weapons:** all 9 types stay, 6 each = **54**: 2 Common, 2 Uncommon, 1 Rare, 1 Legendary per type. Boon's Crossbow is a signature item on top of that (not a drop).
@@ -88,9 +90,9 @@ Stats are at level 1: damage, crit %, accuracy %.
 | Uncommon | Dwarven Crossbow | 12-22 | 9 | 90 |
 | Rare | Dragonfire Crossbow | 16-34 | 12 | 93 |
 | Legendary | Ballista Prime | 32-67 | 23 | 98 |
-| *Signature* | Boon's Crossbow 🔒 (Uncommon, not a drop) | 6-12 | 5 | 95 |
+| *Signature* | Boon's Crossbow 🔒 (Uncommon, not a drop) | 10-20 | 5 | 95 |
 
-Boon's Crossbow is Uncommon but has Common-level damage today (6-12). The decision is Uncommon-level damage, so it needs raising when it's built (e.g. to about 10-20, like the Heavy Crossbow).
+Boon's Crossbow is 6-12 in the code today. It goes to 10-20 (the Heavy Crossbow's damage), keeping its signature 95% accuracy (decided 2026-11-24).
 
 ### Staff (Arcane)
 | Rarity | Item | Damage | Crit | Acc |
