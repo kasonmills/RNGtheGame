@@ -142,7 +142,8 @@ namespace GameLogic.Entities.NPCs
             Level++;
 
             // Scale stats with level (similar to player)
-            int healthIncrease = 10 + (Level / 5); // Slightly less than player
+            // Same as the player, scaled by the difficulty's party max-health multiplier
+            int healthIncrease = ScaleMaxHealthGain(10 + (Level / 5));
             MaxHealth += healthIncrease;
             Health = MaxHealth; // Full heal on level up
 

@@ -297,6 +297,9 @@ namespace GameLogic.Core
             {
                 _tutorialManager.ActionLessonsFinished -= OnLessonsFinished;
 
+                // Back to the save's real difficulty after the capped tutorial fight
+                _combatManager.Difficulty = _gameSettings.Difficulty;
+
                 // The fight can end before every lesson is done (e.g. Chance lands the last hit)
                 if (_currentState == GameState.Tutorial)
                 {
@@ -317,6 +320,10 @@ namespace GameLogic.Core
 
             _tutorialManager.ActionLessonsFinished += OnLessonsFinished;
             WatchFightEnd(OnCombatFinished);
+
+            // The tutorial fight is capped at Hard (decided 2026-11-23): Normal numbers on Normal,
+            // Hard numbers on Difficult and Unfair. The party's max health stays the save's own.
+            _combatManager.Difficulty = DifficultyScaler.GetTutorialDifficulty(_gameSettings.Difficulty);
 
             _combatManager.StartCombat(_player, new List<Entities.Enemies.EnemyBase> { eagleBear }, _partyManager.RecruitedCompanions, _bossManager);
         }

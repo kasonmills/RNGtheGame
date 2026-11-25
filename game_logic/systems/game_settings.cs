@@ -83,18 +83,35 @@ namespace GameLogic.Systems
 
         /// <summary>
         /// Hit chance taken off the player's and companions' attacks on each difficulty
-        /// (percentage points): Normal 0, Hard 7, Difficult 14, Unfair 21. Enemies are not
-        /// affected, and Boon is exempt (decided 2026-10-21).
+        /// (percentage points): Normal 0, Hard 5, Difficult 10, Unfair 15 (decided 2026-11-23;
+        /// was 0/7/14/21). Enemies are not affected, and Boon is exempt with his own crossbow.
         /// </summary>
         public static int GetPartyAccuracyPenalty(DifficultyLevel difficulty)
         {
             return difficulty switch
             {
                 DifficultyLevel.Normal => 0,
-                DifficultyLevel.Hard => 7,
-                DifficultyLevel.Difficult => 14,
-                DifficultyLevel.Unfair => 21,
+                DifficultyLevel.Hard => 5,
+                DifficultyLevel.Difficult => 10,
+                DifficultyLevel.Unfair => 15,
                 _ => 0
+            };
+        }
+
+        /// <summary>
+        /// The party's max health on each difficulty (decided 2026-11-23): Normal 120%, Hard 100%,
+        /// Difficult 90%, Unfair 80% - for the player and every companion, on top of the enemy
+        /// scaling. It's a %, so the gap lasts at every level (Entity.MaxHealthMultiplier).
+        /// </summary>
+        public static double GetPartyMaxHealthMultiplier(DifficultyLevel difficulty)
+        {
+            return difficulty switch
+            {
+                DifficultyLevel.Normal => 1.2,
+                DifficultyLevel.Hard => 1.0,
+                DifficultyLevel.Difficult => 0.9,
+                DifficultyLevel.Unfair => 0.8,
+                _ => 1.0
             };
         }
 
@@ -137,11 +154,11 @@ namespace GameLogic.Systems
     /// </summary>
     public enum DifficultyLevel
     {
-        // Numbers in DifficultyScaler / LevelingSystem / GetPartyAccuracyPenalty:
-        // enemy health+damage, XP, gold, party hit chance
-        Normal,     // 75%,  80% XP,  100% gold, -0 hit chance
-        Hard,       // 100%, 100% XP, 100% gold, -7  (the 1x baseline)
-        Difficult,  // 150%, 125% XP, 120% gold, -14
-        Unfair      // 200%, 150% XP, 140% gold, -21
+        // Numbers (decided 2026-11-23) in DifficultyScaler / LevelingSystem / GameSettings:
+        // enemy health, enemy damage, XP, gold, party hit chance, party max health
+        Normal,     // 75%,  75%,  80% XP,  100% gold, -0,  120% HP
+        Hard,       // 100%, 100%, 100% XP, 100% gold, -5,  100% HP (the 1x baseline)
+        Difficult,  // 175%, 150%, 130% XP, 125% gold, -10, 90% HP
+        Unfair      // 275%, 225%, 160% XP, 150% gold, -15, 80% HP, plus bad luck
     }
 }

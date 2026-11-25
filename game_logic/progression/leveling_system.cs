@@ -296,8 +296,8 @@ namespace GameLogic.Progression
             {
                 GameLogic.Systems.DifficultyLevel.Normal => 0.8f,
                 GameLogic.Systems.DifficultyLevel.Hard => 1.0f,
-                GameLogic.Systems.DifficultyLevel.Difficult => 1.25f,
-                GameLogic.Systems.DifficultyLevel.Unfair => 1.5f,
+                GameLogic.Systems.DifficultyLevel.Difficult => 1.3f, // was 1.25 (decided 2026-11-23)
+                GameLogic.Systems.DifficultyLevel.Unfair => 1.6f,    // was 1.5
                 _ => 1.0f
             };
         }

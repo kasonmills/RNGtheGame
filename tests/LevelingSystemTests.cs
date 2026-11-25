@@ -701,23 +701,23 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void GetDifficultyMultiplier_Difficult_Returns1Point25()
+        public void GetDifficultyMultiplier_Difficult_Returns1Point3()
         {
             // Act
             float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Difficult);
 
-            // Assert
-            Assert.Equal(1.25f, multiplier);
+            // Assert - 130% XP (decided 2026-11-23)
+            Assert.Equal(1.3f, multiplier);
         }
 
         [Fact]
-        public void GetDifficultyMultiplier_Unfair_Returns1Point5()
+        public void GetDifficultyMultiplier_Unfair_Returns1Point6()
         {
             // Act
             float multiplier = LevelingSystem.GetDifficultyMultiplier(DifficultyLevel.Unfair);
 
-            // Assert
-            Assert.Equal(1.5f, multiplier);
+            // Assert - 160% XP (decided 2026-11-23)
+            Assert.Equal(1.6f, multiplier);
         }
 
         #endregion

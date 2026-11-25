@@ -130,8 +130,8 @@ namespace GameLogic.Tests
         [Theory]
         [InlineData(DifficultyLevel.Normal, 174)]    // 231 x 0.75 = 173.25 -> 174
         [InlineData(DifficultyLevel.Hard, 231)]
-        [InlineData(DifficultyLevel.Difficult, 347)] // 346.5 -> 347
-        [InlineData(DifficultyLevel.Unfair, 462)]
+        [InlineData(DifficultyLevel.Difficult, 405)] // 231 x 1.75 = 404.25 -> 405 (2026-11-23 numbers)
+        [InlineData(DifficultyLevel.Unfair, 636)]    // 231 x 2.75 = 635.25 -> 636
         public void Difficulty_IsAppliedOnTopOfTheSheetStats(DifficultyLevel difficulty, int expectedHealth)
         {
             var skarn = MakeBoss(BossStatSheet.Skarn, 2);
@@ -151,14 +151,32 @@ namespace GameLogic.Tests
             // First attempt
             scaler.ApplyDifficultyToEnemy(skarn);
             scaler.ApplyDifficultyToEnemy(skarn); // A second call does nothing
-            Assert.Equal(462, skarn.MaxHealth);
+            Assert.Equal(636, skarn.MaxHealth);
 
             // Retry: CombatManager rebuilds the boss, then applies the difficulty again
             skarn.InitializeStats(2);
             scaler.ApplyDifficultyToEnemy(skarn);
-            Assert.Equal(462, skarn.MaxHealth);
-            Assert.Equal(30, skarn.MinDamage);
-            Assert.Equal(56, skarn.MaxDamage);
+            Assert.Equal(636, skarn.MaxHealth);   // 231 x 2.75, rounded up
+            Assert.Equal(34, skarn.MinDamage);    // 15 x 2.25 = 33.75 -> 34
+            Assert.Equal(63, skarn.MaxDamage);    // 28 x 2.25 = 63
+            Assert.Equal(87, skarn.Accuracy);     // 72 + 15
+            Assert.Equal(15, skarn.CritChance);   // 5 + 10
+            Assert.Equal(16, skarn.Speed);        // 12 + 4
+            Assert.Equal(2, skarn.Defense);       // 1 x 1.4 = 1.4 -> 2
+        }
+
+        [Fact]
+        public void Difficulty_OnHard_OnlyRaisesAccuracy()
+        {
+            var skarn = MakeBoss(BossStatSheet.Skarn, 2);
+            new DifficultyScaler(DifficultyLevel.Hard).ApplyDifficultyToEnemy(skarn);
+
+            Assert.Equal(231, skarn.MaxHealth);
+            Assert.Equal(15, skarn.MinDamage);
+            Assert.Equal(77, skarn.Accuracy); // 72 + 5
+            Assert.Equal(5, skarn.CritChance);
+            Assert.Equal(12, skarn.Speed);
+            Assert.Equal(1, skarn.Defense);
         }
 
         #endregion

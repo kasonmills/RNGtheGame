@@ -7,7 +7,12 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
     ///
     /// Fights at the party's level (the dragon's level - 5), not the dragon's. Farming them is
     /// allowed, with diminishing rewards after 10 in one fight (DiminishingRewardsGroup, decided
-    /// 2026-11-10). Stats are my defaults (2026-11-11), not decided.
+    /// 2026-11-10). Stats are my defaults (2026-11-11), kept as built by the roster review
+    /// (2026-11-24).
+    ///
+    /// Also a wild overworld enemy (decided 2026-11-23), in slime groups: a wild one may try to
+    /// flee below 30% health. The Slime Dragon's own spawns never do - nothing flees in a boss
+    /// fight (CombatManager). Targets at random.
     /// </summary>
     public class Dragling : EnemyBase
     {
@@ -20,6 +25,9 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
             Type = EnemyType.Common;
             Behavior = EnemyBehavior.Aggressive;
             DiminishingRewardsGroup = RewardsGroup;
+            Family = EnemyRoster.Slimes;
+            Targeting = EnemyTargetPattern.Random;
+            FleeBelowHealth = 0.30;
 
             InitializeStats(Level);
         }
@@ -46,11 +54,6 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
 
             XPValue = Level * 20;
             GoldValue = Level * 4;
-        }
-
-        public override EnemyAction DecideAction()
-        {
-            return EnemyAction.Attack;
         }
 
         public override string GetDescription()

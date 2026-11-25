@@ -93,6 +93,17 @@ namespace GameLogic.Combat
         // Speed penalties from being revived, waiting to be added to the next round's speed
         private readonly Dictionary<Entity, int> _pendingRevivePenalties;
 
+        // For the enemies' targeting patterns (EnemyTargetPattern): who last hit each enemy, and
+        // how much damage each party member has done this fight
+        private readonly Dictionary<Entity, Entity> _lastAttackerOf = new Dictionary<Entity, Entity>();
+        private readonly Dictionary<Entity, int> _damageDealtBy = new Dictionary<Entity, int>();
+
+        /// <summary>
+        /// How often (1-100) an enemy follows its targeting pattern - the rest of the time it
+        /// picks a random party member (decided 2026-11-19).
+        /// </summary>
+        public const int TargetPatternChance = 70;
+
         // Events raised while an action or effect tick resolves, waiting to be handed to
         // reacting bosses (IReactiveMechanic) once it has been reported. See RunAndReport.
         private const int MaxReactionPasses = 10;
@@ -338,6 +349,8 @@ namespace GameLogic.Combat
             _defendingEntities.Clear();
             _fledEnemies.Clear();
             _pendingRevivePenalties.Clear();
+            _lastAttackerOf.Clear();
+            _damageDealtBy.Clear();
             _pendingReactions.Clear();
             _collectingReactions = false;
             _turnQueue.Clear();
@@ -747,6 +760,13 @@ namespace GameLogic.Combat
             if (pinned != null)
             {
                 speed -= pinned.Potency;
+            }
+
+            // And a slime's sticky hit
+            var slowed = entity.GetEffect<Abilities.EnemyAbilities.SlowedEffect>();
+            if (slowed != null)
+            {
+                speed -= slowed.Potency;
             }
 
             return Math.Max(1, speed);
@@ -1479,8 +1499,8 @@ namespace GameLogic.Combat
             bool canUseAbility = enemy.SpecialAbility != null &&
                                  enemy.SpecialAbility.CurrentCooldown <= 0;
 
-            // Select target - enemies can target the player or companions
-            Entity target = SelectEnemyTarget();
+            // Select target - enemies can target the player or companions, by their pattern
+            Entity target = SelectEnemyTarget(enemy);
             if (target == null)
             {
                 return CombatAction.None(enemy);
@@ -1507,6 +1527,14 @@ namespace GameLogic.Combat
                 }
             }
 
+            // Below its flee line an enemy tries to get away some of its turns (never in a boss
+            // fight - decided 2026-11-23). Whether it does is its FleeChance (ProcessFlee).
+            if (enemy.FleeBelowHealth > 0 && !IsBossFight() && healthPercent < enemy.FleeBelowHealth
+                && _rngManager.Roll(1, 100) <= enemy.FleeAttemptChance)
+            {
+                return CombatAction.Flee(enemy);
+            }
+
             // Decision logic based on behavior type
             switch (enemy.Behavior)
             {
@@ -1516,7 +1544,7 @@ namespace GameLogic.Combat
                     {
                         return EnemyAbilityAction(enemy, target);
                     }
-                    return CombatAction.Attack(enemy, target);
+                    return EnemyAttack(enemy, target);
 
                 case EnemyBehavior.Defensive:
                     // Defend when low on health
@@ -1528,7 +1556,7 @@ namespace GameLogic.Combat
                     {
                         return EnemyAbilityAction(enemy, target);
                     }
-                    return CombatAction.Attack(enemy, target);
+                    return EnemyAttack(enemy, target);
 
                 case EnemyBehavior.Tactical:
                     // Use abilities strategically
@@ -1540,7 +1568,7 @@ namespace GameLogic.Combat
                     {
                         return CombatAction.Defend(enemy);
                     }
-                    return CombatAction.Attack(enemy, target);
+                    return EnemyAttack(enemy, target);
 
                 case EnemyBehavior.Berserker:
                     // Always attack, rarely defend, use abilities aggressively
@@ -1548,11 +1576,12 @@ namespace GameLogic.Combat
                     {
                         return EnemyAbilityAction(enemy, target);
                     }
-                    return CombatAction.Attack(enemy, target);
+                    return EnemyAttack(enemy, target);
 
                 case EnemyBehavior.Cautious:
-                    // Defend frequently when low health, flee if very low
-                    if (healthPercent < 0.15f && _rngManager.Roll(1, 100) <= 30)
+                    // Defend frequently when low health, flee if very low (never in a boss
+                    // fight - decided 2026-11-23)
+                    if (!IsBossFight() && healthPercent < 0.15f && _rngManager.Roll(1, 100) <= 30)
                     {
                         return CombatAction.Flee(enemy);
                     }
@@ -1564,7 +1593,7 @@ namespace GameLogic.Combat
                     {
                         return EnemyAbilityAction(enemy, target);
                     }
-                    return CombatAction.Attack(enemy, target);
+                    return EnemyAttack(enemy, target);
 
                 case EnemyBehavior.Balanced:
                 default:
@@ -1577,7 +1606,7 @@ namespace GameLogic.Combat
                     {
                         return EnemyAbilityAction(enemy, target);
                     }
-                    return CombatAction.Attack(enemy, target);
+                    return EnemyAttack(enemy, target);
             }
         }
 
@@ -1587,23 +1616,84 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Select a target for an enemy - 70% the most wounded standing party member,
-        /// 30% a random standing party member.
+        /// An enemy's plain attack - carrying its on-hit status effect if this hit rolled one
+        /// (a wolf's bleed, a spider's poison - EnemyBase.RollOnHitEffect). The effect only
+        /// lands if the attack does.
         /// </summary>
-        private Entity SelectEnemyTarget()
+        private CombatAction EnemyAttack(Enemy enemy, Entity target)
+        {
+            var attack = CombatAction.Attack(enemy, target);
+            attack.AppliesEffect = enemy.RollOnHitEffect(_rngManager);
+            return attack;
+        }
+
+        /// <summary>
+        /// Select a target for an enemy: its targeting pattern (EnemyBase.Targeting) about 70% of
+        /// the time (TargetPatternChance), a random standing party member otherwise. A Random
+        /// enemy always picks at random. Bosses and older enemies default to Most wounded (the
+        /// old 70/30 rule).
+        /// </summary>
+        private Entity SelectEnemyTarget(Enemy enemy)
         {
             var livingParty = GetLivingParty();
 
             if (livingParty.Count == 0) return null;
             if (livingParty.Count == 1) return livingParty[0];
 
-            if (_rngManager.Roll(1, 100) <= 70)
+            var pattern = enemy?.Targeting ?? EnemyTargetPattern.MostWounded;
+            if (pattern != EnemyTargetPattern.Random && _rngManager.Roll(1, 100) <= TargetPatternChance)
             {
-                return MostWounded(livingParty);
+                var chosen = PickByPattern(pattern, enemy, livingParty);
+                if (chosen != null) return chosen;
             }
 
             int randomIndex = _rngManager.Roll(0, livingParty.Count - 1);
             return livingParty[randomIndex];
+        }
+
+        /// <summary>
+        /// The party member a targeting pattern points at, or null if it has no answer yet
+        /// (nobody has hit this enemy, or nobody has done damage) - then the pick is random.
+        /// Ties go to the first in party order.
+        /// </summary>
+        private Entity PickByPattern(EnemyTargetPattern pattern, Enemy enemy, List<Entity> livingParty)
+        {
+            switch (pattern)
+            {
+                case EnemyTargetPattern.MostWounded:
+                    return MostWounded(livingParty);
+
+                case EnemyTargetPattern.WeakestDefense:
+                    return livingParty.OrderBy(GetArmorDefense).First();
+
+                case EnemyTargetPattern.LastAttacker:
+                    return enemy != null && _lastAttackerOf.TryGetValue(enemy, out var attacker) && livingParty.Contains(attacker)
+                        ? attacker
+                        : null;
+
+                case EnemyTargetPattern.BiggestThreat:
+                    var threat = livingParty
+                        .Where(member => _damageDealtBy.TryGetValue(member, out int dealt) && dealt > 0)
+                        .OrderByDescending(member => _damageDealtBy[member])
+                        .FirstOrDefault();
+                    return threat;
+
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// The defense of the armor a party member is wearing (0 if none)
+        /// </summary>
+        private static int GetArmorDefense(Entity member)
+        {
+            return member switch
+            {
+                Player player => player.EquippedArmor?.Defense ?? 0,
+                NPCBase companion => companion.EquippedArmor?.Defense ?? 0,
+                _ => 0
+            };
         }
 
         // ------------------------------------------------------------------
@@ -1631,11 +1721,39 @@ namespace GameLogic.Combat
             var before = TakeSnapshot();
             work();
             ReportChanges(before);
+            JoinSpawnsOfTheBeaten(before);
 
             _collectingReactions = wasCollecting;
             if (!wasCollecting)
             {
                 DispatchReactions();
+            }
+        }
+
+        /// <summary>
+        /// Enemies beaten by what just happened that bring others in (the Big Slime splits into
+        /// two Slimes - EnemyBase.GetSpawnsOnDefeat). Once per enemy; a fled enemy doesn't. They
+        /// join like any summon: refused past the 8-enemy cap, acting from the next round.
+        /// </summary>
+        private void JoinSpawnsOfTheBeaten(Dictionary<Entity, EntitySnapshot> before)
+        {
+            foreach (var pair in before)
+            {
+                if (!pair.Value.Alive || !(pair.Key is Enemy beaten) || beaten.IsAlive()
+                    || HasFled(beaten) || beaten.SpawnedOnDefeat)
+                {
+                    continue;
+                }
+
+                beaten.SpawnedOnDefeat = true;
+                var spawns = beaten.GetSpawnsOnDefeat();
+                if (spawns == null || spawns.Count == 0) continue;
+
+                Log($"{beaten.Name} splits apart!");
+                foreach (var spawn in spawns)
+                {
+                    AddEnemyToFight(spawn, null);
+                }
             }
         }
 
@@ -1745,7 +1863,11 @@ namespace GameLogic.Combat
                 Log("(Fighting unarmed - find a weapon!)");
             }
 
-            DamageResult result = _damageCalculator.CalculateAttack(attacker, target, _player, action.IgnoresDefense);
+            // Defending halves every hit until the defender's next turn - done inside the
+            // damage calculation, so for a party member it counts towards the 75% cap together
+            // with armor and Defense Boost
+            bool isDefending = IsDefending(target);
+            DamageResult result = _damageCalculator.CalculateAttack(attacker, target, _player, action.IgnoresDefense, isDefending);
 
             if (result.Missed)
             {
@@ -1754,13 +1876,9 @@ namespace GameLogic.Combat
                 return;
             }
 
-            // Defending halves every hit until the defender's next turn
-            bool isDefending = IsDefending(target);
             if (isDefending)
             {
-                int damageReduction = result.FinalDamage / 2;
-                result.FinalDamage -= damageReduction;
-                Log($"{target.Name}'s defensive stance reduced damage by {damageReduction}!");
+                Log($"{target.Name}'s defensive stance softens the blow!");
             }
 
             // Evasion (the player's passive ability) - only when not defending
@@ -1775,11 +1893,12 @@ namespace GameLogic.Combat
             }
 
             // Boss mechanics (e.g. a charge/stoop attack) can boost the damage of this
-            // specific hit. A flat multiplier commutes with the defend-reduction already
-            // applied above, so applying it here (after) is equivalent to applying it before.
+            // specific hit. A flat multiplier commutes with the defense and Defend reduction
+            // already applied, so applying it here (after) is equivalent to applying it before.
+            // The fraction rounds by chance.
             if (action.DamageMultiplier != 1.0)
             {
-                result.FinalDamage = (int)(result.FinalDamage * action.DamageMultiplier);
+                result.FinalDamage = _rngManager.RoundByChance(result.FinalDamage * action.DamageMultiplier);
             }
 
             // Risk's armor: a chance a weapon or other non-magical hit lands but does no damage
@@ -1804,9 +1923,12 @@ namespace GameLogic.Combat
 
             if (result.DamageReduced > 0)
             {
-                Log(target is Enemy
-                    ? $"Defense blocked {result.DamageReduced} damage!"
-                    : $"Armor blocked {result.DamageReduced} damage!");
+                // Includes the defensive stance when the target is defending
+                Log(isDefending
+                    ? $"{target.Name} blocked {result.DamageReduced} damage!"
+                    : target is Enemy
+                        ? $"Defense blocked {result.DamageReduced} damage!"
+                        : $"Armor blocked {result.DamageReduced} damage!");
             }
 
             // A raised shield (the Librarian-Monk) halves the hit, rounded down, and takes the
@@ -1848,6 +1970,13 @@ namespace GameLogic.Combat
             {
                 target.TakeDamage(result.FinalDamage);
                 Log($"{target.Name} took {result.FinalDamage} damage!");
+
+                // For the enemies' "last attacker" and "biggest threat" targeting
+                if (IsPartyMember(attacker) && target is Enemy)
+                {
+                    _lastAttackerOf[target] = attacker;
+                    _damageDealtBy[attacker] = (_damageDealtBy.TryGetValue(attacker, out int dealt) ? dealt : 0) + result.FinalDamage;
+                }
 
                 // Some attacks also inflict a status effect on a successful hit (e.g. a grapple's slow)
                 if (action.AppliesEffect != null)
@@ -2139,6 +2268,15 @@ namespace GameLogic.Combat
 
             if (actor is Enemy enemy)
             {
+                // Nothing flees in a boss fight (decided 2026-11-23) - the boss, the draglings,
+                // the castle guards and the Cyclops partner all stay. The AI already never picks
+                // Flee here; this catches anything else that does.
+                if (IsBossFight())
+                {
+                    Log($"\n{enemy.Name} stands their ground!");
+                    return;
+                }
+
                 if (_rngManager.Roll(1, 100) <= enemy.FleeChance)
                 {
                     _fledEnemies.Add(enemy);
@@ -2504,14 +2642,6 @@ namespace GameLogic.Combat
                 }
             }
 
-            // The party won while the player was down - the player gets back up with 1 HP
-            // (my default, not decided - see the TODO)
-            if (!_player.IsAlive())
-            {
-                _player.Health = 1;
-                Log($"\n{_player.Name} gets back on their feet.");
-            }
-
             // Harder difficulties pay more XP and gold (Normal pays less XP)
             float xpMultiplier = _difficultyScaler.GetXPMultiplier();
             float goldMultiplier = _difficultyScaler.GetGoldMultiplier();
@@ -2540,6 +2670,23 @@ namespace GameLogic.Combat
             foreach (var companion in _sittingOut)
             {
                 GiveCompanionXP(companion, totalXP / 2, result);
+            }
+
+            // Everyone who is down when the party wins gets back up at 1 HP - the player and
+            // the companions (decided 2026-11-23). After the XP, so a companion who was down
+            // still gets half.
+            if (!_player.IsAlive())
+            {
+                _player.Health = 1;
+                Log($"\n{_player.Name} gets back on their feet.");
+            }
+            foreach (var member in _party)
+            {
+                if (member != _player && !member.IsAlive())
+                {
+                    member.Health = 1;
+                    Log($"{member.Name} gets back on their feet.");
+                }
             }
 
             _player.Gold += totalGold;

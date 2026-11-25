@@ -307,9 +307,65 @@ namespace GameLogic.Tests
             var resultNoArmor = calculator.CalculateEnemyAttackDamage(enemy, playerNoArmor);
             var resultWithArmor = calculator.CalculateEnemyAttackDamage(enemy, playerWithArmor);
 
+            // Assert - armor is a % reduction (2026-11-24): defense 10 stops 10/110 = 9.1% of the
+            // 20-damage hit, so 18.18 is left - 18 or 19 (the fraction rounds by chance), which
+            // is 1 or 2 blocked
+            Assert.Equal(20, resultNoArmor.FinalDamage);
+            Assert.InRange(resultWithArmor.FinalDamage, 18, 19);
+            Assert.InRange(resultWithArmor.DamageReduced, 1, 2);
+        }
+
+        [Fact]
+        public void GetArmorReduction_FollowsDefenseOverDefensePlus100()
+        {
+            Assert.Equal(0.0, DamageCalculator.GetArmorReduction(0));
+            Assert.Equal(0.2, DamageCalculator.GetArmorReduction(25), 3);
+            Assert.Equal(0.5, DamageCalculator.GetArmorReduction(100), 3);
+            Assert.True(DamageCalculator.GetArmorReduction(999) < 1.0);
+        }
+
+        [Fact]
+        public void CalculateAttack_ArmorAndDefending_CappedAt75Percent()
+        {
+            // Arrange - defense 900 stops 90% alone, and Defend halves the rest; the total cap
+            // keeps a quarter of the hit
+            var rng = new RNGManager(seed: 42);
+            var calculator = new DamageCalculator(rng);
+            var enemy = CreateTestGoblin(level: 10);
+            enemy.MinDamage = 100;
+            enemy.MaxDamage = 100;
+            enemy.Accuracy = 100;
+            enemy.CritChance = 0;
+            var player = CreateTestPlayer();
+            player.EquipArmor(CreateTestArmor("Super Armor", defense: 900));
+
+            // Act
+            var result = calculator.CalculateAttack(enemy, player, player, targetDefending: true);
+
             // Assert
-            Assert.True(resultWithArmor.FinalDamage < resultNoArmor.FinalDamage);
-            Assert.Equal(10, resultWithArmor.DamageReduced);
+            Assert.Equal(25, result.FinalDamage);
+        }
+
+        [Fact]
+        public void RoundByChance_WholeNumber_ComesBackUnchanged()
+        {
+            var rng = new RNGManager(seed: 42);
+            Assert.Equal(30, rng.RoundByChance(25 * 1.2)); // 30.000000000000004 is still 30
+            Assert.Equal(-50, rng.RoundByChance(-50.0));
+        }
+
+        [Fact]
+        public void RoundByChance_Fraction_RoundsUpAboutThatOften()
+        {
+            var rng = new RNGManager(seed: 42);
+            int ups = 0;
+            for (int i = 0; i < 1000; i++)
+            {
+                int value = rng.RoundByChance(5.25);
+                Assert.InRange(value, 5, 6);
+                if (value == 6) ups++;
+            }
+            Assert.InRange(ups, 180, 320); // about 25%
         }
 
         [Fact]

@@ -83,7 +83,7 @@ namespace GameLogic.Tests
         [Theory]
         [InlineData(DifficultyLevel.Normal, 77)]     // 102 x 0.75 = 76.5 -> 77
         [InlineData(DifficultyLevel.Hard, 102)]      // 20 x 1.7 x 3 at level 8
-        [InlineData(DifficultyLevel.Unfair, 204)]
+        [InlineData(DifficultyLevel.Unfair, 281)]    // 102 x 2.75 = 280.5 -> 281 (enemy health multiplier, 2026-11-23)
         public void FightStart_RaisesAFullShield_ScaledByLevelAndDifficulty(DifficultyLevel difficulty, int expected)
         {
             var monk = MakeMonk(level: 8);

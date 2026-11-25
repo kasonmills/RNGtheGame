@@ -40,30 +40,13 @@ Nothing left here - the hand-set boss stats are built (section 3). Boss rewards 
 - [ ] **Fiery the Mage: rework `companion_mage.cs`** into the angry wild-magic Mage - now a woman named Fiery (decided 2026-11-19 - full rules in `done.md`): a 0-100 anger meter; wild-spell chance = half her anger; above 75 anger, about 1 in 4 wild spells backfires on the party; anger adds up to +50% spell damage; on auto she Defends to calm down above 75. She starts with Fireball, Frost Lance, Chain Lightning, Poison Cloud and Mage Blast (decided 2026-11-20). She is the second recruit, so she needs the magic system early. ⛔ Needs the magic system.
 
 ### Combat
-- [ ] **Rebalance the regular enemies for the new player** (100 HP, party damage ×2 - 2026-11-10). Goblin, Bandit and Dragon were tuned for the old 24 HP player and will now be pushovers. Do it with the enemy list (section 2), the same way as the boss sheet (`boss_stats_draft.md`). The stats are drafted in `enemy_roster.md` (2026-11-23): every enemy is a standard enemy times its multipliers, and building it means adding the 10 new enemy classes (Wolf, Slime, Big Slime, Spider, Giant Beetle, Fungusoar, Imp, Deserter/Army Soldier, Kingdom B Soldier, Kingdom B Archer) and retuning the 5 existing ones. The roster was reviewed and approved 2026-11-24: stats (as placeholders), level bands, specials, flee rules, AI patterns, day/night lean and name lists. **Tests to update:** `DifficultyScalerTests.ApplyDifficultyToEnemy_Unfair_DoublesHealthAndDamage_OnlyOnce` and `..._Normal_LowersStats_RoundingUp` hard-code the old level-1 Goblin (15 HP, 2-5); the new one is 18 HP, 2-5. The other tests that use a Goblin only use it as a stand-in.
+- [ ] **Enemy roster leftovers** (after the rebalance build, 2026-11-24 - see section 3):
+  - **The Imp's other conditions:** it only burns today. Add Hexed and Weakened (weaker versions) to `EnemyRoster.Imp` when the Demon Prince's new conditions are built.
+  - **Component favour:** spiders and beetles drop bug components, and Fungusoars mushroom components, at 2x weight - with "Component drops" (Items, loot and magic).
+  - **Base XP and gold:** `StandardEnemy.StandardXPPerLevel` (50) and `StandardGoldPerLevel` (12) are placeholders, times each enemy's XP weight - set them with the XP rework.
+  - **Back row:** `EnemyBase.IsBackRow` is set for the archer and the imp; "Formation and rows" below reads it.
+  - **The army camp's soldiers** (`ArmySoldier`) get their rewards from the camp's exit reward, not normal loot - with the army camp build.
 - [ ] **Weapon screens show the un-doubled damage.** The party's weapon damage is ×2 in the damage calculation (`DamageCalculator.PartyDamageScale`), but `Weapon.GetInfo()`/`GetDisplayName()` still show the weapon's own range. Show the real range, or fold the ×2 into the item numbers once the scale is settled.
-- [ ] 🔴 **Difficulty numbers** (decided 2026-11-23 - replaces the old placeholders in `DifficultyScaler`, `LevelingSystem.GetDifficultyMultiplier` and `GameSettings.GetPartyAccuracyPenalty`). Hard stays the 1x baseline.
-
-  | | Normal | Hard | Difficult | Unfair |
-  |---|---|---|---|---|
-  | Enemy HP | 75% | 100% | 175% | 275% |
-  | Enemy damage | 75% | 100% | 150% | 225% |
-  | Enemy accuracy | +0 | +5 | +10 | +15 (never above 95%) |
-  | Enemy crit | +0 | +0 | +5% | +10% |
-  | Enemy speed | +0 | +0 | +2 | +4 |
-  | Enemy defense | +0 | +0 | +20% | +40% |
-  | Party hit chance | -0 | -5 | -10 | -15 |
-  | Party Max HP | 120% | 100% | 90% | 80% |
-  | XP | 80% | 100% | 130% | 160% |
-  | Gold | 100% | 100% | 125% | 150% |
-  | Loot quality | 0.8x | 1x | 1.3x | 1.6x (unchanged) |
-
-  - HP and damage are split today (one `_difficultyMultiplier` for both), so they need their own multipliers. Accuracy, crit, speed and defense are new, and are applied once per enemy like HP and damage (bosses and mid-fight joiners too).
-  - **Party Max HP** applies to the player and every companion, on top of the enemy scaling. It's a %, so the gap lasts at every level. It has to apply on a new game, on level-up, on recruit and on load, and come out in the right place against the Risk max-health bonus and the Vigor Draughts.
-  - **Unfair bad luck:** about 1 in 4 of the party's hit, crit and damage rolls are rolled twice and the worse is kept. It's Fluke's Lucky Aura in reverse, and the two can share one roll helper.
-  - **The tutorial is capped at Hard:** the Skarn fight uses Normal numbers on Normal and Hard numbers on Difficult and Unfair.
-  - Update the difficulty-select text to match.
-  - **Tests to update** (they check the old numbers): `DifficultyScalerTests`, `LevelingSystemTests`, `GameSettingsTests`, `BossStatsTests` (Skarn on Normal/Unfair), and any boss tests that check per-difficulty health, e.g. `LibrarianMonkTests` shield health.
 - [ ] **Enemy XP and gold values become the guaranteed base reward**, with a random extra on top. Do this together with XP rework item "Random XP rewards" below. Bosses too: today a boss's fight XP is rolled from its level and its gold from the loot table, so `BossEnemy.XPValue`/`GoldValue` and the scaler's boss reward multipliers (XP x5, gold x3-5) aren't used yet - wire them in here (decided 2026-11-10, left out of the boss stat build 2026-11-11).
 - [ ] **Formation and rows** (decided 2026-11-23 - see `done.md`, "Positions"):
   - **Party layout:** 2 front, 2 back. The formation is set in the party menu and saved. Every fight starts with it. A new recruit fills the first empty slot, ranged users at the back first.
@@ -75,14 +58,9 @@ Nothing left here - the hand-set boss stats are built (section 3). Boss rewards 
   - **Enemy rows:** each enemy type has a set row. Archers and imps go at the back, and everyone else at the front (`enemy_roster.md`). An enemy row can hold any number. Bosses ignore rows.
   - **Saving:** the formation and each member's slot are saved.
 - [ ] **Reposition action** - a 5th combat button. Swap places with any party member (a downed one too - the body moves), or move into an empty slot (decided 2026-11-23). It costs the turn of whoever chose it; the partner doesn't lose a turn. Add it to the tutorial's "try each action" list. ⛔ Needs "Formation and rows" above.
-- [ ] **Random names for regular enemies**, picked fresh each fight, with no repeats in one fight. Bosses keep their own names. Each family has its own list, shown as "Name the Type" (decided 2026-11-23 - lists drafted in `enemy_roster.md`).
+- [ ] **Random names for regular enemies**, picked fresh each fight, with no repeats in one fight. Bosses keep their own names. Each family has its own list, shown as "Name the Type" (decided 2026-11-23 - lists final in `enemy_roster.md`). Every regular enemy now has its `Family` set (`EnemyRoster` constants), so the lists can be keyed on it.
 - [ ] **Fix the buff/cooldown timing** - effect timers tick at the end of the round they were applied in, so 1-turn buffs vanish before they're used. Spell buffs and debuffs last 3 turns, and Doom 2 (decided 2026-11-20), so they must last that many of the target's turns.
 - [ ] `DamageCalculator.CalculateHealing()`'s passive healing bonus is never applied.
-- [ ] **Armor is % reduction, not flat** (decided 2026-11-24). A party member's worn armor cuts each hit by defense / (defense + 100): defense 25 = 20%, 30 = 23%, 103 = 51%. It replaces the flat `adjustedDamage - GetArmorDefense(target)` in `DamageCalculator`, so armor never makes anyone immune. Together with Defend, Defense Boost and Bulwark, the total reduction is capped at 75% (the Bulwark cap). A hit still does at least 1. **Enemy defense stays flat** - the enemy roster's numbers are sized for that. The Iron Draught's +2 defense adds to the armor's number before the %. **Tests to update:** `DamageCalculatorTests.CalculateEnemyAttackDamage_PlayerWithArmor_ReducesDamage` expects a flat 10 reduced; `..._ArmorNeverReducesDamageBelow1` should still pass.
-- [ ] **Everyone down at a win gets up at 1 HP** (decided 2026-11-23): when the party wins, every party member who is down gets up at 1 HP, companions included. Today only the player does, and downed companions stay down. They still get half XP for being down at the end.
-- [ ] **Fractions round up by chance** (decided 2026-11-23): wherever a percentage is applied to damage, defense or healing, the leftover fraction is the chance to round up (5.5 → 5 or 6, 50/50) instead of always rounding down.
-- [ ] **Nothing flees in a boss fight** (decided 2026-11-23): bosses never flee, and neither does any enemy in a boss fight (draglings, castle guards, the Cyclops partner). Enemies in a boss fight never choose Flee, and a Flee from one is refused. The party's flee is already refused.
-- [ ] **Wild draglings** (decided 2026-11-23): draglings are also a regular overworld enemy, and wild ones use their normal flee chance. Today `Dragling` is `Aggressive`, so it never tries to flee. Give wild ones a behaviour that can flee, and keep the boss's spawns from fleeing (item above). Goes with the per-area spawn lists.
 
 ### Tutorial
 - [ ] **Chance revives the player once** (decided 2026-11-23): the first time the player goes down in the Skarn fight, Chance revives them (with a short line) and the fight goes on. A second fall loses, and the tutorial is replayed (today any loss goes to Game Over).
@@ -308,7 +286,44 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
 
 ### Combat
 - [ ] **Endings** - win, loss, party fled and opponent fled each end correctly; fleeing no longer leads to Game Over; enemies can flee on their own; a mixed ending pays 100% per beaten enemy and 50% per fled one; no fleeing from bosses.
-- [ ] **Defend** lasts until the defender's next turn and halves every hit in that window.
+- [ ] **Defend** lasts until the defender's next turn and halves every hit in that window. (Since 2026-11-24 the halving is done inside `DamageCalculator.CalculateAttack` - `targetDefending` - so it counts towards the 75% cap below.)
+- [ ] **Armor is a % reduction** (built 2026-11-24): a party member's armor cuts each hit by defense / (defense + 100) (`DamageCalculator.GetArmorReduction`). Armor, Defense Boost and Defend multiply together and cut at most 75% (`MaxDamageReduction` - Bulwark joins it when built). The consumables' flat Resistance comes after the %. A piercing bolt skips armor, Defense Boost and Resistance, but Defend still halves it. Enemy defense stays flat, then Defend halves it. A hit always does at least 1. Check in play: Common plate (25) takes about 20% off; full defense + Defend never goes past 75%. Not built yet: the Iron Draught's +2 defense (it adds to the armor number before the %, with the stat potions). Tests: the armor test now expects 18-19 from a 20 hit; new tests for the formula and the cap.
+- [ ] **Fractions round up by chance** (built 2026-11-24): `RNGManager.RoundByChance` - the leftover fraction is the chance to round up (5.25 → 6 a quarter of the time); a whole number uses no roll. Used for every % on damage in `DamageCalculator` (attack boost, rage, crits, Rallying Cry, passive abilities, armor and Defense Boost, Defend), the boss charge multiplier in `ProcessAttack`, `CalculateDamage` and `CalculateHealing`. Left as they were: the difficulty stat scaling (already rounds up), the Librarian-Monk's shield (rounds down, as decided), reward shares, and accuracy/crit chance numbers. New tests for the helper.
+- [ ] **Everyone down at a win gets up at 1 HP** (built 2026-11-24): the player and every downed companion, after the XP is handed out, so a downed companion still gets half.
+- [ ] **Nothing flees in a boss fight** (built 2026-11-24): a Cautious enemy never picks Flee while a boss is in the fight, and `ProcessFlee` refuses any enemy flee there ("stands their ground!", the turn is spent). The party's flee was already refused.
+- [ ] **Difficulty numbers** (decided 2026-11-23, built 2026-11-24). Hard is the 1x baseline.
+
+  | | Normal | Hard | Difficult | Unfair |
+  |---|---|---|---|---|
+  | Enemy HP | 75% | 100% | 175% | 275% |
+  | Enemy damage | 75% | 100% | 150% | 225% |
+  | Enemy accuracy | +0 | +5 | +10 | +15 (never above 95%) |
+  | Enemy crit | +0 | +0 | +5% | +10% |
+  | Enemy speed | +0 | +0 | +2 | +4 |
+  | Enemy defense | +0 | +0 | +20% | +40% |
+  | Party hit chance | -0 | -5 | -10 | -15 |
+  | Party Max HP | 120% | 100% | 90% | 80% |
+  | XP | 80% | 100% | 130% | 160% |
+  | Gold | 100% | 100% | 125% | 150% |
+  | Loot quality | 0.8x | 1x | 1.3x | 1.6x (unchanged) |
+
+  - **Enemies:** `DifficultyScaler` now has separate health and damage multipliers. `ApplyDifficultyToEnemy` also applies the accuracy (an enemy already above 95% keeps its number), crit, speed and defense (rounded up), once per enemy - bosses and mid-fight joiners too. The Librarian-Monk's shield follows the health multiplier. The Captain keeps his own crit table (set after the difficulty, so his number wins), and the Centipede's and the Princess's per-difficulty numbers are unchanged.
+  - **Party Max HP:** `Entity.MaxHealthMultiplier`. Applied to the player on a new game (`GameStartup.CreateNewGame`), copied from the player when a companion is recruited (`PartyManager.RecruitCompanion`, before the catch-up levels), and restored without rescaling on load (the saved max health already has it). Every level-up gain is scaled by it. Flat bonuses aren't scaled: Risk's max-health bonus, and the Vigor Draught's +10 when it's built (my default). Saves made before this have unscaled max health; only their future level-ups are scaled.
+  - **Unfair bad luck:** `DamageCalculator.RollWithLuck` - on Unfair, 25% of the party's attack hit, crit and damage rolls are rolled twice and the worse kept. It takes a good-luck chance too, for Fluke's aura (`GetGoodLuckChance`, 0 until he's built). If both trigger on one roll they cancel (my default). Spells don't use it yet.
+  - **The tutorial is capped at Hard:** `DifficultyScaler.GetTutorialDifficulty`. `GameManager.BeginEagleBearEncounter` sets it for the Skarn fight and puts the save's difficulty back when the fight ends. The party's max health stays the save's own.
+  - **Difficulty-select text** (`GameStartup.GetDifficultyDescription`) is built from the new numbers. Its flavour lines are still placeholders (section 2).
+  - **Check in play:** Skarn on Unfair (Hard numbers); a new Normal game starts at 120 HP; a companion recruited on Unfair joins at 80%; save, load and level up keep the %.
+  - **Tests:** updated `DifficultyScalerTests`, `BossStatsTests`, `LibrarianMonkTests` and `LevelingSystemTests` to the new numbers; new `DifficultyPartyTests` (party side), plus enemy-bonus, accuracy-cap, defense and tutorial-cap tests.
+- [ ] **The regular enemies rebalanced** (built 2026-11-24 from `enemy_roster.md`). Every regular enemy is `StandardEnemy` times its `EnemyProfile` (`EnemyRoster`): health 20 + 6/level, damage (2 + level/2)-(5 + level), defense level/4, speed 10 + level/4, 75% accuracy, 5% crit. Health and damage round to nearest, defense rounds down.
+  - **New:** Wolf, Slime, Big Slime, Spider, Giant Beetle, Fungusoar, Imp, Deserter, Army Soldier (the roster's "Deserter / Army Soldier" row, split because only the deserter flees), Kingdom B Soldier, Kingdom B Archer. **Retuned:** Goblin, Bandit, Dragon (now Elite, not Boss type), Castle Guard (damage up to the standard). The Dragling keeps its built stats.
+  - **Flee lines:** below its `FleeBelowHealth` an enemy tries to flee - goblins and imps every turn, the rest 30% of their turns (`FleeAttemptChance`) - then `FleeChance` decides. Never in a boss fight. Wild draglings can now flee (below 30%); the Slime Dragon's can't. The old per-class `DecideAction` flee code (never used by combat) is gone.
+  - **Targeting:** each enemy follows its pattern 70% of the time, otherwise random (`CombatManager.SelectEnemyTarget`): Random, Most wounded, Weakest defense (least armor), Last attacker, Biggest threat (most damage done this fight). With no answer yet (nobody has hit it) the pick is random. Bosses keep Most wounded, so they behave as before.
+  - **Hit effects** (`EnemyBase.RollOnHitEffect`, rolled when it attacks, lands only on a hit): wolf Bleeding 15%, slime Slowed (-2 speed, 2 turns - new `SlowedEffect`) 20%, spider poison 20%, Fungusoar Spore Roar poison 25%, imp weak Burning 20%, Dragon fire breath Burning 30%. Strengths are my defaults (the poison formula, and half or all of its middle for burn/bleed).
+  - **Big Slime split:** when beaten it brings in 2 Slimes at its level (`GetSpawnsOnDefeat`), like a summon (8-enemy cap, they act next round). All slimes share the "Slime" diminishing-rewards group.
+  - **Behaviour:** deserters and both Kingdom B soldiers are `Defensive` (defend more when wounded); the Dragon is `Tactical`; the rest `Aggressive` or `Balanced`.
+  - **Not in the fights yet:** the new enemies don't spawn until the per-area spawn lists exist (the overworld still rolls Goblin / Bandit / Dragon). Leftovers are in section 1 ("Enemy roster leftovers").
+  - **Check in play:** a level-1 Goblin has 18 HP and runs when low; wolves make you bleed; a Big Slime's split; a beetle shrugging off normal hits.
+  - **Tests:** the 2 Goblin tests in `DifficultyScalerTests` use the new Goblin (18 HP); new `EnemyRosterTests` (the sheet's worked numbers, flee lines, targeting, the split in a fight).
 - [ ] **One damage path** - companion hits are reduced by enemy defense; enemy hits on companions roll to hit and crit and go through armor; no hit does less than 1 damage.
 - [ ] **8 turn slots** - fights with 1, 2, 4, 5 and 8 enemies give the expected slots (extras to the slowest slots, shared speed = average rounded up, empty slots skipped); speeds change between rounds after attacking or defending.
 - [ ] **More than one turn slot per round** (written 2026-11-09, for the Princess). A boss whose mechanic implements `IMultiTurnMechanic` gets one opponent slot per turn, each with its own speed. No boss uses it yet, so test it with a small test mechanic (e.g. 2 turns, second turn 5 slower). Check:
@@ -449,14 +464,14 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - Buying an item that doesn't fit (full bag, or a stack over 99) is refused and takes no gold.
   - The combat log doesn't repeat damage or healing lines (`Player.Heal`/`TakeDamage` messages are commented out).
   - `CombatManagerTests.CalculateXPReward_BonusOccursAtExpectedRate` now counts "Bonus XP!" from `CombatMessage` instead of capturing the console (the console-capture helpers were removed).
-- [ ] **Difficulty changes the game** (wired 2026-11-10 - the numbers below are the old placeholders; the real ones are in "Difficulty numbers", section 1). `CombatManager` builds a `DifficultyScaler` whenever its `Difficulty` is set (GameManager sets it on a new game and on load); `GameManager.Difficulty` exposes it. Check:
+- [ ] **Difficulty changes the game** (wired 2026-11-10 - the numbers below are the old placeholders; the real ones were built 2026-11-24, see "Difficulty numbers" above in this section). `CombatManager` builds a `DifficultyScaler` whenever its `Difficulty` is set (GameManager sets it on a new game and on load); `GameManager.Difficulty` exposes it. Check:
   - Every enemy's health and damage is multiplied for the difficulty when a fight starts (Normal 75%, Hard 100%, Difficult 150%, Unfair 200%) - including bosses, the tutorial's Skarn, and enemies who join mid-fight.
   - A boss fought again after a loss is not made stronger again (applied once per enemy).
   - The fight's XP and gold get the difficulty multiplier (shown in the log), and companions share the multiplied XP.
   - The difficulty-select text now also states the enemy strength and the XP/gold numbers.
   - Tests: the 4 `GameSettingsTests` for the removed `GetDifficultyMultiplier`/`GetRewardMultiplier` are gone; 2 new `DifficultyScalerTests` cover applying difficulty to an enemy.
 - [ ] **Old boss multipliers and rematches fully off** (finished 2026-11-10, code kept commented with notes on bringing it back). Check: it builds; a boss's name and info screen show no "Strength: x..." label; a new save has no boss repeat counts, and an older save that has them still loads.
-- [ ] **Party accuracy by difficulty** - on Hard, an 85% weapon hits about 78% of the time; enemies are unaffected; a load keeps the penalty. (The penalty changes to -0 / -5 / -10 / -15 with "Difficulty numbers" in section 1 - test with those once built.)
+- [ ] **Party accuracy by difficulty** - on Hard, an 85% weapon hits about 80% of the time (-0 / -5 / -10 / -15 since 2026-11-24); enemies are unaffected by it (they get their own accuracy bonus); a load keeps the penalty.
 - [ ] **Combat text** (items, abilities, effects, companion level-ups) shows in the combat log.
 - [ ] **Tutorial** - only the player's own actions count toward "try each action"; a refused action doesn't count; the player gets a Minor Health Potion.
 

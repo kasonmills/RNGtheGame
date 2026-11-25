@@ -82,6 +82,56 @@ namespace GameLogic.Entities
         }
 
         /// <summary>
+        /// The difficulty's party max-health multiplier this entity's max health is built with
+        /// (GameSettings.GetPartyMaxHealthMultiplier - Normal 120%, Hard 100%, Difficult 90%,
+        /// Unfair 80%). 1.0 for enemies and anyone it was never applied to. Level-up health
+        /// gains are scaled by it (ScaleMaxHealthGain).
+        /// </summary>
+        public double MaxHealthMultiplier { get; private set; } = 1.0;
+
+        /// <summary>
+        /// Build this entity's max health with a new multiplier (a new game, or a companion
+        /// joining): max health is rescaled from the old multiplier to the new one, and health
+        /// with it (a full-health entity stays full). Calling it again with the same multiplier
+        /// does nothing. Flat bonuses already in MaxHealth (Risk's bonus on the player) are
+        /// rescaled too, so apply it before those.
+        /// </summary>
+        public void ApplyMaxHealthMultiplier(double multiplier)
+        {
+            if (multiplier <= 0 || multiplier == MaxHealthMultiplier) return;
+
+            bool atFullHealth = Health >= MaxHealth;
+            double ratio = multiplier / MaxHealthMultiplier;
+
+            MaxHealth = Math.Max(1, (int)Math.Round(MaxHealth * ratio, MidpointRounding.AwayFromZero));
+            Health = atFullHealth
+                ? MaxHealth
+                : Math.Min(MaxHealth, (int)Math.Round(Health * ratio, MidpointRounding.AwayFromZero));
+            MaxHealthMultiplier = multiplier;
+        }
+
+        /// <summary>
+        /// Set the multiplier without touching max health - for a loaded save, whose saved max
+        /// health already has it built in.
+        /// </summary>
+        public void RestoreMaxHealthMultiplier(double multiplier)
+        {
+            if (multiplier > 0)
+            {
+                MaxHealthMultiplier = multiplier;
+            }
+        }
+
+        /// <summary>
+        /// A level-up's max-health gain, scaled by MaxHealthMultiplier (rounded, at least 1).
+        /// </summary>
+        protected int ScaleMaxHealthGain(int gain)
+        {
+            if (gain <= 0) return gain;
+            return Math.Max(1, (int)Math.Round(gain * MaxHealthMultiplier, MidpointRounding.AwayFromZero));
+        }
+
+        /// <summary>
         /// Check if entity is alive
         /// </summary>
         public bool IsAlive()

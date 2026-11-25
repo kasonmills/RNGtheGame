@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using GameLogic.Entities.Player;
 using GameLogic.Entities.NPCs;
 using GameLogic.World;
@@ -90,6 +91,9 @@ namespace GameLogic.Core
             var player = new Player(playerName);
 
             gameSettings.Difficulty = difficulty;
+            // The party's max health on this difficulty (Normal 120% ... Unfair 80%); companions
+            // copy it when they join (PartyManager.RecruitCompanion)
+            player.ApplyMaxHealthMultiplier(GameSettings.GetPartyMaxHealthMultiplier(difficulty));
             player.SetAbility(ability);
             player.EquipWeapon(startingWeapon);
 
@@ -151,6 +155,16 @@ namespace GameLogic.Core
             // Load game settings from save data
             var gameSettings = SaveManager.LoadSettingsFromSaveData(saveData);
 
+            // The party's max-health multiplier for this difficulty - the saved max health already
+            // has it built in, so it's only restored (for future level-ups), not applied again
+            double partyHealthMultiplier = GameSettings.GetPartyMaxHealthMultiplier(gameSettings.Difficulty);
+            player.RestoreMaxHealthMultiplier(partyHealthMultiplier);
+            var companions = SaveManager.LoadCompanions(saveData);
+            foreach (var companion in companions)
+            {
+                companion.RestoreMaxHealthMultiplier(partyHealthMultiplier);
+            }
+
             // Load statistics from save data
             var statistics = SaveManager.LoadStatisticsFromSaveData(saveData);
 
@@ -198,7 +212,7 @@ namespace GameLogic.Core
                 GameSettings = gameSettings,
                 Statistics = statistics,
                 GameCompleted = saveData.GameCompleted,
-                Companions = SaveManager.LoadCompanions(saveData)
+                Companions = companions
             };
         }
 
@@ -206,32 +220,67 @@ namespace GameLogic.Core
         /// Descriptive text for a difficulty-select screen (immutable choice per save file).
         /// TODO-GODOT: render as radio buttons + info panel.
         /// Only describes what difficulty actually changes in the game today (rewritten
-        /// 2026-11-03, core/ to-do 12; enemy strength and rewards added 2026-11-10). The numbers
-        /// are read from the code (GameSettings.GetPartyAccuracyPenalty, DifficultyScaler), so the
-        /// text can't drift from them. Add a line here as each planned difficulty effect is
-        /// built: starting stats (Bucket A #15), enemy accuracy (#16), boss level (#11),
-        /// the Giant House Centipede's poison, the Captain's crit chance.
+        /// 2026-11-03; enemy strength and rewards added 2026-11-10; the 2026-11-23 numbers -
+        /// split health/damage, enemy accuracy/crit/speed/defense, party max health, Unfair bad
+        /// luck, the tutorial cap - added 2026-11-24). The numbers are read from the code
+        /// (GameSettings, DifficultyScaler), so the text can't drift from them. The flavour
+        /// lines are placeholders for the writing pass.
         /// </summary>
         public static string GetDifficultyDescription(DifficultyLevel difficulty)
         {
-            int penalty = GameSettings.GetPartyAccuracyPenalty(difficulty);
-            string accuracy = penalty == 0
-                ? "Your party's attacks land as often as their weapons allow."
-                : $"Your party's chance to hit is {penalty}% lower.";
+            var parts = new List<string>();
 
+            // Enemies
             var scaler = new DifficultyScaler(difficulty);
-            int strength = (int)Math.Round(scaler.GetDifficultyMultiplier() * 100);
+            int health = (int)Math.Round(scaler.GetHealthMultiplier() * 100);
+            int damage = (int)Math.Round(scaler.GetDamageMultiplier() * 100);
+            parts.Add(health == 100 && damage == 100
+                ? "Enemies are at their full strength."
+                : $"Enemies have {health}% health and deal {damage}% damage.");
+
+            var extras = new List<string>();
+            int accuracyBonus = DifficultyScaler.GetEnemyAccuracyBonus(difficulty);
+            int critBonus = DifficultyScaler.GetEnemyCritBonus(difficulty);
+            int speedBonus = DifficultyScaler.GetEnemySpeedBonus(difficulty);
+            int defense = (int)Math.Round(DifficultyScaler.GetEnemyDefenseMultiplier(difficulty) * 100);
+            if (accuracyBonus > 0) extras.Add($"+{accuracyBonus}% accuracy");
+            if (critBonus > 0) extras.Add($"+{critBonus}% crit chance");
+            if (speedBonus > 0) extras.Add($"+{speedBonus} speed");
+            if (defense != 100) extras.Add($"+{defense - 100}% defense");
+            if (extras.Count > 0)
+            {
+                parts.Add($"They also get {JoinWithAnd(extras)}.");
+            }
+
+            // The party
+            int partyHealth = (int)Math.Round(GameSettings.GetPartyMaxHealthMultiplier(difficulty) * 100);
+            if (partyHealth != 100)
+            {
+                parts.Add($"Your party has {partyHealth}% max health.");
+            }
+            int penalty = GameSettings.GetPartyAccuracyPenalty(difficulty);
+            parts.Add(penalty == 0
+                ? "Your party's attacks land as often as their weapons allow."
+                : $"Your party's chance to hit is {penalty}% lower.");
+            if (difficulty == DifficultyLevel.Unfair)
+            {
+                parts.Add($"About 1 in 4 of your party's hit, crit and damage rolls is rolled twice and the worse one is kept.");
+            }
+
+            // Rewards
             int xp = (int)Math.Round(scaler.GetXPMultiplier() * 100);
             int gold = (int)Math.Round(scaler.GetGoldMultiplier() * 100);
-
-            string enemies = strength == 100
-                ? "Enemies are at their full strength."
-                : $"Enemies have {strength}% of their health and damage.";
-            string rewards = (xp == 100 && gold == 100)
+            parts.Add(xp == 100 && gold == 100
                 ? "Fights pay the standard XP and gold."
-                : $"Fights pay {xp}% XP and {gold}% gold.";
+                : $"Fights pay {xp}% XP and {gold}% gold.");
 
-            accuracy = $"{enemies} {rewards} {accuracy}";
+            // The tutorial cap
+            if (DifficultyScaler.GetTutorialDifficulty(difficulty) != difficulty)
+            {
+                parts.Add($"The opening tutorial fight plays as {DifficultyScaler.GetTutorialDifficulty(difficulty)}.");
+            }
+
+            string accuracy = string.Join(" ", parts);
 
             string flavour = difficulty switch
             {
@@ -243,6 +292,15 @@ namespace GameLogic.Core
             };
 
             return $"{flavour} {accuracy} Difficulty can't be changed once the game has started.";
+        }
+
+        /// <summary>
+        /// "a", "a and b", "a, b and c"
+        /// </summary>
+        private static string JoinWithAnd(List<string> items)
+        {
+            if (items.Count <= 1) return items.Count == 1 ? items[0] : "";
+            return string.Join(", ", items.Take(items.Count - 1)) + " and " + items[items.Count - 1];
         }
 
         /// <summary>

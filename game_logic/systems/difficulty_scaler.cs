@@ -14,9 +14,16 @@ namespace GameLogic.Systems
     /// </summary>
     public class DifficultyScaler
     {
-        // Base game difficulty multiplier
+        // Base game difficulty multipliers - enemy health and damage are split (2026-11-23)
         private readonly DifficultyLevel _gameDifficulty;
-        private readonly float _difficultyMultiplier;
+        private readonly float _healthMultiplier;
+        private readonly float _damageMultiplier;
+
+        /// <summary>
+        /// Enemy accuracy is never raised above this by the difficulty (one already above it
+        /// keeps its own number).
+        /// </summary>
+        public const int MaxEnemyAccuracy = 95;
 
         // Scaling configuration
         private const float HEALTH_SCALING_PER_LEVEL = 0.10f;      // +10% HP per level
@@ -27,7 +34,8 @@ namespace GameLogic.Systems
         public DifficultyScaler(DifficultyLevel gameDifficulty)
         {
             _gameDifficulty = gameDifficulty;
-            _difficultyMultiplier = GetDifficultyMultiplier(gameDifficulty);
+            _healthMultiplier = GetEnemyHealthMultiplier(gameDifficulty);
+            _damageMultiplier = GetEnemyDamageMultiplier(gameDifficulty);
         }
 
         #region Party Power Calculation
@@ -122,29 +130,114 @@ namespace GameLogic.Systems
 
         #endregion
 
+        #region The numbers per difficulty (decided 2026-11-23 - Hard is the 1x baseline)
+
         /// <summary>
-        /// Get the difficulty multiplier for the game difficulty
+        /// Enemy health: Normal 75%, Hard 100%, Difficult 175%, Unfair 275%.
         /// </summary>
-        private float GetDifficultyMultiplier(DifficultyLevel difficulty)
+        public static float GetEnemyHealthMultiplier(DifficultyLevel difficulty)
+        {
+            return difficulty switch
+            {
+                DifficultyLevel.Normal => 0.75f,
+                DifficultyLevel.Hard => 1.0f,
+                DifficultyLevel.Difficult => 1.75f,
+                DifficultyLevel.Unfair => 2.75f,
+                _ => 1.0f
+            };
+        }
+
+        /// <summary>
+        /// Enemy damage: Normal 75%, Hard 100%, Difficult 150%, Unfair 225%.
+        /// </summary>
+        public static float GetEnemyDamageMultiplier(DifficultyLevel difficulty)
         {
             return difficulty switch
             {
                 DifficultyLevel.Normal => 0.75f,
                 DifficultyLevel.Hard => 1.0f,
                 DifficultyLevel.Difficult => 1.5f,
-                DifficultyLevel.Unfair => 2.0f,
+                DifficultyLevel.Unfair => 2.25f,
                 _ => 1.0f
             };
         }
 
+        /// <summary>
+        /// Enemy accuracy (percentage points): Normal +0, Hard +5, Difficult +10, Unfair +15,
+        /// never raising it above 95% (MaxEnemyAccuracy).
+        /// </summary>
+        public static int GetEnemyAccuracyBonus(DifficultyLevel difficulty)
+        {
+            return difficulty switch
+            {
+                DifficultyLevel.Hard => 5,
+                DifficultyLevel.Difficult => 10,
+                DifficultyLevel.Unfair => 15,
+                _ => 0
+            };
+        }
+
+        /// <summary>
+        /// Enemy crit chance (percentage points): Normal and Hard +0, Difficult +5, Unfair +10.
+        /// </summary>
+        public static int GetEnemyCritBonus(DifficultyLevel difficulty)
+        {
+            return difficulty switch
+            {
+                DifficultyLevel.Difficult => 5,
+                DifficultyLevel.Unfair => 10,
+                _ => 0
+            };
+        }
+
+        /// <summary>
+        /// Enemy speed: Normal and Hard +0, Difficult +2, Unfair +4.
+        /// </summary>
+        public static int GetEnemySpeedBonus(DifficultyLevel difficulty)
+        {
+            return difficulty switch
+            {
+                DifficultyLevel.Difficult => 2,
+                DifficultyLevel.Unfair => 4,
+                _ => 0
+            };
+        }
+
+        /// <summary>
+        /// Enemy defense: Normal and Hard 100%, Difficult 120%, Unfair 140%.
+        /// </summary>
+        public static float GetEnemyDefenseMultiplier(DifficultyLevel difficulty)
+        {
+            return difficulty switch
+            {
+                DifficultyLevel.Difficult => 1.2f,
+                DifficultyLevel.Unfair => 1.4f,
+                _ => 1.0f
+            };
+        }
+
+        /// <summary>
+        /// The difficulty the tutorial fight (Skarn) is played at - capped at Hard (decided
+        /// 2026-11-23): Normal stays Normal, everything else plays as Hard.
+        /// </summary>
+        public static DifficultyLevel GetTutorialDifficulty(DifficultyLevel difficulty)
+        {
+            return difficulty == DifficultyLevel.Normal ? DifficultyLevel.Normal : DifficultyLevel.Hard;
+        }
+
+        #endregion
+
         #region Applying difficulty in play
 
         /// <summary>
-        /// Make an enemy as strong as this difficulty says: its health and damage are multiplied
-        /// by GetDifficultyMultiplier() (Normal 75%, Hard 100%, Difficult 150%, Unfair 200%), on
-        /// top of the stats its level gave it. Done once per enemy (EnemyBase.DifficultyApplied),
-        /// so a boss that is fought again after a loss doesn't grow every attempt. Called by
-        /// CombatManager when a fight starts and when an enemy joins one.
+        /// Make an enemy as strong as this difficulty says, on top of the stats its level gave
+        /// it: health x GetEnemyHealthMultiplier, damage x GetEnemyDamageMultiplier, defense x
+        /// GetEnemyDefenseMultiplier (all rounded up), plus the accuracy (capped at 95%), crit and
+        /// speed bonuses. Done once per enemy (EnemyBase.DifficultyApplied), so a boss that is
+        /// fought again after a loss doesn't grow every attempt. Called by CombatManager when a
+        /// fight starts and when an enemy joins one (bosses and summons too).
+        /// A boss mechanic that sets its own number at fight start (the Captain's crit chance)
+        /// runs after this, so its own number wins.
         /// </summary>
         public void ApplyDifficultyToEnemy(Entities.Enemies.EnemyBase enemy)
         {
@@ -156,24 +249,51 @@ namespace GameLogic.Systems
             enemy.Health = atFullHealth
                 ? enemy.MaxHealth
                 : Math.Min(enemy.MaxHealth, ScaleForDifficulty(enemy.Health));
-            enemy.MinDamage = ScaleForDifficulty(enemy.MinDamage);
-            enemy.MaxDamage = ScaleForDifficulty(enemy.MaxDamage);
+            enemy.MinDamage = ScaleDamageForDifficulty(enemy.MinDamage);
+            enemy.MaxDamage = ScaleDamageForDifficulty(enemy.MaxDamage);
+
+            enemy.Defense = ScaleUp(enemy.Defense, GetEnemyDefenseMultiplier(_gameDifficulty));
+            enemy.Speed += GetEnemySpeedBonus(_gameDifficulty);
+            enemy.CritChance = Math.Min(100, enemy.CritChance + GetEnemyCritBonus(_gameDifficulty));
+
+            int accuracyBonus = GetEnemyAccuracyBonus(_gameDifficulty);
+            if (accuracyBonus > 0 && enemy.Accuracy < MaxEnemyAccuracy)
+            {
+                enemy.Accuracy = Math.Min(MaxEnemyAccuracy, enemy.Accuracy + accuracyBonus);
+            }
 
             enemy.DifficultyApplied = true;
         }
 
         /// <summary>
-        /// A stat multiplied by the difficulty, rounded up, never below 1 (for a stat above 0).
+        /// A health number multiplied by the difficulty's enemy health multiplier, rounded up,
+        /// never below 1 (for a number above 0). Also used for the Librarian-Monk's shield.
         /// </summary>
         public int ScaleForDifficulty(int value)
         {
-            if (value <= 0) return value;
-            return Math.Max(1, (int)Math.Ceiling(value * _difficultyMultiplier));
+            return ScaleUp(value, _healthMultiplier);
         }
 
         /// <summary>
-        /// The XP multiplier for this difficulty (Normal 80%, Hard 100%, Difficult 125%, Unfair
-        /// 150%). The numbers live in LevelingSystem.GetDifficultyMultiplier - one place for them.
+        /// A damage number multiplied by the difficulty's enemy damage multiplier, rounded up,
+        /// never below 1 (for a number above 0).
+        /// </summary>
+        public int ScaleDamageForDifficulty(int value)
+        {
+            return ScaleUp(value, _damageMultiplier);
+        }
+
+        private static int ScaleUp(int value, float multiplier)
+        {
+            if (value <= 0) return value;
+            // Rounded to 6 places first so floating-point noise (1.2f is 1.2000000476...) doesn't
+            // round a whole number up
+            return Math.Max(1, (int)Math.Ceiling(Math.Round(value * (double)(decimal)multiplier, 6)));
+        }
+
+        /// <summary>
+        /// The XP multiplier for this difficulty (Normal 80%, Hard 100%, Difficult 130%, Unfair
+        /// 160%). The numbers live in LevelingSystem.GetDifficultyMultiplier - one place for them.
         /// </summary>
         public float GetXPMultiplier()
         {
@@ -181,8 +301,8 @@ namespace GameLogic.Systems
         }
 
         /// <summary>
-        /// The gold multiplier for this difficulty (Normal and Hard 100%, Difficult 120%,
-        /// Unfair 140%).
+        /// The gold multiplier for this difficulty (Normal and Hard 100%, Difficult 125%,
+        /// Unfair 150% - decided 2026-11-23).
         /// </summary>
         public float GetGoldMultiplier()
         {
@@ -190,8 +310,8 @@ namespace GameLogic.Systems
             {
                 DifficultyLevel.Normal => 1.0f,
                 DifficultyLevel.Hard => 1.0f,
-                DifficultyLevel.Difficult => 1.2f,   // +20% gold
-                DifficultyLevel.Unfair => 1.4f,      // +40% gold
+                DifficultyLevel.Difficult => 1.25f,  // +25% gold
+                DifficultyLevel.Unfair => 1.5f,      // +50% gold
                 _ => 1.0f
             };
         }
@@ -211,7 +331,7 @@ namespace GameLogic.Systems
             float levelMultiplier = 1.0f + ((partyLevel - 1) * HEALTH_SCALING_PER_LEVEL);
 
             // Apply difficulty multiplier
-            float scaledHealth = baseHealth * levelMultiplier * _difficultyMultiplier;
+            float scaledHealth = baseHealth * levelMultiplier * _healthMultiplier;
 
             return (int)Math.Ceiling(scaledHealth);
         }
@@ -226,7 +346,7 @@ namespace GameLogic.Systems
             float levelMultiplier = 1.0f + ((partyLevel - 1) * DAMAGE_SCALING_PER_LEVEL);
 
             // Apply difficulty multiplier
-            float scaledDamage = baseDamage * levelMultiplier * _difficultyMultiplier;
+            float scaledDamage = baseDamage * levelMultiplier * _damageMultiplier;
 
             return (int)Math.Ceiling(scaledDamage);
         }
@@ -461,26 +581,39 @@ namespace GameLogic.Systems
         }
 
         /// <summary>
-        /// Get the difficulty multiplier
+        /// The enemy health multiplier for this difficulty
         /// </summary>
-        public float GetDifficultyMultiplier()
+        public float GetHealthMultiplier()
         {
-            return _difficultyMultiplier;
+            return _healthMultiplier;
         }
 
         /// <summary>
-        /// Get a display-friendly difficulty description
+        /// The enemy damage multiplier for this difficulty
+        /// </summary>
+        public float GetDamageMultiplier()
+        {
+            return _damageMultiplier;
+        }
+
+        /// <summary>
+        /// Get a display-friendly difficulty description (short; the full text for the
+        /// difficulty-select screen is GameStartup.GetDifficultyDescription).
+        /// TODO: the flavour words are placeholders for the writing pass.
         /// </summary>
         public string GetDifficultyDescription()
         {
-            return _gameDifficulty switch
+            int health = (int)Math.Round(_healthMultiplier * 100);
+            int damage = (int)Math.Round(_damageMultiplier * 100);
+            string flavour = _gameDifficulty switch
             {
-                DifficultyLevel.Normal => "Normal (75% difficulty, good for learning)",
-                DifficultyLevel.Hard => "Hard (100% difficulty, the intended experience)",
-                DifficultyLevel.Difficult => "Difficult (150% difficulty, for experienced players)",
-                DifficultyLevel.Unfair => "Unfair (200% difficulty, brutal challenge)",
-                _ => "Unknown"
+                DifficultyLevel.Normal => "good for learning",
+                DifficultyLevel.Hard => "the intended experience",
+                DifficultyLevel.Difficult => "for experienced players",
+                DifficultyLevel.Unfair => "brutal challenge",
+                _ => ""
             };
+            return $"{_gameDifficulty} ({health}% enemy health, {damage}% enemy damage, {flavour})";
         }
 
         /// <summary>

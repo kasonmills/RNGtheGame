@@ -35,6 +35,17 @@ namespace GameLogic.Combat
         /// </summary>
         public const int PartyDamageScale = 2;
 
+        /// <summary>
+        /// The most a party member's armor, Defense Boost and Defend can cut a hit by, all
+        /// together (decided 2026-11-24 - the Bulwark ability will count towards it too).
+        /// </summary>
+        public const double MaxDamageReduction = 0.75;
+
+        /// <summary>
+        /// Defending halves every hit until the defender's next turn
+        /// </summary>
+        public const double DefendDamageMultiplier = 0.5;
+
         public DamageCalculator(RNGManager rngManager)
         {
             _rngManager = rngManager;
@@ -47,13 +58,21 @@ namespace GameLogic.Combat
         /// </summary>
         /// <param name="partyLeader">The player - needed for the player's passive abilities that
         /// boost companions (Precision Training, Rallying Cry). Can be null.</param>
-        /// <param name="ignoreDefense">Skip the target's defense/armor (e.g. a piercing bolt).</param>
-        public DamageResult CalculateAttack(Entity attacker, Entity target, Player partyLeader = null, bool ignoreDefense = false)
+        /// <param name="ignoreDefense">Skip the target's defense/armor (e.g. a piercing bolt).
+        /// Defending still halves the hit.</param>
+        /// <param name="targetDefending">The target chose Defend - the hit is halved (for a
+        /// party member, within the 75% cap together with armor and Defense Boost).</param>
+        public DamageResult CalculateAttack(Entity attacker, Entity target, Player partyLeader = null,
+            bool ignoreDefense = false, bool targetDefending = false)
         {
             DamageResult result = new DamageResult();
 
-            // Step 1: Check if attack hits
-            int hitRoll = _rngManager.Roll(1, 100);
+            // Luck on the attacker's rolls - Unfair's bad luck for the party (Fluke's aura later)
+            int goodLuck = GetGoodLuckChance(attacker);
+            int badLuck = GetBadLuckChance(attacker);
+
+            // Step 1: Check if attack hits (a low roll is good)
+            int hitRoll = RollWithLuck(() => _rngManager.Roll(1, 100), higherIsBetter: false, goodLuck, badLuck);
 
             if (hitRoll > GetAccuracy(attacker, partyLeader))
             {
@@ -62,13 +81,14 @@ namespace GameLogic.Combat
             }
 
             // Step 2: Base damage (weapon or claws, level bonus, passive abilities)
-            int baseDamage = GetBaseDamage(attacker);
+            int baseDamage = RollWithLuck(() => GetBaseDamage(attacker), higherIsBetter: true, goodLuck, badLuck);
 
             // Step 3: Active effects on the attacker
+            // (every % on damage rounds by chance - RNGManager.RoundByChance)
             if (attacker.HasEffect<AttackBoostEffect>())
             {
                 var attackBoost = attacker.GetEffect<AttackBoostEffect>();
-                baseDamage = (int)(baseDamage * attackBoost.GetDamageMultiplier());
+                baseDamage = _rngManager.RoundByChance(baseDamage * attackBoost.GetDamageMultiplier());
             }
 
             if (attacker.HasEffect<StrengthBoostEffect>())
@@ -80,43 +100,91 @@ namespace GameLogic.Combat
             if (attacker.HasEffect<RageEffect>())
             {
                 var rage = attacker.GetEffect<RageEffect>();
-                baseDamage = (int)(baseDamage * rage.GetDamageMultiplier());
+                baseDamage = _rngManager.RoundByChance(baseDamage * rage.GetDamageMultiplier());
             }
 
-            // Step 4: Check for critical hit
-            int critRoll = _rngManager.Roll(1, 100);
+            // Step 4: Check for critical hit (a low roll is good)
+            int critRoll = RollWithLuck(() => _rngManager.Roll(1, 100), higherIsBetter: false, goodLuck, badLuck);
 
             if (critRoll <= GetCritChance(attacker))
             {
                 result.IsCritical = true;
-                baseDamage = (int)(baseDamage * GetCritMultiplier(attacker));
+                baseDamage = _rngManager.RoundByChance(baseDamage * GetCritMultiplier(attacker));
             }
 
             // Step 5: Rallying Cry (the player's passive) boosts companion hits
             if (attacker is CompanionBase && partyLeader?.SelectedAbility is RallyingCryAbility rallyingCry)
             {
-                baseDamage = (int)(baseDamage * rallyingCry.GetDamageMultiplier());
+                baseDamage = _rngManager.RoundByChance(baseDamage * rallyingCry.GetDamageMultiplier());
             }
 
             // Step 6: An enraged target has lowered defense and takes more damage
             if (target.HasEffect<RageEffect>())
             {
                 var rage = target.GetEffect<RageEffect>();
-                baseDamage = (int)(baseDamage * rage.GetDefenseMultiplier());
+                baseDamage = _rngManager.RoundByChance(baseDamage * rage.GetDefenseMultiplier());
             }
 
-            // Step 7: The target's defense (enemy defense stat, or worn armor and defensive effects)
-            int finalDamage = ignoreDefense
-                ? baseDamage
-                : target is Enemy enemyTarget
-                    ? ApplyEnemyDefenseReduction(baseDamage, enemyTarget)
-                    : ApplyArmorReduction(baseDamage, target);
+            // Step 7: The target's defense (enemy defense stat, or worn armor and defensive
+            // effects) and Defend
+            int finalDamage = target is Enemy enemyTarget
+                ? ApplyEnemyDefenseReduction(baseDamage, enemyTarget, ignoreDefense, targetDefending)
+                : ApplyArmorReduction(baseDamage, target, ignoreDefense, targetDefending);
 
             result.RawDamage = baseDamage;
             result.FinalDamage = finalDamage;
             result.DamageReduced = baseDamage - finalDamage;
 
             return result;
+        }
+
+        /// <summary>
+        /// On Unfair, about 1 in 4 of the party's hit, crit and damage rolls are rolled twice
+        /// and the worse is kept (decided 2026-11-23).
+        /// </summary>
+        public const int UnfairBadLuckChance = 25;
+
+        /// <summary>
+        /// Chance (0-100) that one of this attacker's rolls is rolled twice, keeping the worse:
+        /// the party on Unfair. Enemies never get it.
+        /// </summary>
+        private int GetBadLuckChance(Entity attacker)
+        {
+            return Difficulty == DifficultyLevel.Unfair && !(attacker is Enemy) ? UnfairBadLuckChance : 0;
+        }
+
+        /// <summary>
+        /// Chance (0-100) that one of this attacker's rolls is rolled twice, keeping the better.
+        /// Nothing gives it yet - Fluke's party aura (10% -> 30% with his level) plugs in here
+        /// when he's built.
+        /// </summary>
+        private int GetGoodLuckChance(Entity attacker)
+        {
+            return 0;
+        }
+
+        /// <summary>
+        /// One roll, with luck: with goodLuckChance it's rolled twice and the better kept, with
+        /// badLuckChance twice and the worse kept. If both trigger on the same roll they cancel
+        /// out (my default). With both chances at 0 it's a plain roll - no extra random numbers
+        /// are used.
+        /// </summary>
+        /// <param name="higherIsBetter">True for a damage roll; false for a hit or crit roll,
+        /// where a low number succeeds.</param>
+        private int RollWithLuck(Func<int> roll, bool higherIsBetter, int goodLuckChance, int badLuckChance)
+        {
+            int first = roll();
+
+            bool goodLuck = goodLuckChance > 0 && _rngManager.Roll(1, 100) <= goodLuckChance;
+            bool badLuck = badLuckChance > 0 && _rngManager.Roll(1, 100) <= badLuckChance;
+            if (goodLuck == badLuck)
+            {
+                return first;
+            }
+
+            int second = roll();
+            bool keepHigher = goodLuck == higherIsBetter;
+            return keepHigher ? Math.Max(first, second) : Math.Min(first, second);
         }
 
         /// <summary>
@@ -400,39 +468,61 @@ namespace GameLogic.Combat
             // DefenseBoost: No damage bonus (defensive ability)
             // HealingAbility: No damage bonus (support ability)
 
-            return (int)(baseDamage * damageMultiplier);
+            return _rngManager.RoundByChance(baseDamage * damageMultiplier);
         }
 
         /// <summary>
-        /// Apply armor reduction to incoming damage (for the player and companions)
+        /// The share of a hit that worn armor stops (decided 2026-11-24): defense / (defense + 100).
+        /// Defense 25 = 20%, 30 = 23%, 103 = 51% - it never reaches 100%.
         /// </summary>
-        private int ApplyArmorReduction(int rawDamage, Entity target)
+        public static double GetArmorReduction(int defense)
+        {
+            return defense <= 0 ? 0.0 : (double)defense / (defense + 100);
+        }
+
+        /// <summary>
+        /// Apply armor and defensive effects to incoming damage (for the player and companions).
+        /// Armor %, Defense Boost and Defend multiply together (each applies to what's left),
+        /// and together they cut at most 75% (MaxDamageReduction). Then the flat Resistance from
+        /// consumables. A hit always does at least 1.
+        /// </summary>
+        /// <param name="ignoreArmor">A piercing hit - armor, Defense Boost and Resistance are
+        /// skipped. Defend still halves it.</param>
+        private int ApplyArmorReduction(int rawDamage, Entity target, bool ignoreArmor, bool defending)
         {
             double damageMultiplier = 1.0;
             int flatReduction = 0;
 
-            // Apply DefenseBoost effect if active (percentage reduction)
-            if (target.HasEffect<DefenseBoostEffect>())
+            if (!ignoreArmor)
             {
-                var defenseBoost = target.GetEffect<DefenseBoostEffect>();
-                damageMultiplier *= defenseBoost.GetDamageMultiplier();
+                // Worn armor (% reduction)
+                damageMultiplier *= 1.0 - GetArmorReduction(GetArmorDefense(target));
+
+                // DefenseBoost effect (% reduction)
+                if (target.HasEffect<DefenseBoostEffect>())
+                {
+                    var defenseBoost = target.GetEffect<DefenseBoostEffect>();
+                    damageMultiplier *= defenseBoost.GetDamageMultiplier();
+                }
+
+                // ResistanceEffect from consumables (flat reduction, after the %)
+                if (target.HasEffect<ResistanceEffect>())
+                {
+                    var resistance = target.GetEffect<ResistanceEffect>();
+                    flatReduction += resistance.GetDamageReduction();
+                }
             }
 
-            // Apply ResistanceEffect from consumables if active (flat reduction)
-            if (target.HasEffect<ResistanceEffect>())
+            if (defending)
             {
-                var resistance = target.GetEffect<ResistanceEffect>();
-                flatReduction += resistance.GetDamageReduction();
+                damageMultiplier *= DefendDamageMultiplier;
             }
 
-            // Apply damage multiplier from effects first
-            int adjustedDamage = (int)(rawDamage * damageMultiplier);
+            // The 75% cap on the total
+            damageMultiplier = Math.Max(1.0 - MaxDamageReduction, damageMultiplier);
 
-            // Then apply flat reduction
-            adjustedDamage = Math.Max(1, adjustedDamage - flatReduction);
-
-            // Armor reduces damage but never below 1
-            return Math.Max(1, adjustedDamage - GetArmorDefense(target));
+            int adjustedDamage = _rngManager.RoundByChance(rawDamage * damageMultiplier);
+            return Math.Max(1, adjustedDamage - flatReduction);
         }
 
         /// <summary>
@@ -449,30 +539,33 @@ namespace GameLogic.Combat
         }
 
         /// <summary>
-        /// Apply enemy defense reduction to incoming damage (for enemy defense)
+        /// Apply enemy defense to incoming damage. Enemy defense stays a flat reduction
+        /// (decided 2026-11-24 - the enemy roster's numbers are sized for it), then Defend
+        /// halves what's left. A hit always does at least 1.
         /// </summary>
-        private int ApplyEnemyDefenseReduction(int rawDamage, Enemy target)
+        /// <param name="ignoreDefense">A piercing hit - the defense stat is skipped. Defend
+        /// still halves it.</param>
+        private int ApplyEnemyDefenseReduction(int rawDamage, Enemy target, bool ignoreDefense, bool defending)
         {
-            // Check if enemy has defense stat
-            if (target.Defense <= 0)
+            int damage = ignoreDefense || target.Defense <= 0
+                ? rawDamage
+                : rawDamage - target.Defense;
+
+            if (defending)
             {
-                // No defense: Return raw damage
-                return Math.Max(1, rawDamage);
+                damage = _rngManager.RoundByChance(damage * DefendDamageMultiplier);
             }
 
-            // Enemy defense works as flat damage reduction
-            // Defense reduces damage but never below 1 (always deal at least 1 damage)
-            int finalDamage = Math.Max(1, rawDamage - target.Defense);
-
-            return finalDamage;
+            return Math.Max(1, damage);
         }
 
         /// <summary>
-        /// Calculate damage with a simple modifier (for special abilities)
+        /// Calculate damage with a simple modifier (for special abilities). The fraction
+        /// rounds by chance.
         /// </summary>
         public int CalculateDamage(int baseDamage, float modifier)
         {
-            return (int)(baseDamage * modifier);
+            return _rngManager.RoundByChance(baseDamage * (double)modifier);
         }
 
         /// <summary>
@@ -501,7 +594,7 @@ namespace GameLogic.Combat
                 }
             }
 
-            int actualHealing = (int)(baseHealing * healingMultiplier);
+            int actualHealing = _rngManager.RoundByChance(baseHealing * healingMultiplier);
 
             // Can't heal above max health
             int maxPossibleHealing = target.MaxHealth - target.Health;

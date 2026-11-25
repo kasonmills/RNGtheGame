@@ -1,6 +1,6 @@
 # Enemy roster
 
-**Status: final, reviewed 2026-11-24** (drafted 2026-11-23). The stats, level bands, specials, AI patterns, day/night lean and name lists below are approved. All numbers are placeholders, to retune after playtesting. This sheet is the "Rebalance the regular enemies" item (section 1, Combat). Still open: a real name for "Kingdom B".
+**Status: final, reviewed 2026-11-24** (drafted 2026-11-23). The stats, level bands, specials, AI patterns, day/night lean and name lists below are approved. All numbers are placeholders, to retune after playtesting. **Built 2026-11-24** (`EnemyRoster` / `StandardEnemy` in `game_logic/entities/enemies/enemy_types/` - see `to_do_list.md` section 3, "The regular enemies rebalanced"). Still open: a real name for "Kingdom B", the spawn lists and group sizes (with the map), random names, and the leftovers in section 1 ("Enemy roster leftovers").
 
 **Decided so far (2026-11-23)**
 - **Goblin, Bandit and Dragon stay.** The Dragon becomes a rare late-game enemy found only in one or two mountain areas, never a random 5% roll.

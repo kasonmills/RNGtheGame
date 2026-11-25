@@ -199,7 +199,8 @@ namespace GameLogic.Entities.Player
             Level++;
             // Same health growth as the companions (NPCBase.LevelUp) - decided 2026-11-10 with the
             // 100 HP start; was a random +1 to +6
-            MaxHealth += 10 + (Level / 5);
+            // Scaled by the difficulty's party max-health multiplier (decided 2026-11-23)
+            MaxHealth += ScaleMaxHealthGain(10 + (Level / 5));
             Health = MaxHealth; // Full heal on level up
 
             // Increase Speed every few levels (small incremental gains)

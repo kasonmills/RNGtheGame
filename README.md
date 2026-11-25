@@ -28,11 +28,24 @@ RNGtheGame/
 │   │   │   ├── enemy_base.cs            # Base enemy
 │   │   │   ├── enemy_ai.cs              # Enemy decision-making
 │   │   │   ├── enemy_types/
+│   │   │   │   ├── standard_enemy.cs    # The standard enemy + EnemyProfile (multipliers, behaviour)
+│   │   │   │   ├── enemy_roster.cs      # The 15 regular enemies' profiles (docs/enemy_roster.md)
 │   │   │   │   ├── goblin.cs
 │   │   │   │   ├── bandit.cs
-│   │   │   │   ├── castle_guard.cs      # Called in by the final boss
-│   │   │   │   ├── dragon.cs
-│   │   │   │   └── dragling.cs          # The Slime Dragon's spawn
+│   │   │   │   ├── wolf.cs
+│   │   │   │   ├── slime.cs
+│   │   │   │   ├── big_slime.cs         # Splits into 2 Slimes when beaten
+│   │   │   │   ├── spider.cs
+│   │   │   │   ├── giant_beetle.cs
+│   │   │   │   ├── fungusoar.cs         # The mushroom dinosaur
+│   │   │   │   ├── imp.cs
+│   │   │   │   ├── deserter.cs          # Own army, hostile on the routes
+│   │   │   │   ├── army_soldier.cs      # Own army, sparring at the army camp
+│   │   │   │   ├── kingdom_b_soldier.cs # "Kingdom B" is a placeholder name
+│   │   │   │   ├── kingdom_b_archer.cs
+│   │   │   │   ├── castle_guard.cs      # Palace enemy, and called in by the final boss
+│   │   │   │   ├── dragon.cs            # Rare, mountains only
+│   │   │   │   └── dragling.cs          # The Slime Dragon's spawn, and wild in slime groups
 │   │   │   └── bosses/
 │   │   │       ├── boss_definitions.cs  # Boss roster
 │   │   │       ├── boss_enemy.cs        # One shared boss class
@@ -86,7 +99,8 @@ RNGtheGame/
 │   │       ├── centipede_poison_effect.cs  # The Centipede's stacking poison
 │   │       ├── grapple.cs
 │   │       ├── poison_attack.cs
-│   │       └── rage.cs
+│   │       ├── rage.cs
+│   │       └── slowed_effect.cs         # A slime's sticky hit (-speed)
 │   │
 │   ├── items/
 │   │   ├── item.cs                      # Base item
@@ -179,6 +193,8 @@ RNGtheGame/
 │   ├── RNGManagerTests.cs
 │   ├── LevelingSystemTests.cs
 │   ├── DifficultyScalerTests.cs
+│   ├── DifficultyPartyTests.cs          # The party's side of the difficulty: hit penalty and max health
+│   ├── EnemyRosterTests.cs              # The regular enemies' worked numbers and behaviour
 │   ├── GameSettingsTests.cs
 │   ├── StatisticsTrackerTests.cs
 │   ├── BossStatsTests.cs

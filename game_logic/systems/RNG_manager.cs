@@ -300,6 +300,26 @@ namespace GameLogic.Systems
         }
 
         /// <summary>
+        /// Round to a whole number, using the leftover fraction as the chance to round up
+        /// (decided 2026-11-23): 5.5 is 5 or 6 (50/50), 5.25 is 6 a quarter of the time.
+        /// A whole number comes back as it is, with no roll.
+        /// </summary>
+        public int RoundByChance(double value)
+        {
+            // Trim floating-point noise (25 * 1.2 = 30.000000000000004)
+            value = Math.Round(value, 6);
+            double floor = Math.Floor(value);
+            double fraction = value - floor;
+
+            if (fraction <= 0)
+            {
+                return (int)floor;
+            }
+
+            return NextDouble() < fraction ? (int)floor + 1 : (int)floor;
+        }
+
+        /// <summary>
         /// Roll multiple dice and return the sum
         /// Example: RollDice(3, 6) rolls 3d6
         /// </summary>

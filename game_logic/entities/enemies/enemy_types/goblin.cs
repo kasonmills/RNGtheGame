@@ -1,72 +1,14 @@
-using System;
-
 namespace GameLogic.Entities.Enemies.EnemyTypes
 {
     /// <summary>
-    /// Goblin - Common weak enemy
-    /// Low health, low damage, but decent accuracy
+    /// Goblin - weak, quick and cowardly: always tries to flee below 25% health. Targets at
+    /// random. Numbers in EnemyRoster.Goblin (enemy_roster.md, retuned 2026-11-24 - was
+    /// 10 + 5 per level health, tuned for the old 24 HP player).
     /// </summary>
-    public class Goblin : EnemyBase
+    public class Goblin : StandardEnemy
     {
-        public Goblin(int level)
+        public Goblin(int level) : base(EnemyRoster.Goblin, level)
         {
-            Name = "Goblin";
-            Level = level;
-            Type = EnemyType.Common;
-            Behavior = EnemyBehavior.Aggressive;
-            
-            InitializeStats(level);
-        }
-
-        public override void InitializeStats(int level)
-        {
-            // Health: Goblins are fragile
-            MaxHealth = 10 + (level * 5);
-            Health = MaxHealth;
-
-            // Damage: Low but consistent
-            MinDamage = 1 + (level * 1);
-            MaxDamage = 3 + (level * 2);
-
-            // Accuracy: Decent aim
-            Accuracy = 75;
-
-            // Critical: Low crit chance
-            CritChance = 5;
-
-            // Defense: Weak armor
-            Defense = level / 2;
-
-            // Aggression: numerous but weak, moderate-low
-            AggressionLevel = 30;
-
-            // Speed: Fast and nimble
-            Speed = 12 + (level / 2); // Goblins are quick
-
-            // Rewards: Basic
-            XPValue = level * 40;
-            GoldValue = level * 8;
-        }
-
-        public override EnemyAction DecideAction()
-        {
-            // Goblins are cowardly - flee if low on health
-            if (Health < MaxHealth * 0.25) // Below 25% health
-            {
-                Random rand = new Random();
-                if (rand.Next(1, 101) <= 30) // 30% chance to flee
-                {
-                    return EnemyAction.Flee;
-                }
-            }
-
-            // Otherwise, always attack
-            return EnemyAction.Attack;
-        }
-
-        public override string GetDescription()
-        {
-            return $"{Name} - A weak but numerous creature (Level {Level})";
         }
     }
 }

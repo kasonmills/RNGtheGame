@@ -50,6 +50,63 @@ namespace GameLogic.Entities.Enemies
         // Abilities (optional - some enemies have special abilities)
         public Ability SpecialAbility { get; set; }
 
+        // ===== Roster behaviour (enemy_roster.md, decided 2026-11-24) =====
+
+        /// <summary>
+        /// The family it belongs to ("Goblins", "Slimes" ...) - for the spawn lists and the name
+        /// lists. Null for bosses.
+        /// </summary>
+        public string Family { get; set; }
+
+        /// <summary>
+        /// Who it goes after. Followed about 70% of the time (CombatManager.TargetPatternChance),
+        /// a random party member otherwise. Most wounded by default (bosses and older enemies).
+        /// </summary>
+        public EnemyTargetPattern Targeting { get; set; } = EnemyTargetPattern.MostWounded;
+
+        /// <summary>
+        /// Below this share of its health (0.25 = 25%) it tries to flee, never in a boss fight.
+        /// 0 = never flees.
+        /// </summary>
+        public double FleeBelowHealth { get; set; }
+
+        /// <summary>
+        /// How often (1-100) it tries to flee on a turn while below FleeBelowHealth: 100 for the
+        /// cowardly ones (goblins, imps), 30 for "may try". Whether it gets away is FleeChance.
+        /// </summary>
+        public int FleeAttemptChance { get; set; } = 30;
+
+        /// <summary>
+        /// Fights from the back row (archers, imps). Rows aren't built yet ("Formation and rows",
+        /// to-do section 1) - this is read once they are.
+        /// </summary>
+        public bool IsBackRow { get; set; }
+
+        /// <summary>
+        /// Set once its spawns-on-defeat have joined, so they only come once.
+        /// </summary>
+        public bool SpawnedOnDefeat { get; set; }
+
+        /// <summary>
+        /// A status effect its next attack carries if it lands (a wolf's bleed, a spider's
+        /// poison), rolled when it decides to attack. Null = a plain hit. Bosses use their
+        /// mechanics instead.
+        /// </summary>
+        public virtual AbilityEffect RollOnHitEffect(RNGManager rng)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Enemies that join the fight when this one is beaten (the Big Slime splits into two
+        /// Slimes). Null or empty = none. They join through the normal summon rules (the 8-enemy
+        /// cap, acting from the next round).
+        /// </summary>
+        public virtual List<EnemyBase> GetSpawnsOnDefeat()
+        {
+            return null;
+        }
+
         /// <summary>
         /// Constructor - child classes must call this
         /// </summary>
@@ -175,6 +232,19 @@ namespace GameLogic.Entities.Enemies
         Berserker,   // High risk/high reward - big damage, low accuracy
         Cautious,    // Defends when low on health
         Balanced     // Mix of attacking and defending
+    }
+
+    /// <summary>
+    /// Who an enemy goes after (the AI patterns decided 2026-11-19, given to the regular enemies
+    /// in enemy_roster.md).
+    /// </summary>
+    public enum EnemyTargetPattern
+    {
+        Random,          // Anyone standing
+        MostWounded,     // The lowest share of health
+        WeakestDefense,  // The least armor
+        LastAttacker,    // Whoever last hit it
+        BiggestThreat    // Whoever has done the most damage this fight
     }
 
     /// <summary>

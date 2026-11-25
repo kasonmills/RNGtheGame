@@ -413,22 +413,66 @@ namespace GameLogic.Tests
         #region Applying Difficulty Tests
 
         [Fact]
-        public void ApplyDifficultyToEnemy_Unfair_DoublesHealthAndDamage_OnlyOnce()
+        public void ApplyDifficultyToEnemy_Unfair_ScalesHealthAndDamage_OnlyOnce()
         {
-            // Arrange - a level-1 Goblin has 15 HP and 2-5 damage
+            // Arrange - a level-1 Goblin has 18 HP and 2-5 damage (the enemy roster, 2026-11-24:
+            // the standard 26 HP x0.7, 2-6 x0.8)
             var scaler = new DifficultyScaler(DifficultyLevel.Unfair);
             var goblin = new Goblin(1);
+            int accuracy = goblin.Accuracy;
+            int crit = goblin.CritChance;
+            int speed = goblin.Speed;
 
             // Act - applying it a second time must not stack
             scaler.ApplyDifficultyToEnemy(goblin);
             scaler.ApplyDifficultyToEnemy(goblin);
 
-            // Assert
+            // Assert - health x2.75 and damage x2.25, rounded up (2026-11-23 numbers)
             Assert.True(goblin.DifficultyApplied);
-            Assert.Equal(30, goblin.MaxHealth);
-            Assert.Equal(30, goblin.Health);
-            Assert.Equal(4, goblin.MinDamage);
-            Assert.Equal(10, goblin.MaxDamage);
+            Assert.Equal(50, goblin.MaxHealth);   // 18 x 2.75 = 49.5 -> 50
+            Assert.Equal(50, goblin.Health);
+            Assert.Equal(5, goblin.MinDamage);    // 4.5 -> 5
+            Assert.Equal(12, goblin.MaxDamage);   // 11.25 -> 12
+            Assert.Equal(Math.Min(95, accuracy + 15), goblin.Accuracy);
+            Assert.Equal(crit + 10, goblin.CritChance);
+            Assert.Equal(speed + 4, goblin.Speed);
+        }
+
+        [Fact]
+        public void ApplyDifficultyToEnemy_AccuracyNeverRaisedAbove95()
+        {
+            var scaler = new DifficultyScaler(DifficultyLevel.Unfair);
+            var nearCap = new Goblin(1) { Accuracy = 90 };
+            var aboveCap = new Goblin(1) { Accuracy = 98 };
+
+            scaler.ApplyDifficultyToEnemy(nearCap);
+            scaler.ApplyDifficultyToEnemy(aboveCap);
+
+            Assert.Equal(95, nearCap.Accuracy);
+            Assert.Equal(98, aboveCap.Accuracy); // Already above - keeps its own number
+        }
+
+        [Fact]
+        public void ApplyDifficultyToEnemy_DefenseRoundsUp()
+        {
+            var difficult = new Goblin(10) { Defense = 5 };
+            var unfair = new Goblin(10) { Defense = 5 };
+
+            new DifficultyScaler(DifficultyLevel.Difficult).ApplyDifficultyToEnemy(difficult);
+            new DifficultyScaler(DifficultyLevel.Unfair).ApplyDifficultyToEnemy(unfair);
+
+            Assert.Equal(6, difficult.Defense); // 5 x 1.2 = 6
+            Assert.Equal(7, unfair.Defense);    // 5 x 1.4 = 7
+        }
+
+        [Theory]
+        [InlineData(DifficultyLevel.Normal, DifficultyLevel.Normal)]
+        [InlineData(DifficultyLevel.Hard, DifficultyLevel.Hard)]
+        [InlineData(DifficultyLevel.Difficult, DifficultyLevel.Hard)]
+        [InlineData(DifficultyLevel.Unfair, DifficultyLevel.Hard)]
+        public void GetTutorialDifficulty_IsCappedAtHard(DifficultyLevel save, DifficultyLevel expected)
+        {
+            Assert.Equal(expected, DifficultyScaler.GetTutorialDifficulty(save));
         }
 
         [Fact]
@@ -441,8 +485,8 @@ namespace GameLogic.Tests
             // Act
             scaler.ApplyDifficultyToEnemy(goblin);
 
-            // Assert - 75%, rounded up: 15 -> 12, 2 -> 2, 5 -> 4
-            Assert.Equal(12, goblin.MaxHealth);
+            // Assert - 75%, rounded up: 18 -> 14 (13.5), 2 -> 2, 5 -> 4
+            Assert.Equal(14, goblin.MaxHealth);
             Assert.Equal(2, goblin.MinDamage);
             Assert.Equal(4, goblin.MaxDamage);
             Assert.Equal(0.8f, scaler.GetXPMultiplier());
@@ -685,19 +729,18 @@ namespace GameLogic.Tests
         }
 
         [Fact]
-        public void GetDifficultyMultiplier_ReturnsCorrectMultipliers()
+        [Theory]
+        [InlineData(DifficultyLevel.Normal, 0.75f, 0.75f, 1.0f)]
+        [InlineData(DifficultyLevel.Hard, 1.0f, 1.0f, 1.0f)]
+        [InlineData(DifficultyLevel.Difficult, 1.75f, 1.5f, 1.25f)]
+        [InlineData(DifficultyLevel.Unfair, 2.75f, 2.25f, 1.5f)]
+        public void Multipliers_MatchTheDecidedNumbers(DifficultyLevel difficulty, float health, float damage, float gold)
         {
-            // Arrange
-            var normalScaler = new DifficultyScaler(DifficultyLevel.Normal);
-            var hardScaler = new DifficultyScaler(DifficultyLevel.Hard);
-            var difficultScaler = new DifficultyScaler(DifficultyLevel.Difficult);
-            var unfairScaler = new DifficultyScaler(DifficultyLevel.Unfair);
+            var scaler = new DifficultyScaler(difficulty);
 
-            // Act & Assert
-            Assert.Equal(0.75f, normalScaler.GetDifficultyMultiplier());
-            Assert.Equal(1.0f, hardScaler.GetDifficultyMultiplier());
-            Assert.Equal(1.5f, difficultScaler.GetDifficultyMultiplier());
-            Assert.Equal(2.0f, unfairScaler.GetDifficultyMultiplier());
+            Assert.Equal(health, scaler.GetHealthMultiplier());
+            Assert.Equal(damage, scaler.GetDamageMultiplier());
+            Assert.Equal(gold, scaler.GetGoldMultiplier());
         }
 
         [Fact]
@@ -709,8 +752,9 @@ namespace GameLogic.Tests
             // Act
             string description = scaler.GetDifficultyDescription();
 
-            // Assert
+            // Assert - 175% health, 150% damage
             Assert.Contains("Difficult", description);
+            Assert.Contains("175%", description);
             Assert.Contains("150%", description);
         }
 

@@ -74,6 +74,10 @@ namespace GameLogic.Entities.NPCs.Companions
                 return false;
             }
 
+            // A recruit's max health follows the party's difficulty (the player's multiplier),
+            // before the catch-up levels so those gains are scaled too
+            companion.ApplyMaxHealthMultiplier(player.MaxHealthMultiplier);
+
             if (companion is CompanionBase newRecruit)
             {
                 newRecruit.RaiseToLevel(player.Level - 1);
