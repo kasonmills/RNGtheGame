@@ -62,8 +62,10 @@ namespace GameLogic.Combat
         /// Defending still halves the hit.</param>
         /// <param name="targetDefending">The target chose Defend - the hit is halved (for a
         /// party member, within the 75% cap together with armor and Defense Boost).</param>
+        /// <param name="hitChanceModifier">Added to the hit chance (e.g. -10 for an attack on
+        /// the back row - Formation.BackRowHitPenalty). The hit chance stays at least 1.</param>
         public DamageResult CalculateAttack(Entity attacker, Entity target, Player partyLeader = null,
-            bool ignoreDefense = false, bool targetDefending = false)
+            bool ignoreDefense = false, bool targetDefending = false, int hitChanceModifier = 0)
         {
             DamageResult result = new DamageResult();
 
@@ -74,7 +76,10 @@ namespace GameLogic.Combat
             // Step 1: Check if attack hits (a low roll is good)
             int hitRoll = RollWithLuck(() => _rngManager.Roll(1, 100), higherIsBetter: false, goodLuck, badLuck);
 
-            if (hitRoll > GetAccuracy(attacker, partyLeader))
+            int hitChance = hitChanceModifier == 0
+                ? GetAccuracy(attacker, partyLeader)
+                : Math.Max(1, GetAccuracy(attacker, partyLeader) + hitChanceModifier);
+            if (hitRoll > hitChance)
             {
                 result.Missed = true;
                 return result;

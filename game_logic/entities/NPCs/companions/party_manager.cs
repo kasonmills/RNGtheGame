@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using GameLogic.Combat;
 
 namespace GameLogic.Entities.NPCs.Companions
 {
@@ -127,6 +128,7 @@ namespace GameLogic.Entities.NPCs.Companions
             }
 
             ((NPCBase)companion).LeaveParty();
+            companion.FormationSlot = Formation.NoSlot; // The bench has no slots
             return true;
         }
 
@@ -157,7 +159,72 @@ namespace GameLogic.Entities.NPCs.Companions
                 return false;
             }
 
-            return MoveToBench(player, fighting) && MoveToFighting(player, benched);
+            // The one coming in takes the slot of the one going out
+            int slot = fighting?.FormationSlot ?? Formation.NoSlot;
+            if (!(MoveToBench(player, fighting) && MoveToFighting(player, benched)))
+            {
+                return false;
+            }
+            if (Formation.IsValidSlot(slot))
+            {
+                SetFormationSlot(player, benched, slot);
+            }
+            return true;
+        }
+
+        // ----- The formation (decided 2026-11-23 - see GameLogic.Combat.Formation) -----
+
+        /// <summary>The player and the fighting companions - everyone with a formation slot.</summary>
+        public List<Entity> GetFormationMembers(Player.Player player)
+        {
+            var members = new List<Entity>();
+            if (player != null) members.Add(player);
+            members.AddRange(FightingCompanions);
+            return members;
+        }
+
+        /// <summary>
+        /// Give everyone in the formation a slot of their own: kept if valid and not shared,
+        /// otherwise the first free one (ranged users at the back first). Call after loading
+        /// (old saves have no slots) - recruiting, benching and swapping keep it tidy themselves.
+        /// </summary>
+        public void FixFormation(Player.Player player)
+        {
+            var slots = Formation.Arrange(GetFormationMembers(player), m => m.FormationSlot);
+            foreach (var pair in slots)
+            {
+                pair.Key.FormationSlot = pair.Value;
+            }
+        }
+
+        /// <summary>
+        /// Put the player or a fighting companion in a slot (0-1 front, 2-3 back) - from the
+        /// party menu. Whoever was in that slot swaps to the mover's old slot. False (nothing
+        /// changed) for a slot that doesn't exist or someone not in the formation.
+        /// TODO-GODOT: call this from the party menu's formation view.
+        /// </summary>
+        public bool SetFormationSlot(Player.Player player, Entity member, int slot)
+        {
+            var members = GetFormationMembers(player);
+            if (member == null || !members.Contains(member) || !Formation.IsValidSlot(slot))
+            {
+                return false;
+            }
+
+            FixFormation(player);
+            var occupant = members.FirstOrDefault(m => m != member && m.FormationSlot == slot);
+            if (occupant != null)
+            {
+                occupant.FormationSlot = member.FormationSlot;
+            }
+            member.FormationSlot = slot;
+            return true;
+        }
+
+        /// <summary>Who is in a slot, or null if it's empty.</summary>
+        public Entity GetMemberInSlot(Player.Player player, int slot)
+        {
+            return GetFormationMembers(player).FirstOrDefault(m => m.FormationSlot == slot);
         }
 
         /// <summary>
@@ -175,7 +242,7 @@ namespace GameLogic.Entities.NPCs.Companions
             return companion is NPCBase npc && npc.InParty;
         }
 
-        private static void PutInFightingParty(Player.Player player, Entity companion)
+        private void PutInFightingParty(Player.Player player, Entity companion)
         {
             if (companion is NPCBase npcCompanion)
             {
@@ -186,6 +253,10 @@ namespace GameLogic.Entities.NPCs.Companions
             {
                 companionBase.ApplyPassiveBonus(player);
             }
+
+            // A newcomer fills the first empty slot, ranged users at the back first
+            companion.FormationSlot = Formation.NoSlot;
+            FixFormation(player);
         }
     }
 }

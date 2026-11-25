@@ -24,7 +24,8 @@ namespace GameLogic.Core
             ActionType.Attack,
             ActionType.UseAbility,
             ActionType.UseItem,
-            ActionType.Defend
+            ActionType.Defend,
+            ActionType.Reposition   // Added 2026-11-25 with the formation
         };
 
         private readonly HashSet<ActionType> _usedActionTypes = new HashSet<ActionType>();

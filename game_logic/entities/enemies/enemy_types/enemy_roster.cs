@@ -10,7 +10,7 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
     /// multipliers (StandardEnemy). All numbers are placeholders, to retune after playtesting.
     ///
     /// Not here yet (their own to-do items): level bands and group sizes (the spawn lists and the
-    /// encounter-size roll, with the fixed map), random names, the day/night lean, component
+    /// encounter-size roll, with the fixed map), the day/night lean, component
     /// drop weights (spiders, beetles and Fungusoars favour their own group), and back-row
     /// combat (IsBackRow is set, rows aren't built).
     /// </summary>
@@ -197,7 +197,7 @@ namespace GameLogic.Entities.Enemies.EnemyTypes
         {
             Name = "Dragon", Family = Dragons,
             Description = "A legendary beast of immense power",
-            Type = EnemyType.Elite,
+            Type = EnemyType.Boss, // Boss loot table and x3 drops; not a boss fight (that needs a BossEnemy)
             Health = 4.0, Damage = 2.0, Defense = 3.0, SpeedBonus = -2,
             Accuracy = 85, CritChance = 20, XPWeight = 5.0, Aggression = 80,
             Behavior = EnemyBehavior.Tactical, Targeting = EnemyTargetPattern.BiggestThreat,

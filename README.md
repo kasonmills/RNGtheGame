@@ -30,6 +30,7 @@ RNGtheGame/
 │   │   │   ├── enemy_types/
 │   │   │   │   ├── standard_enemy.cs    # The standard enemy + EnemyProfile (multipliers, behaviour)
 │   │   │   │   ├── enemy_roster.cs      # The 15 regular enemies' profiles (docs/enemy_roster.md)
+│   │   │   │   ├── enemy_names.cs       # Each family's name list ("Grik the Goblin")
 │   │   │   │   ├── goblin.cs
 │   │   │   │   ├── bandit.cs
 │   │   │   │   ├── wolf.cs
@@ -70,7 +71,10 @@ RNGtheGame/
 │   │
 │   ├── combat/
 │   │   ├── combat_manager.cs            # Runs a fight (non-blocking, event-driven, multi-enemy)
-│   │   ├── combat_action.cs             # One combat action (attack, ability, item, defend, flee)
+│   │   ├── combat_action.cs             # One combat action (attack, ability, item, defend, flee, surrender, reposition)
+│   │   ├── formation.cs                 # The party's 4 slots and the row rules (front/back)
+│   │   ├── fight_rules.cs               # Special rules for one fight (the army camp's waves)
+│   │   ├── army_camp_challenge.cs       # The army camp's endless waves and the pot
 │   │   ├── combat_event.cs              # What a combat screen reads: events, outcome, result, turn slots
 │   │   ├── damage_calculator.cs         # Damage, defense, accuracy, crits
 │   │   └── turn_manager.cs              # Older turn-order code (not used by combat_manager)
@@ -140,6 +144,7 @@ RNGtheGame/
 │   ├── systems/
 │   │   ├── RNG_manager.cs               # All randomness (seeded, reproducible)
 │   │   ├── difficulty_scaler.cs
+│   │   ├── day_night_cycle.cs           # Day/night: 10-minute phases, the after-pause roll, night enemies
 │   │   ├── event_system.cs
 │   │   ├── game_log.cs                  # One channel for text messages (fed into the combat log during a fight)
 │   │   ├── game_settings.cs
@@ -194,7 +199,11 @@ RNGtheGame/
 │   ├── LevelingSystemTests.cs
 │   ├── DifficultyScalerTests.cs
 │   ├── DifficultyPartyTests.cs          # The party's side of the difficulty: hit penalty and max health
-│   ├── EnemyRosterTests.cs              # The regular enemies' worked numbers and behaviour
+│   ├── EnemyRosterTests.cs              # The regular enemies' worked numbers, behaviour and names
+│   ├── EffectTimingTests.cs             # Effects and cooldowns count the owner's own turns
+│   ├── DayNightTests.cs                 # The day/night clock, night enemies, shops closed at night
+│   ├── ArmyCampTests.cs                 # The army camp's waves, the pot, surrendering
+│   ├── FormationTests.cs                # Formation slots, rows, Reposition, the 2:1 targeting
 │   ├── GameSettingsTests.cs
 │   ├── StatisticsTrackerTests.cs
 │   ├── BossStatsTests.cs

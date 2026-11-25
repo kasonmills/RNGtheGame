@@ -54,13 +54,14 @@ namespace GameLogic.Data
         /// <param name="errorMessage">Why the save failed (for a pop-up), or null on success</param>
         /// <param name="gameCompleted">Whether the final boss has been beaten on this save</param>
         /// <param name="party">The companion roster to save (fighting and benched)</param>
+        /// <param name="dayNight">The day/night clock to save (null = day, full countdown)</param>
         /// <returns>True if save was successful</returns>
-        public static bool SaveGame(Player player, string saveSlotName, out string errorMessage, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false, PartyManager party = null)
+        public static bool SaveGame(Player player, string saveSlotName, out string errorMessage, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false, PartyManager party = null, DayNightCycle dayNight = null)
         {
             SaveData saveData;
             try
             {
-                saveData = CreateSaveData(player, bossManager, mapManager, questManager, gameSettings, statistics, gameCompleted, party);
+                saveData = CreateSaveData(player, bossManager, mapManager, questManager, gameSettings, statistics, gameCompleted, party, dayNight);
             }
             catch (Exception ex)
             {
@@ -83,11 +84,18 @@ namespace GameLogic.Data
         /// Build a SaveData of the current game in memory without writing it - e.g. the
         /// snapshot taken when the final boss fight starts, written later with WriteSaveData.
         /// </summary>
-        public static SaveData CreateSaveData(Player player, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false, PartyManager party = null)
+        public static SaveData CreateSaveData(Player player, Entities.Enemies.Bosses.BossManager bossManager = null, World.MapManager mapManager = null, QuestManager questManager = null, GameSettings gameSettings = null, StatisticsTracker statistics = null, bool gameCompleted = false, PartyManager party = null, DayNightCycle dayNight = null)
         {
                 // Create SaveData from player
                 SaveData saveData = CreateSaveDataFromPlayer(player, mapManager);
                 saveData.GameCompleted = gameCompleted;
+
+                // Day/night: the phase and the time left in it
+                if (dayNight != null)
+                {
+                    saveData.IsNight = dayNight.IsNight;
+                    saveData.DayNightSecondsLeft = dayNight.SecondsLeft;
+                }
 
                 // Save the companion roster
                 if (party != null)
@@ -234,6 +242,7 @@ namespace GameLogic.Data
                 Health = player.Health,
                 MaxHealth = player.MaxHealth,
                 Gold = player.Gold,
+                PlayerFormationSlot = Combat.Formation.IsValidSlot(player.FormationSlot) ? player.FormationSlot : (int?)null,
                 SaveDate = DateTime.Now,
                 PlayTime = player.PlayTime
             };
@@ -298,6 +307,7 @@ namespace GameLogic.Data
                 Health = companion.Health,
                 MaxHealth = companion.MaxHealth,
                 InFightingParty = companion.InParty,
+                FormationSlot = Combat.Formation.IsValidSlot(companion.FormationSlot) ? companion.FormationSlot : (int?)null,
                 StartingItemsGiven = companion.StartingItemsGiven,
                 PassiveBonusState = companion.PassiveBonusState,
                 EquippedWeapon = companion.EquippedWeapon != null ? SerializeItem(companion.EquippedWeapon) : null,
@@ -342,6 +352,7 @@ namespace GameLogic.Data
                 companion.MaxHealth = saved.MaxHealth;
                 companion.Health = saved.Health;
                 companion.InParty = saved.InFightingParty;
+                companion.FormationSlot = saved.FormationSlot ?? Combat.Formation.NoSlot;
                 companion.StartingItemsGiven = saved.StartingItemsGiven;
                 companion.PassiveBonusState = saved.PassiveBonusState;
                 companion.EquippedWeapon = DeserializeItem(saved.EquippedWeapon) as Weapon;
@@ -541,6 +552,7 @@ namespace GameLogic.Data
             player.Health = saveData.Health;
             player.MaxHealth = saveData.MaxHealth;
             player.Gold = saveData.Gold;
+            player.FormationSlot = saveData.PlayerFormationSlot ?? Combat.Formation.NoSlot;
             player.PlayTime = saveData.PlayTime;
 
             // Restore equipped weapon (try new format first, fallback to legacy)
@@ -817,6 +829,7 @@ namespace GameLogic.Data
             saveData.BossesDefeatedCount = stats.BossesDefeated;
             saveData.BossAttemptsCount = stats.BossAttempts;
             saveData.BossDefeatsDict = new System.Collections.Generic.Dictionary<string, int>(stats.BossDefeats);
+            saveData.ArmyCampBestWave = stats.ArmyCampBestWave;
 
             // Economic statistics
             saveData.TotalGoldEarned = stats.TotalGoldEarned;
@@ -897,6 +910,7 @@ namespace GameLogic.Data
             stats.BossAttempts = saveData.BossAttemptsCount;
             if (saveData.BossDefeatsDict != null)
                 stats.BossDefeats = new System.Collections.Generic.Dictionary<string, int>(saveData.BossDefeatsDict);
+            stats.ArmyCampBestWave = saveData.ArmyCampBestWave;
 
             // Economic statistics
             stats.TotalGoldEarned = saveData.TotalGoldEarned;

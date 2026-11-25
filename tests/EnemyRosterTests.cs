@@ -100,7 +100,7 @@ namespace GameLogic.Tests
             var dragon = new Dragon(40);
             AssertStats(dragon, 1040, 44, 90);
             Assert.Equal(30, dragon.Defense);
-            Assert.Equal(EnemyType.Elite, dragon.Type);
+            Assert.Equal(EnemyType.Boss, dragon.Type); // Keeps the boss loot table
         }
 
         #endregion
@@ -182,6 +182,103 @@ namespace GameLogic.Tests
             Assert.False(bigSlime.IsAlive());
             Assert.Equal(2, events.Count(e => e.Type == CombatEventType.EnemyJoined && e.Target is Slime));
             Assert.True(combat.IsCombatActive); // The slimes keep the fight going
+        }
+
+        #endregion
+
+        #region Names
+
+        [Fact]
+        public void GivenName_ShowsAsNameTheType_AndCanBeCleared()
+        {
+            var goblin = new Goblin(1);
+            Assert.Equal("Goblin", goblin.TypeName);
+            Assert.Null(goblin.GivenName);
+
+            goblin.SetGivenName("Grik");
+            Assert.Equal("Grik the Goblin", goblin.Name);
+            Assert.Equal("Goblin", goblin.TypeName);
+
+            goblin.SetGivenName("Snag"); // A new fight, a new name - never "Snag the Grik the Goblin"
+            Assert.Equal("Snag the Goblin", goblin.Name);
+
+            goblin.SetGivenName(null);
+            Assert.Equal("Goblin", goblin.Name);
+        }
+
+        [Theory]
+        [InlineData(EnemyRoster.Goblins)]
+        [InlineData(EnemyRoster.Bandits)]
+        [InlineData(EnemyRoster.Wolves)]
+        [InlineData(EnemyRoster.Slimes)]
+        [InlineData(EnemyRoster.Bugs)]
+        [InlineData(EnemyRoster.Fungusoars)]
+        [InlineData(EnemyRoster.Imps)]
+        [InlineData(EnemyRoster.OwnArmy)]
+        [InlineData(EnemyRoster.KingdomB)]
+        [InlineData(EnemyRoster.CastleGuards)]
+        [InlineData(EnemyRoster.Dragons)]
+        public void EveryFamily_HasAtLeast8UniqueNames(string family)
+        {
+            var names = EnemyNames.GetNames(family);
+            Assert.True(names.Count >= 8);
+            Assert.Equal(names.Count, names.Distinct().Count());
+        }
+
+        [Fact]
+        public void Fight_EightGoblins_AllGetDifferentNames()
+        {
+            var combat = new CombatManager(new RNGManager(seed: 42)) { NameRng = new RNGManager(seed: 7) };
+            var player = new Player("TestHero") { Level = 10, Health = 5000, MaxHealth = 5000 };
+            var goblins = Enumerable.Range(0, 8).Select(_ => (EnemyBase)new Goblin(5)).ToList();
+
+            combat.StartCombat(player, goblins);
+
+            Assert.All(goblins, g => Assert.EndsWith(" the Goblin", g.Name));
+            Assert.All(goblins, g => Assert.Contains(g.GivenName, EnemyNames.GetNames(EnemyRoster.Goblins)));
+            Assert.Equal(8, goblins.Select(g => g.GivenName).Distinct().Count());
+        }
+
+        [Fact]
+        public void Fight_SplitSlimes_GetFreshNames()
+        {
+            var combat = new CombatManager(new RNGManager(seed: 42)) { NameRng = new RNGManager(seed: 7) };
+            var player = new Player("TestHero") { Level = 10, Health = 5000, MaxHealth = 5000 };
+            var bigSlime = new BigSlime(10);
+
+            var joined = new List<EnemyBase>();
+            combat.CombatEventOccurred += e =>
+            {
+                if (e.Type == CombatEventType.EnemyJoined && e.Target is EnemyBase enemy) joined.Add(enemy);
+            };
+
+            combat.StartCombat(player, new List<EnemyBase> { bigSlime });
+            bigSlime.Health = 1;
+
+            for (int i = 0; i < 40 && combat.IsCombatActive && joined.Count == 0; i++)
+            {
+                if (combat.IsWaitingForPlayerAction)
+                {
+                    combat.SubmitPlayerAction(CombatAction.Attack(player, bigSlime));
+                }
+            }
+
+            Assert.Equal(2, joined.Count);
+            Assert.All(joined, s => Assert.EndsWith(" the Slime", s.Name));
+            var names = joined.Select(s => s.GivenName).Append(bigSlime.GivenName).ToList();
+            Assert.Equal(3, names.Distinct().Count()); // The Big Slime is a Slime too - no repeats
+        }
+
+        [Fact]
+        public void PickName_AllUsed_ReusesOneNotStanding()
+        {
+            var rng = new RNGManager(seed: 1);
+            var all = EnemyNames.GetNames(EnemyRoster.Dragons).ToList();
+            var standing = all.Skip(1).ToList(); // Only the first is free to reuse
+
+            Assert.Equal(all[0], EnemyNames.PickName(EnemyRoster.Dragons, all, standing, rng));
+            Assert.Null(EnemyNames.PickName(EnemyRoster.Dragons, all, all, rng));
+            Assert.Null(EnemyNames.PickName(null, null, null, rng)); // No family - plain name
         }
 
         #endregion

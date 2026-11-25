@@ -53,6 +53,7 @@ namespace GameLogic.Data
         public int Health { get; set; }
         public int MaxHealth { get; set; }
         public bool InFightingParty { get; set; }  // false = benched
+        public int? FormationSlot { get; set; }    // 0-1 front, 2-3 back; null (old saves) = placed on load
         public bool StartingItemsGiven { get; set; }
         public int PassiveBonusState { get; set; }
         public SerializedItem EquippedWeapon { get; set; }
@@ -111,6 +112,7 @@ namespace GameLogic.Data
         public int Health { get; set; }
         public int MaxHealth { get; set; }
         public int Gold { get; set; }
+        public int? PlayerFormationSlot { get; set; } // 0-1 front, 2-3 back; null (old saves) = placed on load
 
         // Player Ability (permanent choice)
         public string SelectedAbilityName { get; set; }
@@ -143,6 +145,11 @@ namespace GameLogic.Data
         // is, so this is always true in a save; stored so the rule isn't hidden (core/ to-do 9).
         // Defaults to true so saves made before this field existed load as finished.
         public bool TutorialCompleted { get; set; } = true;
+
+        // Day/night (2026-11-25): the phase and the real seconds left in it. Saves made before
+        // these existed load at day with a full countdown (null time left).
+        public bool IsNight { get; set; }
+        public double? DayNightSecondsLeft { get; set; }
 
         // Timestamps
         public DateTime SaveDate { get; set; }
@@ -190,6 +197,7 @@ namespace GameLogic.Data
         public int EnemiesKilled { get; set; }
         public Dictionary<string, int> KillsByEnemyType { get; set; }
         public int BossesDefeatedCount { get; set; }
+        public int ArmyCampBestWave { get; set; }   // Most army camp waves beaten in one attempt (2026-11-25)
         public int BossAttemptsCount { get; set; }
         public Dictionary<string, int> BossDefeatsDict { get; set; }
         public long TotalGoldEarned { get; set; }

@@ -59,6 +59,43 @@ namespace GameLogic.Entities.Enemies
         public string Family { get; set; }
 
         /// <summary>
+        /// Its plain type name ("Goblin"), kept when it is given a name for a fight. Set the first
+        /// time SetGivenName is called; until then it is just Name. Statistics and kill quests
+        /// should count by this, not Name ("Grik the Goblin").
+        /// </summary>
+        public string TypeName
+        {
+            get => _typeName ?? Name;
+            private set => _typeName = value;
+        }
+        private string _typeName;
+
+        /// <summary>
+        /// Spawned at night (DayNightCycle.MakeNightEnemy): tougher and pays more.
+        /// </summary>
+        public bool IsNightEnemy { get; set; }
+
+        /// <summary>
+        /// Multiplier on the XP and gold it pays when beaten (1.0 normally, 1.2 for a night
+        /// enemy). Applied before the difficulty's multipliers.
+        /// </summary>
+        public double RewardMultiplier { get; set; } = 1.0;
+
+        /// <summary>Its name for this fight ("Grik"), or null if it has none.</summary>
+        public string GivenName { get; private set; }
+
+        /// <summary>
+        /// Give it a name for the fight: Name becomes "Grik the Goblin" (decided 2026-11-23,
+        /// lists in EnemyNames). Null puts back the plain type name.
+        /// </summary>
+        public void SetGivenName(string givenName)
+        {
+            if (_typeName == null) TypeName = Name;
+            GivenName = string.IsNullOrWhiteSpace(givenName) ? null : givenName;
+            Name = GivenName == null ? TypeName : $"{GivenName} the {TypeName}";
+        }
+
+        /// <summary>
         /// Who it goes after. Followed about 70% of the time (CombatManager.TargetPatternChance),
         /// a random party member otherwise. Most wounded by default (bosses and older enemies).
         /// </summary>
@@ -77,8 +114,8 @@ namespace GameLogic.Entities.Enemies
         public int FleeAttemptChance { get; set; } = 30;
 
         /// <summary>
-        /// Fights from the back row (archers, imps). Rows aren't built yet ("Formation and rows",
-        /// to-do section 1) - this is read once they are.
+        /// Fights from the back row (archers, imps) - and at range (GameLogic.Combat.Formation).
+        /// Bosses ignore it.
         /// </summary>
         public bool IsBackRow { get; set; }
 

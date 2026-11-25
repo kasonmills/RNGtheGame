@@ -26,6 +26,10 @@ namespace GameLogic.Entities
         // Action Tracking
         public CombatAction LastAction { get; set; }  // Track what entity did last turn
 
+        // The party formation slot (0-1 front, 2-3 back; -1 = none yet) - set through
+        // PartyManager, saved, copied by each fight (GameLogic.Combat.Formation). Unused by enemies.
+        public int FormationSlot { get; set; } = -1;
+
         // Active Effects (buffs, debuffs, status effects)
         public List<AbilityEffect> ActiveEffects { get; set; }
 
@@ -152,10 +156,12 @@ namespace GameLogic.Entities
                 // Effect already exists - it decides: by default a stacking effect gains a
                 // stack, and the duration goes back to full (AbilityEffect.OnReapplied)
                 existingEffect.OnReapplied(effect, this);
+                existingEffect.AppliedThisTurn = true; // Its fresh time starts after this turn
             }
             else
             {
                 // New effect - add it
+                effect.AppliedThisTurn = true;
                 ActiveEffects.Add(effect);
                 effect.OnApplied(this);
                 GameLog.Write($"{Name} is affected by {effect.Name}!");
@@ -200,8 +206,51 @@ namespace GameLogic.Entities
         }
 
         /// <summary>
-        /// Tick down all effect durations by 1 round
-        /// Called at the end of each round by the combat manager
+        /// This entity's own turn is starting: effects put on it before now count from here
+        /// (AbilityEffect.AppliedThisTurn). Called by the combat manager.
+        /// </summary>
+        public void StartOwnTurn()
+        {
+            foreach (var effect in ActiveEffects)
+            {
+                effect.AppliedThisTurn = false;
+            }
+        }
+
+        /// <summary>
+        /// The end of this entity's own turn (fixed 2026-11-25): every effect it already had
+        /// when the turn started is applied (damage, healing ...) and counts down by 1, and
+        /// is removed when it runs out. Effects put on it during this turn wait for its next
+        /// turn, so an effect lasts that many of the target's turns.
+        /// </summary>
+        public void ProcessTurnEndEffects(RNGManager rng)
+        {
+            var effectsToProcess = ActiveEffects.Where(e => !e.AppliedThisTurn).ToList();
+            if (effectsToProcess.Count == 0) return;
+
+            GameLog.Write($"\n--- {Name}'s Status Effects ---");
+
+            foreach (var effect in effectsToProcess)
+            {
+                effect.ApplyEffect(this, rng);
+            }
+
+            foreach (var effect in effectsToProcess)
+            {
+                // A cure or an effect's own ending may already have taken it off
+                if (!ActiveEffects.Contains(effect)) continue;
+
+                effect.TickDuration();
+                if (effect.IsExpired())
+                {
+                    RemoveEffect(effect);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tick down all effect durations by 1. Combat no longer uses this (effects count down
+        /// on the target's own turns - ProcessTurnEndEffects); kept for anything outside combat.
         /// </summary>
         public void TickEffectDurations()
         {

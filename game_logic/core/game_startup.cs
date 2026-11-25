@@ -38,6 +38,8 @@ namespace GameLogic.Core
         public GameSettings GameSettings { get; set; }
         public StatisticsTracker Statistics { get; set; }
         public bool GameCompleted { get; set; }
+        /// <summary>The day/night clock (a new game starts at day; a load restores the save's).</summary>
+        public DayNightCycle DayNight { get; set; } = new DayNightCycle();
         public List<Entities.NPCs.Companions.CompanionBase> Companions { get; set; } = new List<Entities.NPCs.Companions.CompanionBase>();
     }
 
@@ -212,6 +214,7 @@ namespace GameLogic.Core
                 GameSettings = gameSettings,
                 Statistics = statistics,
                 GameCompleted = saveData.GameCompleted,
+                DayNight = new DayNightCycle(saveData.IsNight ? DayPhase.Night : DayPhase.Day, saveData.DayNightSecondsLeft),
                 Companions = companions
             };
         }

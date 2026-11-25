@@ -44,23 +44,14 @@ Nothing left here - the hand-set boss stats are built (section 3). Boss rewards 
   - **The Imp's other conditions:** it only burns today. Add Hexed and Weakened (weaker versions) to `EnemyRoster.Imp` when the Demon Prince's new conditions are built.
   - **Component favour:** spiders and beetles drop bug components, and Fungusoars mushroom components, at 2x weight - with "Component drops" (Items, loot and magic).
   - **Base XP and gold:** `StandardEnemy.StandardXPPerLevel` (50) and `StandardGoldPerLevel` (12) are placeholders, times each enemy's XP weight - set them with the XP rework.
-  - **Back row:** `EnemyBase.IsBackRow` is set for the archer and the imp; "Formation and rows" below reads it.
-  - **The army camp's soldiers** (`ArmySoldier`) get their rewards from the camp's exit reward, not normal loot - with the army camp build.
 - [ ] **Weapon screens show the un-doubled damage.** The party's weapon damage is ×2 in the damage calculation (`DamageCalculator.PartyDamageScale`), but `Weapon.GetInfo()`/`GetDisplayName()` still show the weapon's own range. Show the real range, or fold the ×2 into the item numbers once the scale is settled.
 - [ ] **Enemy XP and gold values become the guaranteed base reward**, with a random extra on top. Do this together with XP rework item "Random XP rewards" below. Bosses too: today a boss's fight XP is rolled from its level and its gold from the loot table, so `BossEnemy.XPValue`/`GoldValue` and the scaler's boss reward multipliers (XP x5, gold x3-5) aren't used yet - wire them in here (decided 2026-11-10, left out of the boss stat build 2026-11-11).
-- [ ] **Formation and rows** (decided 2026-11-23 - see `done.md`, "Positions"):
-  - **Party layout:** 2 front, 2 back. The formation is set in the party menu and saved. Every fight starts with it. A new recruit fills the first empty slot, ranged users at the back first.
-  - **Enemy targeting:** enemies pick front-row members twice as often as back-row ones. If the front row is empty, the back row counts as the front.
-  - **Enemy AI:** when an enemy follows its pattern (about 70%), it picks by its pattern and ignores rows. The 2:1 weighting applies to the random 30% and to "Random" enemies.
-  - **Back-row hit penalty:** every attack on the back row (either side) gets -10 hit chance.
-  - **Ranged and melee:** ranged weapons are bow, crossbow, staff and wand. Melee weapons are sword, dagger, axe, mace, spear, unarmed and cat-form Chance. A melee attack from the back row does -30% damage (spear -10%, for its reach). Ranged attacks have no penalty in either row.
-  - **What ignores rows:** spells, heals and items (no penalty and no -10).
-  - **Enemy rows:** each enemy type has a set row. Archers and imps go at the back, and everyone else at the front (`enemy_roster.md`). An enemy row can hold any number. Bosses ignore rows.
-  - **Saving:** the formation and each member's slot are saved.
-- [ ] **Reposition action** - a 5th combat button. Swap places with any party member (a downed one too - the body moves), or move into an empty slot (decided 2026-11-23). It costs the turn of whoever chose it; the partner doesn't lose a turn. Add it to the tutorial's "try each action" list. ⛔ Needs "Formation and rows" above.
-- [ ] **Random names for regular enemies**, picked fresh each fight, with no repeats in one fight. Bosses keep their own names. Each family has its own list, shown as "Name the Type" (decided 2026-11-23 - lists final in `enemy_roster.md`). Every regular enemy now has its `Family` set (`EnemyRoster` constants), so the lists can be keyed on it.
-- [ ] **Fix the buff/cooldown timing** - effect timers tick at the end of the round they were applied in, so 1-turn buffs vanish before they're used. Spell buffs and debuffs last 3 turns, and Doom 2 (decided 2026-11-20), so they must last that many of the target's turns.
-- [ ] `DamageCalculator.CalculateHealing()`'s passive healing bonus is never applied.
+- [ ] **Formation leftovers** (the rows and Reposition are built - section 3, "Formation, rows and Reposition"):
+  - **Spells:** spells ignore rows - the spell build must not add the -10 or the melee cut.
+  - **Auto companions and rows:** `enemy_roster.md` says auto companions pick back-row enemies less often. Today they always go for the most wounded enemy, so add the 2:1 weighting with "One combat decision-maker" (Companions).
+  - **Godot:** the formation view in the party menu (`PartyManager.SetFormationSlot`), the rows on the combat screen (`CombatManager.GetSlot`/`GetRow`), and the Reposition button (target a party member or an empty slot - `GetValidTargets(actor, ActionType.Reposition)` and `GetFreeSlots()`).
+  - **Tutorial text:** Reposition is now one of the actions to try in the Skarn fight; its hint text comes with the tutorial writing.
+- [ ] `DamageCalculator.CalculateHealing()`'s passive healing bonus is never applied. Do it with "Rescale every ability for the level-40 cap" (XP, levels and abilities), since the bonus numbers change there. `Player.Heal` is the likely hook (check for heals that set `Health` directly).
 
 ### Tutorial
 - [ ] **Chance revives the player once** (decided 2026-11-23): the first time the player goes down in the Skarn fight, Chance revives them (with a short line) and the fight goes on. A second fall loses, and the tutorial is replayed (today any loss goes to Game Over).
@@ -159,43 +150,20 @@ _The per-boss level target is decided (2026-11-19 - table in `done.md`): party l
   - **Per save:** difficulty (locked at creation) and any gameplay setting.
   - An old save's settings seed the global file the first time it's loaded, if the global file doesn't exist yet. Check `GameSettingsTests` and the save tests when this changes.
 - [ ] **Player class system out of the MVP** - no class choice and no class bonuses or armor penalties. Keep the code (`player_class.cs`, the save field) dormant.
-- [ ] **Day/night** (designed by the user 2026-11-23 - see `done.md`):
-  - **The countdown:** a real-time countdown of **10 minutes per phase**. A new game starts at day.
-  - **Pauses that roll:** battles, dialogue and cutscenes pause it. When one ends, **roll -60 to +60 seconds** (every whole number possible) and add it to what's left before the timer resumes.
-  - **Pauses that don't roll:** menus, shops, inventory and the pause screen also pause it, but with no roll, so the clock can't be rerolled by opening the bag.
-  - **Reaching zero:** if a roll takes the countdown to 0 or below, the phase flips as soon as play resumes.
-  - **Manual switch:** at inns and save campsites, in the same rest menu as `Rest()`. It flips the phase and starts a full new countdown.
-  - **Saving:** the phase and the time left are saved.
-  - **At night:**
-    - each area uses its night spawn list
-    - night enemies get +10% HP and damage and one step more aggression, and pay +20% XP and gold
-    - town shops and the blacksmith are closed (`OpenShop`/`OpenBlacksmith` refuse with a "closed for the night" message handed back for Godot); inns stay open
-    - a darker map tint in Godot
-  - The spawn system and the shop/blacksmith checks read the phase.
+- [ ] **Day/night leftovers** (the clock is built - section 3, "Day and night"):
+  - **Night spawn lists:** each area uses its night list at night - with "Per-area enemy spawn lists" below. ⛔ Needs the map.
+  - **The manual switch only at inns and save campsites:** `GameManager.SwitchDayNight()` works anywhere in the world today. Put it in the rest menu with "`Rest()` becomes an inn-based mechanic" below. ⛔ Needs the map.
+  - **Godot:** call `GameManager.AdvanceClock(delta)` every frame, tint the map darker at night (`DayPhaseChanged`), and show `LastRefusalReason` when a shop or the blacksmith is closed.
 - [ ] **`Rest()` becomes an inn-based mechanic** - the same rest menu as the day/night switch (decided 2026-11-23). Inns heal fully; save campsites switch day/night and save, but don't heal.
 - [ ] **Save points:** only inns and marked campsites allow saving. Add the check in `SaveGame` only, so the boss auto-save still works. ⛔ Needs the map.
 - [ ] **Gender selection at character creation** - cosmetic only.
 - [ ] **Equipment levelling, connected:** gear XP (above), a placed Blacksmith, and the three-way weapon upgrade choice wired in (today `CompleteUpgrade()` always takes "Balanced"). (The typed Y/N and the one-second pause are out of `UpgradeWeapon`/`UpgradeArmor` - 2026-11-10.)
 - [ ] **Place shops, the blacksmith and NPCs in towns** - `city.cs` becomes the home for in-town places. ⛔ Needs the fixed map.
 - [ ] **Elder of the Elven Village** (NPC). ⛔ Needs the fixed map.
-- [ ] **Army camp + endless "test your strength" mode** - soldiers to talk to, and a commander who starts back-to-back fights with no healing between them. The loop can be built before the camp. Rules (decided 2026-11-23):
-  - **Waves:** wave 1 is 1 Army Soldier at the party's level. Each wave adds a soldier (max 8) and +1 level every 3 waves.
-  - **The pot:** each wave beaten adds the XP and gold of a normal fight that size to a pot, plus a prize item every 5th wave (its rarity rises with the wave).
-  - **Leaving** (clarified by the user 2026-11-23): leaving between waves - after one is beaten, before the next starts - keeps the whole pot. Leaving while enemies are still standing keeps only half, the same as losing.
-    - **Mid-wave leaving is its own "Surrender" action** (placeholder - "Retire" is the other option for the writing pass), decided by the user 2026-11-23. In the camp it replaces the Flee button.
-    - It doesn't use the flee code at all: no roll, no flee chance. It ends the attempt straight away and keeps half the pot.
-    - Normal Flee is refused for the whole attempt, so the camp never has to deal with the flee rules.
-  - **Losing:** falling is never a Game Over. The party keeps half the pot.
-  - **Fixed lineup** (added by the user 2026-11-23): before starting, the player picks the 4 who fight (the player plus 3 from the roster). There is no swapping with benched companions during the attempt.
-  - **No items** in the waves: the item action is refused for the whole attempt.
-  - **Fallen stays fallen:** a member who falls is out for the rest of the attempt. The "everyone down gets up at 1 HP on a win" rule (section 1, Combat) is switched off between waves. The attempt ends when the whole lineup is down.
-  - **Full heal after:** when the challenge ends (leaving or losing), every participant is fully healed and revived.
-  - **Best wave:** saved per save file, for the statistics and bragging.
-  - **Rewards:** Army Soldiers drop no normal loot here; only the pot pays.
-  - **Free spells in the waves** (added by the user 2026-11-23): casting spells doesn't spend components, so the player can test any mix of party members against the army.
-    - Every caster can still only cast the spells they already know (the player's known spells, Fiery's set, Fluke's luck spells).
-    - Cooldowns, the to-hit roll and Fiery's wild magic still work as normal.
-    - Combat needs a "components are free" flag for the fight, and the "greyed out without components" check must respect it.
+- [ ] **Army camp leftovers** (the wave challenge is built - section 3, "The army camp challenge"):
+  - **The camp itself:** a place on the fixed map with soldiers to talk to and a commander who starts the challenge (`GameManager.StartArmyCampChallenge` works anywhere in the world today). ⛔ Needs the fixed map.
+  - **Free spells:** `FightRules.ComponentsAreFree` is set for the waves, but nothing reads it yet. The spell build must check it, including the "greyed out without components" check. Casters still only cast spells they know; cooldowns, the to-hit roll and Fiery's wild magic work as normal.
+  - **Godot:** a lineup picker before the attempt, the between-waves screen (pot, Next wave, Leave), Surrender in place of the Flee button, and the payout screen.
 - [ ] **Per-area enemy spawn lists**, replacing the fixed 70% Goblin / 25% Bandit / 5% Dragon roll. The Dragon only appears in one or two mountain areas; loyal army soldiers are never random encounters (only deserters are). ⛔ Needs the map (the roster is final in `enemy_roster.md`, with a day/night lean per family).
 - [ ] **Encounter-size roll** (max 8 enemies per fight, decided 2026-11-23): each enemy has a group range (in `enemy_roster.md`, e.g. wolves 2-5, Dragon always 1). The maximum goes up by 1 every 10 player levels, and by +1 on Difficult / +2 on Unfair. The touched enemy's family fills the group, and about 1 in 4 fights adds one or two others from the area's spawn list. The group ranges are final (roster reviewed 2026-11-24). ⛔ The mixing needs the spawn lists.
 
@@ -289,6 +257,21 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
 - [ ] **Defend** lasts until the defender's next turn and halves every hit in that window. (Since 2026-11-24 the halving is done inside `DamageCalculator.CalculateAttack` - `targetDefending` - so it counts towards the 75% cap below.)
 - [ ] **Armor is a % reduction** (built 2026-11-24): a party member's armor cuts each hit by defense / (defense + 100) (`DamageCalculator.GetArmorReduction`). Armor, Defense Boost and Defend multiply together and cut at most 75% (`MaxDamageReduction` - Bulwark joins it when built). The consumables' flat Resistance comes after the %. A piercing bolt skips armor, Defense Boost and Resistance, but Defend still halves it. Enemy defense stays flat, then Defend halves it. A hit always does at least 1. Check in play: Common plate (25) takes about 20% off; full defense + Defend never goes past 75%. Not built yet: the Iron Draught's +2 defense (it adds to the armor number before the %, with the stat potions). Tests: the armor test now expects 18-19 from a 20 hit; new tests for the formula and the cap.
 - [ ] **Fractions round up by chance** (built 2026-11-24): `RNGManager.RoundByChance` - the leftover fraction is the chance to round up (5.25 → 6 a quarter of the time); a whole number uses no roll. Used for every % on damage in `DamageCalculator` (attack boost, rage, crits, Rallying Cry, passive abilities, armor and Defense Boost, Defend), the boss charge multiplier in `ProcessAttack`, `CalculateDamage` and `CalculateHealing`. Left as they were: the difficulty stat scaling (already rounds up), the Librarian-Monk's shield (rounds down, as decided), reward shares, and accuracy/crit chance numbers. New tests for the helper.
+- [ ] **Formation, rows and Reposition** (built 2026-11-25 from the rules decided 2026-11-23 - `combat/formation.cs`):
+  - **Slots:** 4 slots, 0-1 front and 2-3 back (`Entity.FormationSlot`, saved for the player and each companion). The party menu sets them with `PartyManager.SetFormationSlot`, which swaps with whoever is there. A recruit fills the first empty slot, ranged users at the back first. Benching clears the slot, and a swap gives the newcomer the old slot. Old saves load with no slots and are placed (`FixFormation`).
+  - **Fights:** each fight copies the formation, and anyone without a slot is placed the same way. Reposition changes only the fight's copy.
+  - **Targeting:** an enemy's random pick (the 30%, and Random enemies) counts the front row twice and the back row once. Pattern picks ignore rows. When everyone is in the same row, it's the old even roll, so those fights use the same random numbers.
+  - **Hit penalty:** a plain attack on anyone behind their front row gets -10 hit chance (`CalculateAttack`'s new `hitChanceModifier`, the hit chance never below 1). This counts for both sides, so it covers archers and imps too.
+  - **Melee cut:** a party member's melee attack from behind the front row does 70% damage (spear 90%, ranged 100%). It's applied after defense with the boss multiplier, rounded by chance, and the log says so. Ranged means bow, crossbow, staff or wand. Unarmed and cat-form Chance are melee.
+  - **Reposition:** `CombatAction.Reposition(actor, slot)`, party only, and it costs only the mover's turn. The member in that slot, standing or down, swaps into the mover's old slot. Raises `Repositioned`. It's added to the tutorial's "try each action" list.
+  - **My defaults:**
+    - A back row with nobody standing in front counts as the front, for the -10 and the melee cut too, not just for targeting.
+    - Bosses ignore rows completely: always front, no 2:1 in their random picks, and no -10 on their attacks.
+    - Back-row enemies (archers, imps) count as ranged, so enemies never get the melee cut.
+    - Abilities (Boon's bolts, Power Strike and so on) ignore rows, as spells, heals and items do.
+    - The computer never repositions.
+  - **Check in play:** the mage and Felicity start at the back with their staves, so enemies hit them less often.
+  - **Tests:** the new `FormationTests`. No existing test changed. Fights with a back-row member now roll differently, but no existing test has one standing. `ActionType.Reposition` and `CombatEventType.Repositioned` were added at the end of their lists.
 - [ ] **Everyone down at a win gets up at 1 HP** (built 2026-11-24): the player and every downed companion, after the XP is handed out, so a downed companion still gets half.
 - [ ] **Nothing flees in a boss fight** (built 2026-11-24): a Cautious enemy never picks Flee while a boss is in the fight, and `ProcessFlee` refuses any enemy flee there ("stands their ground!", the turn is spent). The party's flee was already refused.
 - [ ] **Difficulty numbers** (decided 2026-11-23, built 2026-11-24). Hard is the 1x baseline.
@@ -315,7 +298,7 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - **Check in play:** Skarn on Unfair (Hard numbers); a new Normal game starts at 120 HP; a companion recruited on Unfair joins at 80%; save, load and level up keep the %.
   - **Tests:** updated `DifficultyScalerTests`, `BossStatsTests`, `LibrarianMonkTests` and `LevelingSystemTests` to the new numbers; new `DifficultyPartyTests` (party side), plus enemy-bonus, accuracy-cap, defense and tutorial-cap tests.
 - [ ] **The regular enemies rebalanced** (built 2026-11-24 from `enemy_roster.md`). Every regular enemy is `StandardEnemy` times its `EnemyProfile` (`EnemyRoster`): health 20 + 6/level, damage (2 + level/2)-(5 + level), defense level/4, speed 10 + level/4, 75% accuracy, 5% crit. Health and damage round to nearest, defense rounds down.
-  - **New:** Wolf, Slime, Big Slime, Spider, Giant Beetle, Fungusoar, Imp, Deserter, Army Soldier (the roster's "Deserter / Army Soldier" row, split because only the deserter flees), Kingdom B Soldier, Kingdom B Archer. **Retuned:** Goblin, Bandit, Dragon (now Elite, not Boss type), Castle Guard (damage up to the standard). The Dragling keeps its built stats.
+  - **New:** Wolf, Slime, Big Slime, Spider, Giant Beetle, Fungusoar, Imp, Deserter, Army Soldier (the roster's "Deserter / Army Soldier" row, split because only the deserter flees), Kingdom B Soldier, Kingdom B Archer. **Retuned:** Goblin, Bandit, Dragon (keeps the Boss type for boss loot; it isn't a boss fight), Castle Guard (damage up to the standard). The Dragling keeps its built stats.
   - **Flee lines:** below its `FleeBelowHealth` an enemy tries to flee - goblins and imps every turn, the rest 30% of their turns (`FleeAttemptChance`) - then `FleeChance` decides. Never in a boss fight. Wild draglings can now flee (below 30%); the Slime Dragon's can't. The old per-class `DecideAction` flee code (never used by combat) is gone.
   - **Targeting:** each enemy follows its pattern 70% of the time, otherwise random (`CombatManager.SelectEnemyTarget`): Random, Most wounded, Weakest defense (least armor), Last attacker, Biggest threat (most damage done this fight). With no answer yet (nobody has hit it) the pick is random. Bosses keep Most wounded, so they behave as before.
   - **Hit effects** (`EnemyBase.RollOnHitEffect`, rolled when it attacks, lands only on a hit): wolf Bleeding 15%, slime Slowed (-2 speed, 2 turns - new `SlowedEffect`) 20%, spider poison 20%, Fungusoar Spore Roar poison 25%, imp weak Burning 20%, Dragon fire breath Burning 30%. Strengths are my defaults (the poison formula, and half or all of its middle for burn/bleed).
@@ -324,6 +307,19 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - **Not in the fights yet:** the new enemies don't spawn until the per-area spawn lists exist (the overworld still rolls Goblin / Bandit / Dragon). Leftovers are in section 1 ("Enemy roster leftovers").
   - **Check in play:** a level-1 Goblin has 18 HP and runs when low; wolves make you bleed; a Big Slime's split; a beetle shrugging off normal hits.
   - **Tests:** the 2 Goblin tests in `DifficultyScalerTests` use the new Goblin (18 HP); new `EnemyRosterTests` (the sheet's worked numbers, flee lines, targeting, the split in a fight).
+- [ ] **Random names for regular enemies** (built 2026-11-25 from the lists in `enemy_roster.md`). Every regular enemy gets a name from its family's list when a fight starts, and so does every enemy that joins mid-fight (split slimes, draglings, the Princess's guards). It shows as "Grik the Goblin" (`EnemyBase.SetGivenName`; `TypeName` keeps "Goblin", `GivenName` "Grik"). No name repeats in one fight; if a family's list runs out (only possible with many joiners), a name not worn by a standing enemy is reused. Bosses keep their own names. The lists are in `EnemyNames`.
+  - Names use their own random numbers (`CombatManager.NameRng`), so naming never changes a fight's rolls.
+  - Statistics and kill quests (not wired yet) should count by `TypeName`, not `Name`.
+  - "Kingdom B" reads badly in "Valka the Kingdom B Soldier" - it changes with the kingdom's name (section 2).
+  - **Check in play:** names in the combat log, no repeats in a big fight, fresh names on a retry.
+  - **Tests:** new in `EnemyRosterTests` (the name format, every list has 8+ unique names, 8 goblins all different, split slimes get fresh names, the fallback).
+- [ ] **Effects and cooldowns count the owner's own turns** (fixed 2026-11-25). Before, every effect and cooldown counted down at the end of each round, including the round it started in, so a 1-turn buff was gone before it could be used and a 3-turn cooldown only blocked 2 turns. Now:
+  - An effect is applied and counts down at the end of each of its target's turns (`Entity.ProcessTurnEndEffects`), except the turn it landed or was re-applied in (`AbilityEffect.AppliedThisTurn`). A 3-turn buff cast on yourself lasts your next 3 turns; a 3-turn poison from an enemy hurts at the end of your next 3 turns.
+  - A cooldown counts down at the end of each of its owner's turns, except the turn the ability was used in. Attack Boost's 5-turn cooldown blocks exactly the next 5 turns.
+  - A boss with 2 turns counts once per round (its first turn), as before. A downed character's effects and cooldowns don't count down until they're back up.
+  - The round's end now only does the speed changes and the Iron Will cleanse. The effect lists say "turns" instead of "rounds".
+  - **Check in play:** spell buffs (3 turns) and Doom (2) once spells exist; Boon's Pinned; the Cyclops' Rage; poison and burn counts.
+  - **Tests (effects):** new `EffectTimingTests`. Seeded fights where a poison or burn lands after the target's turn now tick it once more, so a long seeded fight with damage over time can roll differently - the existing tests found none that depend on it.
 - [ ] **One damage path** - companion hits are reduced by enemy defense; enemy hits on companions roll to hit and crit and go through armor; no hit does less than 1 damage.
 - [ ] **8 turn slots** - fights with 1, 2, 4, 5 and 8 enemies give the expected slots (extras to the slowest slots, shared speed = average rounded up, empty slots skipped); speeds change between rounds after attacking or defending.
 - [ ] **More than one turn slot per round** (written 2026-11-09, for the Princess). A boss whose mechanic implements `IMultiTurnMechanic` gets one opponent slot per turn, each with its own speed. No boss uses it yet, so test it with a small test mechanic (e.g. 2 turns, second turn 5 slower). Check:
@@ -491,6 +487,31 @@ _All the companion mechanics are settled (2026-11-19 - see `done.md`), and Fiery
   - New tests: `GameManagerTests`. No existing test changed.
 
 ### Game flow and saving
+- [ ] **The army camp challenge** (built 2026-11-25 from the rules decided 2026-11-23 - `ArmyCampChallenge`, the camp itself waits for the map):
+  - **Starting:** `GameManager.StartArmyCampChallenge(companions)` with up to 3 recruited companions - the fixed lineup, the player always in it. It goes into Combat for wave 1 and stays in Combat between waves (so the day/night clock rolls once, when the attempt ends).
+  - **Waves:** wave 1 is 1 Army Soldier at the lineup's average level (rounded - my reading of "the party's level", like a boss fight); each wave adds one (max 8), +1 level every 3 waves.
+  - **The pot:** each wave beaten adds that fight's XP and gold, worked out as normal (difficulty included) but not given out. Every 5th wave adds a prize: a random weapon or armor piece at the wave's level - wave 5 Uncommon, 10 Rare, 15 and later Legendary (my defaults). Soldiers drop no normal loot here.
+  - **Between waves:** `ArmyCampNextWave()` or `ArmyCampLeave()`. Leaving keeps the whole pot.
+  - **Surrender:** a new combat action (`CombatAction.Surrender`, outcome `Surrendered`) - no roll, ends the attempt at once, keeps half the pot. Normal Flee and every item are refused in the waves.
+  - **Losing:** never a Game Over - half the pot, then back to the world.
+  - **Half:** XP and gold round down; of the prize items, the best half is kept, rounded down (my default - one prize alone is lost).
+  - **Fallen stay down:** no "back on their feet" between waves; a downed companion sits out the next waves; the player is always in the fight but can't act while down.
+  - **The payout:** the player and every lineup companion get the whole XP amount (my default - benched companions get none); the gold goes to the bag; prizes that don't fit come back as `ItemsLeftBehind`. Then everyone in the lineup is fully healed, revived and cleared of effects.
+  - **Best wave:** `StatisticsTracker.ArmyCampBestWave`, saved per save.
+  - **Fight rules:** behind it is the new `FightRules` (`combat/fight_rules.cs`), passed to `StartCombat`: flee, items and surrender allowed or not, rewards paid or held back, the win revive, a fixed lineup, free components. Normal fights use the defaults, which change nothing.
+  - **Check in play:** a few waves in a row; surrendering; losing; the heal afterwards; the best wave after a load.
+  - **Tests:** new `ArmyCampTests`. No existing test changed (`StartCombat` got an optional `rules` parameter at the end; `CombatOutcome` and `ActionType` got one new value each).
+- [ ] **Day and night** (built 2026-11-25 from the user's design in `done.md`). `DayNightCycle` (in `systems/`), owned by `GameManager.DayNight`:
+  - **The countdown:** 10 real minutes per phase; a new game starts at day. It only runs while the player is in the world (`GameManager.AdvanceClock`, called each frame by Godot).
+  - **The roll:** when a fight, a conversation or a cutscene ends for good, -60 to +60 seconds (every whole number) is added to what's left. Pausing mid-fight, or the intro going straight into the tutorial fight, doesn't roll until the real end. Menus, shops, the bag and the pause screen stop the clock with no roll. If a roll takes it to 0 or below, the phase flips straight away.
+  - **Every flip** starts a full 10 minutes (my default - a few seconds of overshoot aren't carried over).
+  - **Manual switch:** `GameManager.SwitchDayNight()` flips it and starts a full countdown (anywhere in the world for now - see section 1, "Day/night leftovers").
+  - **Saving:** the phase and the time left are saved (`SaveData.IsNight`, `DayNightSecondsLeft`). Saves made before load at day with a full countdown.
+  - **Night enemies:** an enemy spawned at night (`DayNightCycle.MakeNightEnemy`) gets +10% HP and damage (rounded up), +20 aggression (my reading of "one step" - aggression is 0-100, capped at 100) and +20% XP and gold (`EnemyBase.RewardMultiplier`). It stays a night enemy if day comes before it is fought. Bosses are never night enemies. The difficulty goes on top.
+  - **Closed at night:** `OpenShop` and `OpenBlacksmith` refuse at night, with `LastRefusalReason` = "It's closed for the night. Come back in the morning." (placeholder text). Inns don't exist yet.
+  - The clock uses its own random numbers (`DayNightCycle.Rng`), so it never changes other rolls.
+  - **Check in play:** the clock stopping in menus and fights; a fight's roll; night enemies hitting harder and paying more; the shop closed at night; save and load keep the time.
+  - **Tests:** new `DayNightTests`. No existing test changed (the save methods got an optional `dayNight` parameter at the end).
 - [ ] **New game wipes the old one** - start a game, recruit, fight, then start a new game: no companions until Chance joins, clean statistics, no leftover enemies, Back/Pause doesn't return to the old game. The same after loading another slot. Quitting mid-fight then starting a new game: the old fight's end does nothing. A failed load keeps the current game. Volume and text speed survive a new game.
 - [ ] **Tutorial and saving** - saving during the intro or the Skarn fight fails with the message; after winning it works; a loaded game can save straight away.
 - [ ] **Boss auto-save** - challenging a boss saves first; losing and loading lands right before the boss; a brand-new game's first auto-save goes to an empty slot; a failed write still starts the fight and sets `LastSaveError`.

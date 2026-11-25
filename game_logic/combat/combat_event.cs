@@ -46,6 +46,9 @@ namespace GameLogic.Combat
         FleeSucceeded,      // Actor got away (an enemy, or the whole party)
         FleeFailed,
 
+        Repositioned,       // Actor moved to formation slot Amount; Target = who swapped into Actor's old
+                            // slot (null if it was empty). Read CombatManager.GetSlot for both.
+
         CombatEnded         // Read the CombatResult from CombatManager.CombatFinished / LastResult
     }
 
@@ -74,7 +77,8 @@ namespace GameLogic.Combat
         Won,            // Every enemy is down or fled, and at least one was defeated
         Lost,           // The whole party is down - Game Over
         PartyFled,      // The party escaped - no rewards
-        OpponentFled    // Every enemy fled, none were defeated - 50% rewards
+        OpponentFled,   // Every enemy fled, none were defeated - 50% rewards
+        Surrendered     // The party gave up (the army camp's Surrender action) - never a Game Over, no rewards from the fight
     }
 
     /// <summary>

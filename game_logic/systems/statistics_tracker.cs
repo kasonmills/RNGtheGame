@@ -77,6 +77,20 @@ namespace GameLogic.Systems
         // ===== Streak/Achievement Statistics =====
         public int CurrentWinStreak { get; set; }
         public int LongestWinStreak { get; set; }
+
+        /// <summary>The most waves beaten in one army camp attempt on this save.</summary>
+        public int ArmyCampBestWave { get; set; }
+
+        /// <summary>
+        /// An army camp attempt ended with this many waves beaten. Returns true if it is a new
+        /// best.
+        /// </summary>
+        public bool RecordArmyCampAttempt(int wavesBeaten)
+        {
+            if (wavesBeaten <= ArmyCampBestWave) return false;
+            ArmyCampBestWave = wavesBeaten;
+            return true;
+        }
         public int FlawlessVictories { get; set; } // No damage taken
         public int CloseCallVictories { get; set; } // Victory with less than 10% HP
         public int PerfectCritRuns { get; set; } // All attacks were crits in a battle

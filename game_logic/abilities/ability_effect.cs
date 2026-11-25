@@ -14,9 +14,18 @@ namespace GameLogic.Abilities
         public string Name { get; protected set; }
         public string Description { get; protected set; }
 
-        // Duration (in rounds)
-        public int Duration { get; set; }           // Rounds remaining
+        // Duration - in the target's own turns: it counts down at the end of each of their
+        // turns, except the turn it was applied in (fixed 2026-11-25, so a 3-turn buff lasts
+        // the target's next 3 turns)
+        public int Duration { get; set; }           // Turns remaining
         public int MaxDuration { get; protected set; }   // Original duration
+
+        /// <summary>
+        /// True from when it lands (or is re-applied) until the target's next turn starts
+        /// (Entity.StartOwnTurn). While true it doesn't apply or count down at the end of a turn,
+        /// so an effect put on someone during their own turn isn't used up by that turn.
+        /// </summary>
+        public bool AppliedThisTurn { get; set; }
 
         // Potency (how strong the effect is)
         public int Potency { get; set; }            // Strength of effect
@@ -134,7 +143,7 @@ namespace GameLogic.Abilities
         public virtual string GetDisplayInfo()
         {
             string stackInfo = CanStack && StackCount > 1 ? $" x{StackCount}" : "";
-            return $"{Name}{stackInfo} ({Duration} rounds)";
+            return $"{Name}{stackInfo} ({Duration} turn{(Duration == 1 ? "" : "s")})";
         }
 
         /// <summary>
@@ -142,7 +151,7 @@ namespace GameLogic.Abilities
         /// </summary>
         public virtual string GetDetailedInfo()
         {
-            return $"{Name}\n{Description}\nDuration: {Duration}/{MaxDuration} rounds\nPotency: {Potency}";
+            return $"{Name}\n{Description}\nDuration: {Duration}/{MaxDuration} turns\nPotency: {Potency}";
         }
     }
 

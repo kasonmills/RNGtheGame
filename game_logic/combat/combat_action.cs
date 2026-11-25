@@ -31,6 +31,9 @@ namespace GameLogic.Combat
         // For Summon: the enemies brought into the fight (e.g. the Princess's castle guards)
         public List<EnemyBase> SummonedEnemies { get; set; }
 
+        // For Reposition: the formation slot to move to (0-1 front, 2-3 back)
+        public int TargetSlot { get; set; } = -1;
+
         public CombatAction(ActionType type, Entity actor, Entity target = null)
         {
             Type = type;
@@ -68,6 +71,29 @@ namespace GameLogic.Combat
         public static CombatAction Flee(Entity actor)
         {
             return new CombatAction(ActionType.Flee, actor);
+        }
+
+        /// <summary>
+        /// Give up the fight straight away - no roll. Only in a fight whose rules allow it
+        /// (FightRules.SurrenderAllowed - the army camp's waves, where it replaces Flee).
+        /// "Surrender" is a placeholder name ("Retire" is the other option for the writing pass).
+        /// </summary>
+        public static CombatAction Surrender(Entity actor)
+        {
+            return new CombatAction(ActionType.Surrender, actor);
+        }
+
+        /// <summary>
+        /// Move to another formation slot (0-1 front, 2-3 back - decided 2026-11-23). Whoever
+        /// is in it - standing or down - swaps into the mover's old slot; an empty slot is just
+        /// moved into. Costs the mover's turn only.
+        /// </summary>
+        public static CombatAction Reposition(Entity actor, int slot)
+        {
+            return new CombatAction(ActionType.Reposition, actor)
+            {
+                TargetSlot = slot
+            };
         }
 
         /// <summary>
@@ -114,9 +140,13 @@ namespace GameLogic.Combat
         Defend,
         Flee,
         None,
+        Surrender,      // Only where FightRules.SurrenderAllowed (the army camp)
 
         // Enemy-only (bosses) - the player can't submit these (ValidateAction refuses them)
         InflictEffect,  // Put AppliesEffect on Target, no attack roll
-        Summon          // Bring SummonedEnemies into the fight
+        Summon,         // Bring SummonedEnemies into the fight
+
+        // Party only
+        Reposition      // Move to TargetSlot in the formation (swapping with whoever is there)
     }
 }

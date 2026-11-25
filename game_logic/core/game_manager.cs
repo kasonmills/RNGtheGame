@@ -50,6 +50,12 @@ namespace GameLogic.Core
         // marked completed, if the fight is won
         private Data.SaveData _preFinalBossSnapshot;
 
+        // Day and night (2026-11-25) - replaced on a new game and on a load (SetDayNight)
+        private DayNightCycle _dayNight;
+
+        // The army camp challenge being run (null when none has been started this playthrough)
+        private ArmyCampChallenge _armyCamp;
+
         // What to do when the current fight ends (set by WatchFightEnd). Only one fight runs at
         // a time, so only one handler is kept - and a reset can always take it off again.
         private Action<CombatResult> _fightEndHandler;
@@ -152,6 +158,29 @@ namespace GameLogic.Core
         public string LastSaveError { get; private set; }
 
         /// <summary>
+        /// Why the last OpenShop/OpenBlacksmith was refused, for a pop-up - e.g. "closed for
+        /// the night". Null if it opened (or was refused for a reason with no message, such as
+        /// being called from the wrong screen).
+        /// </summary>
+        public string LastRefusalReason { get; private set; }
+
+        /// <summary>
+        /// The day/night clock: the phase (IsNight) and the time left. Replaced on a new game
+        /// and on LoadGame(), so read it through this property each time, and listen to
+        /// DayPhaseChanged rather than to the clock's own event.
+        /// </summary>
+        public DayNightCycle DayNight => _dayNight;
+
+        /// <summary>
+        /// Fired with the new phase whenever day turns to night or back.
+        /// TODO-GODOT: tint the map darker at night, and respawn the area's enemies if wanted.
+        /// </summary>
+        public event Action<DayPhase> DayPhaseChanged;
+
+        /// <summary>The message handed back when a shop or the blacksmith is closed at night.</summary>
+        public const string ClosedForTheNightMessage = "It's closed for the night. Come back in the morning.";
+
+        /// <summary>
         /// Fired whenever the game state changes (old state, new state) via ChangeState/PushState/PopState.
         /// TODO-GODOT: subscribe to this instead of polling the current state.
         /// </summary>
@@ -175,8 +204,65 @@ namespace GameLogic.Core
             _mapManager = systems.MapManager;
             _combatManager = systems.CombatManager;
 
+            SetDayNight(new DayNightCycle());
+            StateChanged += OnStateChangedForClock;
+
             _currentState = GameState.MainMenu;
             _isRunning = true;
+        }
+
+        // ------------------------------------------------------------------
+        // Day and night (2026-11-25 - rules in DayNightCycle)
+        // ------------------------------------------------------------------
+
+        private void SetDayNight(DayNightCycle cycle)
+        {
+            if (_dayNight != null) _dayNight.PhaseChanged -= OnDayPhaseChanged;
+            _dayNight = cycle ?? new DayNightCycle();
+            _dayNight.PhaseChanged += OnDayPhaseChanged;
+        }
+
+        private void OnDayPhaseChanged(DayPhase phase) => DayPhaseChanged?.Invoke(phase);
+
+        /// <summary>
+        /// Real time passing. The clock only runs while the player is in the world (Playing):
+        /// fights, dialogue, cutscenes, menus, shops, the bag and the pause screen all stop it.
+        /// TODO-GODOT: call this every frame (_Process) with the frame's delta in seconds.
+        /// </summary>
+        public void AdvanceClock(double seconds)
+        {
+            if (_currentState != GameState.Playing) return;
+            _dayNight.Advance(seconds);
+        }
+
+        /// <summary>
+        /// Switch day/night by hand - the rest menu at an inn or a save campsite. Flips the
+        /// phase and starts a full countdown. Only from the world. Returns false if refused.
+        /// TODO: only allow it at an inn or a campsite once the fixed map places them; it goes
+        /// in the same rest menu as Rest() (to-do "Rest() becomes an inn-based mechanic").
+        /// </summary>
+        public bool SwitchDayNight()
+        {
+            if (_currentState != GameState.Playing) return false;
+            _dayNight.SwitchPhase();
+            return true;
+        }
+
+        // A fight (and the tutorial on top of it), a conversation or a cutscene - when one ends
+        // for good, the clock gets its -60 to +60 second roll
+        private static bool IsRollingPause(GameState state) =>
+            state == GameState.Combat || state == GameState.Tutorial
+            || state == GameState.Dialogue || state == GameState.Cutscene;
+
+        private void OnStateChangedForClock(GameState oldState, GameState newState)
+        {
+            // Not over yet: going from one rolling pause straight into another (the intro into
+            // the tutorial fight, the tutorial overlay back to its fight), or opening something
+            // on top of it (the pause menu during a fight) - the roll waits for the real end
+            if (!IsRollingPause(oldState) || IsRollingPause(newState)) return;
+            if (_stateStack.Count > 0 && _stateStack.Peek() == oldState) return;
+
+            _dayNight.RollAfterPause();
         }
 
         /// <summary>
@@ -359,6 +445,8 @@ namespace GameLogic.Core
                 // is ignored, so it can't lock the player out of saving)
                 _tutorialCompleted = true;
                 _partyManager.RestoreRoster(result.Companions);
+                _partyManager.FixFormation(_player); // Old saves have no slots - place everyone
+                SetDayNight(result.DayNight);
                 _currentSaveSlot = saveSlotName;
 
                 ChangeState(GameState.Playing);
@@ -400,6 +488,9 @@ namespace GameLogic.Core
             _mapManager = map ?? new MapManager();
             _activeOverworldEnemies = new List<World.OverworldEnemySpawn>();
             _stateStack = new Stack<GameState>();
+            SetDayNight(new DayNightCycle()); // A new game starts at day
+            _armyCamp = null;
+            LastRefusalReason = null;
             CurrentShop = null;
             CurrentBlacksmith = null;
             CurrentDialogueNpc = null;
@@ -597,18 +688,28 @@ namespace GameLogic.Core
             // Roll for enemy type based on rarity
             int roll = _rngManager.Roll(1, 100);
 
+            Entities.Enemies.EnemyBase enemy;
             if (roll <= 70) // 70% chance for Goblin (common)
             {
-                return new Entities.Enemies.EnemyTypes.Goblin(enemyLevel);
+                enemy = new Entities.Enemies.EnemyTypes.Goblin(enemyLevel);
             }
             else if (roll <= 95) // 25% chance for Bandit (elite)
             {
-                return new Entities.Enemies.EnemyTypes.Bandit(enemyLevel);
+                enemy = new Entities.Enemies.EnemyTypes.Bandit(enemyLevel);
             }
             else // 5% chance for Dragon (boss)
             {
-                return new Entities.Enemies.EnemyTypes.Dragon(enemyLevel);
+                enemy = new Entities.Enemies.EnemyTypes.Dragon(enemyLevel);
             }
+
+            // Spawned at night: tougher and pays more. It stays a night enemy even if day comes
+            // before it is fought. TODO: the area's night spawn list, once the spawn lists exist.
+            if (_dayNight.IsNight)
+            {
+                DayNightCycle.MakeNightEnemy(enemy);
+            }
+
+            return enemy;
         }
 
         /// <summary>
@@ -864,10 +965,18 @@ namespace GameLogic.Core
 
         /// <summary>
         /// Open a shopkeeper's shop. Opens from the world. The screen reads CurrentShop.
+        /// Closed at night (refused, with LastRefusalReason set to ClosedForTheNightMessage).
         /// TODO-GODOT: call this when the player interacts with a shopkeeper.
         /// </summary>
         public bool OpenShop(ShopKeeper shop)
         {
+            LastRefusalReason = null;
+            if (shop != null && _currentState == GameState.Playing && _dayNight.IsNight)
+            {
+                LastRefusalReason = ClosedForTheNightMessage;
+                return false;
+            }
+
             if (shop == null || !OpenOverlay(GameState.Shopping, GameState.Playing))
             {
                 return false;
@@ -886,11 +995,19 @@ namespace GameLogic.Core
 
         /// <summary>
         /// Open a blacksmith's upgrade screen. Opens from the world. The screen reads
-        /// CurrentBlacksmith.
+        /// CurrentBlacksmith. Closed at night (refused, with LastRefusalReason set to
+        /// ClosedForTheNightMessage).
         /// TODO-GODOT: call this when the player interacts with a blacksmith.
         /// </summary>
         public bool OpenBlacksmith(Blacksmith blacksmith)
         {
+            LastRefusalReason = null;
+            if (blacksmith != null && _currentState == GameState.Playing && _dayNight.IsNight)
+            {
+                LastRefusalReason = ClosedForTheNightMessage;
+                return false;
+            }
+
             if (blacksmith == null || !OpenOverlay(GameState.Blacksmith, GameState.Playing))
             {
                 return false;
@@ -941,6 +1058,67 @@ namespace GameLogic.Core
             GameLog.Write($"Quest reward claimed: {reward.GetRewardSummary()}");
             return true;
         }
+
+        // ------------------------------------------------------------------
+        // The army camp challenge (2026-11-25 - rules in ArmyCampChallenge)
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// The current (or last) army camp attempt: its state, wave, pot and lineup. Null until
+        /// one is started. Between waves the game stays in Combat - the combat scene shows the
+        /// pot with "Next wave" (ArmyCampNextWave) and "Leave" (ArmyCampLeave).
+        /// </summary>
+        public ArmyCampChallenge ArmyCamp => _armyCamp;
+
+        /// <summary>
+        /// Start an army camp attempt with the player and up to 3 recruited companions (the
+        /// fixed lineup picked before starting), from the world. Goes into Combat for wave 1;
+        /// back to Playing when the attempt ends (never a Game Over). Returns false if refused,
+        /// with LastRefusalReason set.
+        /// TODO: only from the camp's commander once the fixed map places the camp.
+        /// TODO-GODOT: a lineup picker before this, then the wave screens.
+        /// </summary>
+        public bool StartArmyCampChallenge(List<Entities.NPCs.Companions.CompanionBase> companions)
+        {
+            LastRefusalReason = null;
+            if (_currentState != GameState.Playing || _player == null)
+            {
+                return false;
+            }
+
+            companions ??= new List<Entities.NPCs.Companions.CompanionBase>();
+            if (companions.Any(c => c == null || !_partyManager.RecruitedCompanions.Contains(c)))
+            {
+                LastRefusalReason = "Only companions who have joined you can fight in the camp.";
+                return false;
+            }
+
+            StopWatchingFightEnd();
+            var challenge = new ArmyCampChallenge(_combatManager, _rngManager) { Statistics = _statistics };
+            challenge.AttemptFinished += _ =>
+            {
+                if (_currentState == GameState.Combat) ChangeState(GameState.Playing);
+            };
+
+            if (!challenge.Start(_player, companions, out string reason))
+            {
+                LastRefusalReason = reason;
+                return false;
+            }
+
+            _armyCamp = challenge;
+            if (challenge.State != ArmyCampState.Finished)
+            {
+                ChangeState(GameState.Combat);
+            }
+            return true;
+        }
+
+        /// <summary>Fight the next army camp wave (only between waves).</summary>
+        public bool ArmyCampNextWave() => _armyCamp != null && _armyCamp.NextWave();
+
+        /// <summary>Leave the army camp between waves, keeping the whole pot.</summary>
+        public bool ArmyCampLeave() => _armyCamp != null && _armyCamp.Leave();
 
         // No job board in the MVP (decided 2026-11-03): each shop/NPC hands out its own unlock
         // quest, so there is no board to open.
@@ -1008,7 +1186,7 @@ namespace GameLogic.Core
             _statistics.UpdateCurrentLevel(_player.Level);
             _statistics.RecordGameSave();
 
-            bool saved = Data.SaveManager.SaveGame(_player, saveSlotName, out string error, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, _gameCompleted, _partyManager);
+            bool saved = Data.SaveManager.SaveGame(_player, saveSlotName, out string error, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, _gameCompleted, _partyManager, _dayNight);
             LastSaveError = error;
             if (saved)
                 _currentSaveSlot = saveSlotName;
@@ -1222,7 +1400,7 @@ namespace GameLogic.Core
             // Snapshot the game as it is right now, before the fight changes anything. A win
             // writes this to the save marked completed, so loading it puts the player back
             // here - free to keep playing or fight the final boss again (decided 2026-10-30).
-            _preFinalBossSnapshot = Data.SaveManager.CreateSaveData(_player, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, gameCompleted: true, party: _partyManager);
+            _preFinalBossSnapshot = Data.SaveManager.CreateSaveData(_player, _bossManager, _mapManager, _questManager, _gameSettings, _statistics, gameCompleted: true, party: _partyManager, dayNight: _dayNight);
 
             ChangeState(GameState.Combat);
 
