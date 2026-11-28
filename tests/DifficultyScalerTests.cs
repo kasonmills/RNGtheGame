@@ -728,7 +728,6 @@ namespace GameLogic.Tests
             Assert.Equal(DifficultyLevel.Difficult, difficultScaler.GetGameDifficulty());
         }
 
-        [Fact]
         [Theory]
         [InlineData(DifficultyLevel.Normal, 0.75f, 0.75f, 1.0f)]
         [InlineData(DifficultyLevel.Hard, 1.0f, 1.0f, 1.0f)]
